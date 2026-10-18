@@ -29,10 +29,11 @@
 준비물: GitHub 계정. Supabase와 Vercel은 GitHub 계정으로 가입할 수 있습니다.
 
 ### 1. GitHub에 코드 올리기
-1. github.com → 오른쪽 위 **+** → **New repository** → 이름 `pq4r-tutor-mvp`, **Private** 선택 → **Create repository**.
-2. 새 저장소 화면의 **uploading an existing file** → 압축을 푼 `pq4r-tutor-mvp` 폴더 **안의** 파일과 폴더를 모두 끌어다 놓기 → **Commit changes**.
+현재 코드는 `leefoxai/jihyerowoon` 저장소의 `main`에 올라가 있습니다. 새 저장소에 다시 올릴 때만 아래를 따릅니다.
+1. github.com → 오른쪽 위 **+** → **New repository** → 이름 입력, **Private** 선택 → **Create repository**.
+2. 새 저장소 화면의 **uploading an existing file** → 압축을 푼 폴더 **안의** 파일과 폴더를 모두 끌어다 놓기 → **Commit changes**.
    - `node_modules`는 넣지 않습니다(Vercel이 설치).
-   - 명령줄을 쓴다면: `git init && git add . && git commit -m "mvp" && git branch -M main && git remote add origin https://github.com/<아이디>/pq4r-tutor-mvp.git && git push -u origin main`
+   - 명령줄을 쓴다면: `git init && git add . && git commit -m "mvp" && git branch -M main && git remote add origin https://github.com/<아이디>/<저장소>.git && git push -u origin main`
 
 ### 2. Supabase 데이터베이스 만들기
 1. supabase.com → **New project** → 이름 `pq4r`, **Database Password**는 영문·숫자로 길게 만들어 따로 적어 둡니다, **Region: Northeast Asia (Seoul)** → **Create new project**(1~2분).
@@ -40,7 +41,7 @@
 3. 위쪽 **Connect** → **Transaction pooler**의 URI를 복사하고 `[YOUR-PASSWORD]` 자리에 1의 비밀번호를 넣습니다. 이것이 `DATABASE_URL`입니다(포트 **6543**).
 
 ### 3. Vercel에 배포하기
-1. vercel.com → **Add New… → Project** → GitHub 저장소 `pq4r-tutor-mvp` **Import**.
+1. vercel.com → **Add New… → Project** → GitHub 저장소 `jihyerowoon` **Import**. 목록에 없으면 Vercel의 GitHub 앱 권한에 이 저장소를 추가합니다.
 2. **Framework Preset: Other** 그대로. 빌드 설정은 건드리지 않습니다(`vercel.json`이 정함).
 3. **Environment Variables**에 아래를 넣습니다(`.env.example` 참고).
 
@@ -53,7 +54,7 @@
    | `CRON_SECRET` | 무작위 문자열(하루 한 번 점검 작업 보호) |
    | `ANTHROPIC_API_KEY` | (선택) Claude API 키. 없으면 규칙 판정만 |
 
-4. **Deploy** → 1분쯤 뒤 `https://pq4r-tutor-mvp-xxxx.vercel.app` 주소가 생깁니다. 환경 변수를 나중에 바꾸면 **Deployments → … → Redeploy**를 한 번 해야 적용됩니다.
+4. **Deploy** → 1분쯤 뒤 `https://jihyerowoon-xxxx.vercel.app` 같은 주소가 생깁니다(프로젝트 이름에 따라 다름). 환경 변수를 나중에 바꾸면 **Deployments → … → Redeploy**를 한 번 해야 적용됩니다.
 
 ### 4. 첫 점검
 1. 사이트 → **연구자** 탭 → 비밀번호 → **운영 점검** 탭: 데이터베이스 연결·비밀번호 설정이 "정상"인지 봅니다. AI 키를 넣었다면 **AI 연결 시험**(기대: `CLEAR_INDEPENDENT / CLEAR_INDEPENDENT`).
