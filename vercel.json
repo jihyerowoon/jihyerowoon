@@ -1,31 +1,65 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "outputDirectory": "public",
-  "regions": ["icn1"],
+  "regions": [
+    "sin1"
+  ],
   "functions": {
-    "api/router.js": { "maxDuration": 60 },
-    "api/keepalive.js": { "maxDuration": 15 }
+    "api/router.js": {
+      "maxDuration": 60,
+      "includeFiles": "db/schema.sql"
+    },
+    "api/keepalive.js": {
+      "maxDuration": 15,
+      "includeFiles": "db/schema.sql"
+    }
   },
   "rewrites": [
-    { "source": "/api/v1/:path*", "destination": "/api/router?p=:path*" }
+    {
+      "source": "/api/v1/:path*",
+      "destination": "/api/router?p=:path*"
+    }
   ],
   "crons": [
-    { "path": "/api/keepalive", "schedule": "0 18 * * *" }
+    {
+      "path": "/api/keepalive",
+      "schedule": "0 18 * * *"
+    }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Referrer-Policy", "value": "no-referrer" },
-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        }
       ]
     },
     {
       "source": "/api/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
     }
   ]
 }

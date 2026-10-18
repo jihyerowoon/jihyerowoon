@@ -1,6 +1,5 @@
--- PQ4R 튜터 MVP 데이터베이스 (Supabase Postgres)
--- Supabase 대시보드 → SQL Editor에 이 파일 전체를 붙여 넣고 Run 한 번.
--- 다시 실행해도 안전하다(이미 있으면 건너뜀).
+-- PQ4R 튜터 MVP 데이터베이스 (Postgres: Neon 또는 Supabase)
+-- 빈 데이터베이스면 앱이 첫 요청 때 이 파일을 자동으로 실행한다(lib/db.js ensureSchema). SQL Editor에서 직접 실행해도 된다(여러 번 실행해도 안전).
 
 create extension if not exists pgcrypto;
 

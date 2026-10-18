@@ -4,6 +4,7 @@ const C = require('../lib/content');
 const A = require('../lib/auth');
 const S = require('../lib/student');
 const T = require('../lib/staff');
+const D = require('../lib/db');
 const { HttpError, readBody, send, sendText } = require('../lib/util');
 
 function publicContent() {
@@ -15,8 +16,8 @@ function publicContent() {
 
 const STUDENT = ['student'], STAFF = ['teacher', 'researcher'], RESEARCHER = ['researcher'];
 const routes = {
-  'GET health': { fn: async function () { return { ok: true, version: C.VERSIONS.app }; } },
-  'GET content': { fn: async function () { return publicContent(); } },
+  'GET health': { noDb: true, fn: async function () { return { ok: true, version: C.VERSIONS.app }; } },
+  'GET content': { noDb: true, fn: async function () { return publicContent(); } },
   'POST login/student': { body: true, fn: async function (ctx) { return S.login(ctx.body); } },
   'POST login/staff': { body: true, fn: async function (ctx) { return T.login(ctx.body, ctx.req); } },
 
@@ -66,6 +67,7 @@ module.exports = async function handler(req, res) {
     if (!route) { send(res, req.method === 'OPTIONS' ? 204 : 404, { error: '없는 주소예요.', code: 'not_found' }); return; }
     const ctx = { query: query, tok: null, body: null, req: req };
     if (route.roles) ctx.tok = A.requireRole(req, route.roles);
+    if (!route.noDb) await D.ensureSchema();
     if (route.body) ctx.body = await readBody(req);
     const out = await route.fn(ctx);
     if (route.file) { sendText(res, 200, out.text, out.type, out.filename); return; }

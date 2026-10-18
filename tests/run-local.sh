@@ -12,6 +12,9 @@ export APP_SECRET=test-secret-0123456789abcdef TEACHER_PASSWORD=teacher-pass-123
 PORT=3200 node dev/server.js > /tmp/pq4r-test-server.log 2>&1 & SP=$!
 trap 'kill $SP 2>/dev/null || true' EXIT
 for i in $(seq 1 30); do curl -s localhost:3200/api/v1/health >/dev/null && break; sleep 0.2; done
+echo "== 빈 DB 자동 표 생성"
+psql -h $PGHOST -p $PGPORT -U $PGUSER -q -c "drop database if exists ${DB}_auto with (force);" -c "create database ${DB}_auto;"
+AUTO_DB_URL="postgres://$PGUSER@$PGHOST:$PGPORT/${DB}_auto" node tests/autoschema.test.js
 echo "== 엔진";  node tests/engine.test.js lib | tail -1
 echo "== API";   TEST_BASE=http://localhost:3200 node tests/api.test.js
 ANTHROPIC_API_KEY=test-key ANTHROPIC_BASE_URL=http://localhost:3301 PORT=3202 node dev/server.js > /tmp/pq4r-test-server-ai.log 2>&1 & SP2=$!
