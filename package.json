@@ -1,0 +1,19 @@
+{
+  "name": "pq4r-tutor-mvp",
+  "version": "0.3.0",
+  "private": true,
+  "description": "PQ4R 튜터 1차시 연구용 MVP (Vercel + Supabase)",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node dev/server.js",
+    "test": "bash tests/run-local.sh",
+    "test:engine": "node tests/engine.test.js lib"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
+    "postgres": "3.4.9"
+  }
+}
