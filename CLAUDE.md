@@ -18,15 +18,15 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 사이트 | https://jihyerowoon-one.vercel.app (`/api/v1/health` → `{"ok":true,"version":"mvp-…"}`) |
-| 코드 | GitHub `leefoxai/jihyerowoon`, 브랜치 `main` |
-| 배포 | Vercel Hobby(팀 "LEEKYUHO's projects", 프로젝트 `jihyerowoon`, 서버 지역 `sin1`). `main`에 push하면 1~2분 뒤 자동 배포 |
+| 사이트 | https://jihyerowoon.vercel.app (`/api/v1/health` → `{"ok":true,"version":"mvp-…"}`). `jihyerowoon-xxxx-8mathnjh-9726.vercel.app`처럼 배포마다 붙는 주소는 Vercel 로그인을 요구하므로 학생·교사에게는 이 주소만 알려 준다 |
+| 코드 | GitHub `jihyerowoon/jihyerowoon`, 브랜치 `main` (2026-10-19에 옛 계정 `leefoxai`에서 넘겨받음. 옛 주소는 새 주소로 넘어감) |
+| 배포 | Vercel Hobby(새 계정, 팀 주소 `8mathnjh-9726`, 프로젝트 `jihyerowoon`, 서버 지역 `sin1`). `main`에 push하면 1~2분 뒤 자동 배포. 옛 계정의 `jihyerowoon-one.vercel.app`은 정리 대상(새 사이트 확인 뒤 지움) |
 | DB | Neon Postgres Free(싱가포르), Vercel Storage로 연결. `DATABASE_URL` 자동 입력 |
 | 환경변수(Vercel) | `DATABASE_URL`(자동), `APP_SECRET`, `TEACHER_PASSWORD`, `RESEARCHER_PASSWORD`, `CRON_SECRET`, `ANTHROPIC_API_KEY`(선택), `ANTHROPIC_MODEL`(기본 `claude-sonnet-5-5`), `ANTHROPIC_EFFORT`(기본 `medium`). 바꾸면 Vercel에서 Redeploy해야 적용 |
 
 - **저장소는 공개(Public)로 둔다.** Vercel Hobby는 비공개 저장소에서 소유자가 아닌 사람(이 Claude 포함)의 커밋 배포를 막을 수 있다("The Hobby Plan does not support collaboration for private repositories"). 비공개로 바꾸자는 요청이 오면 이 점을 먼저 알린다.
 - `APP_SECRET`을 바꾸면 모두 다시 로그인해야 하고, 연구자 명단의 PIN이 '—'로 보인다(로그인은 그대로 됨, PIN 새로로 복구).
-- 이 작업 공간의 셸에서는 vercel.app·Vercel API 접속이 막혀 있을 수 있다. 배포 확인은 WebFetch로 `https://jihyerowoon-one.vercel.app/api/v1/health`를 읽는다.
+- 이 작업 공간의 셸에서는 vercel.app·Vercel API 접속이 막혀 있을 수 있다. 배포 확인은 WebFetch로 `https://jihyerowoon.vercel.app/api/v1/health?check=<새 버전>`을 읽는다(WebFetch는 같은 주소를 15분 동안 기억하므로 `?check=` 뒤에 새 버전을 붙인다).
 - 무료 한도: Vercel 함수 호출 월 100만·CPU 월 4시간·비상업 용도, Neon 저장 1GB·컴퓨트 월 100 CU-시간(5분 쉬면 잠들고 첫 요청에 깨어남).
 
 ## 3. 연구 규칙 — 바꾸기 전에 반드시 연구자 승인

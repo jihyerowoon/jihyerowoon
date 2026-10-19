@@ -1,4 +1,4 @@
-# PQ4R 튜터 — 연구용 MVP (mvp-0.4.0)
+# PQ4R 튜터 — 연구용 MVP (mvp-0.4.1)
 
 중학교 2학년 수업을 PQ4R 6단계로 진행하는 웹앱입니다. **1차시 「삼각형의 합동」(60분: 2·2·16·19·9·12분)**과 **2차시 「평행사변형의 성질」(54분: 2·2·12·19·9·10분)**이 들어 있습니다(활동지 PPTX 2026-10-19 반영). 학생이 먼저 풀고, 필요한 만큼만 0~4단계로 돕고, 모든 과정을 지우지 않고 기록합니다. 실험집단은 AI 튜터, 통제집단은 교사가 같은 발문 은행으로 지원합니다.
 
@@ -43,7 +43,7 @@
 준비물: GitHub 계정. Vercel은 GitHub 계정으로 가입할 수 있고, Neon 데이터베이스는 Vercel 안에서 만듭니다.
 
 ### 1. GitHub에 코드 올리기
-현재 코드는 `leefoxai/jihyerowoon` 저장소의 `main`에 올라가 있습니다. 새 저장소에 다시 올릴 때만 아래를 따릅니다.
+현재 코드는 `jihyerowoon/jihyerowoon` 저장소의 `main`에 올라가 있고, 사이트는 https://jihyerowoon.vercel.app 입니다. 새 저장소에 다시 올릴 때만 아래를 따릅니다.
 1. github.com → 오른쪽 위 **+** → **New repository** → 이름 입력, **Private** 선택 → **Create repository**.
 2. 새 저장소 화면의 **uploading an existing file** → 압축을 푼 폴더 **안의** 파일과 폴더를 모두 끌어다 놓기 → **Commit changes**.
    - `node_modules`는 넣지 않습니다(Vercel이 설치).
