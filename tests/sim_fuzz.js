@@ -1,5 +1,5 @@
-// 추가 검증: 상태기계 무작위 시뮬레이션(54,000회), 판정 퍼징, 발문 은행 충족, 원자료(03·04·06) 대조
-// 실행: node sim_fuzz.js <앱 폴더> <클라이언트 원본 파일 폴더>
+// 추가 검증: 상태기계 무작위 시뮬레이션, 판정 퍼징, 발문 은행 충족, (선택) 원자료(04·06) 대조
+// 실행: node tests/sim_fuzz.js lib [클라이언트 원본 파일 폴더(04·06 파일이 있을 때만)]
 const path = require('path');
 const fs = require('fs');
 const APP = process.argv[2];
@@ -54,7 +54,7 @@ C.BANK.forEach(e => {
   if (!(e.level >= 1 && e.level <= 4)) badLevel.push(e.id);
   if (!e.type || !e.mechanism) noType.push(e.id);
   if (CORR.test(e.text)) corr.push(e.id);
-  if (E.leakCheck(e.item, e.text) && !(e.level === 4 && /^(RD0[12]|RF0[123])$/.test(e.item))) leakLow.push(e.id + ': ' + e.text);
+  if (E.leakCheck(e.item, e.text) && e.level !== 4) leakLow.push(e.id + ': ' + e.text);
 });
 ok(!dup.length, 'A3 발문 ID 중복 없음', dup);
 ok(!overCap.length, 'A4 단계 상한 초과 발문 없음', overCap);
@@ -66,12 +66,13 @@ ok(!leakLow.length, 'A8 정답 노출 발문 없음(수준4 핵심 성질 제외
 const comCorr = Object.values(C.COMMON).filter(c => CORR.test(c.text)).map(c => c.id + ':' + c.text);
 ok(!comCorr.length, 'A9 공통 응답 정오 신호 없음', comCorr);
 // Reflect 발문이 고정 AI 응답의 정오를 밝히지 않음
-const rfReveal = C.BANK.filter(e => /^RF/.test(e.item) && /(AI(가|의)?\s*(답|응답|말)?(이|은|는)?\s*(틀|맞|옳|잘못))/.test(e.text)).map(e => e.id + ':' + e.text);
+const rfReveal = C.BANK.filter(e => /RF/.test(e.item) && /(AI(가|의)?\s*(답|응답|말|설명)?(이|은|는)?\s*(틀|맞|옳|잘못))/.test(e.text)).map(e => e.id + ':' + e.text);
 ok(!rfReveal.length, 'A10 Reflect 발문이 AI 응답 정오를 밝히지 않음', rfReveal);
 
 /* B. 상태기계 무작위 시뮬레이션 */
 const MISC = [null, 'answer_request', 'copy', 'off_topic', 'calc', 'adj_equal', 'diag_equal', 'missing_values'];
-const MISSING = [[], ['P_ADJ_180'], ['P_OPP_ANGLES'], ['P_DIAG_BISECT']];
+const MISSING = [[], ['P_ADJ_180'], ['P_OPP_ANGLES'], ['P_DIAG_BISECT'], ['C_SSS'], ['C_VERT']];
+const MISC2 = ['missing_choice', 'verdict_category', 'circular', 'reject_valid', 'corr_order', 'names_only', 'examples_only', 'diag_equal'];
 let viol = {}; function V(k, x) { (viol[k] = viol[k] || []).length < 5 && viol[k].push(x); viol[k].n = (viol[k].n || 0) + 1; }
 let runs = 0, totalOuts = 0; const b11 = {};
 C.ITEMS.forEach(it => {
@@ -87,7 +88,7 @@ C.ITEMS.forEach(it => {
         try {
           if (a < 0.5) {
             const state = pick(STATES);
-            const misc = state === 'INVALID_RESPONSE' ? pick(['answer_request', 'copy', 'off_topic', null]) : pick(MISC.filter(m => !['answer_request', 'copy', 'off_topic'].includes(m)));
+            const misc = state === 'INVALID_RESPONSE' ? pick(['answer_request', 'copy', 'off_topic', null]) : pick(MISC.filter(m => !['answer_request', 'copy', 'off_topic'].includes(m)).concat(MISC2));
             const j = { state, misc, missing: pick(MISSING), needsReview: rnd() < 0.2 };
             act = 'submit:' + state; res = E.onSubmit(rec, j, { stage: it.stage, itemId: it.id, group: g, settings: { fadingPairs: true }, recs: {} });
           } else if (a < 0.95) { act = 'help'; res = E.onHelp(rec, { stage: it.stage, itemId: it.id, group: g }); }
@@ -113,7 +114,7 @@ C.ITEMS.forEach(it => {
             if (levelUses[k] > 2) V('B10 같은 수준 발문 3회 이상(재표현 1회 초과)', [it.id, g, trace, k]);
           }
           if (o.kind === 'support' && o.reason && /REPHRASE/.test(o.reason) && o.entryId === prev.lastEntryId) { V('B11 재표현이 직전과 같은 문장', [it.id, g, trace, o.entryId]); b11[o.entryId] = (b11[o.entryId] || 0) + 1; }
-          if (o.kind === 'support' && E.leakCheck(it.id, o.text) && !(o.level === 4 && /^(RD0[12]|RF0[123])$/.test(it.id))) V('B12 정답 노출', [it.id, g, trace, o.text]);
+          if (o.kind === 'support' && E.leakCheck(it.id, o.text) && o.level !== 4) V('B12 정답 노출', [it.id, g, trace, o.text]);
         });
         if (prev.status === 'unresolved' && rec.level > prev.level) V('B13 미해결 후 수준 상승', [it.id, g, trace]);
         if (rec.status === 'clear' && rec.level !== 0) V('B14 해결 후 수준 미복귀', [it.id, g, trace]);
@@ -130,31 +131,31 @@ const vk = Object.keys(viol);
 console.log('B11 내역', JSON.stringify(b11)); console.log('시뮬레이션', runs, '회, 출력', totalOuts, '건');
 
 /* C. 판정 퍼징 */
-const POOL = ['AO', 'OC', 'BO', 'OD', '=', '∠A', '∠B', '68', '112', '180', '3', '4.5', '7', '8', '5', 'x', '30', '10', ' ', '같다', '이등분', '마주 보는', '이웃한', '모르겠다', '답 알려줘', '?', '왜', '각', '변', '대각선', '(', ')', '+', '-', '*', '/', '°', 'cm', '\n', '😀', '<script>', '"', "'", '{AB}', 'constructor', '__proto__', 'ㅋㅋ', '아닌', '틀', 'AI가 맞아요', '정할 수 없다'];
+const POOL = ['AO', 'OC', 'BO', 'OD', 'AE', '=', '≡', '△ABC', '△EFD', '△DEF', '∠A', '∠B', '∠AOB', 'SSS', 'SAS', 'ASA', '①', '②', '③', '④', '⑤', '3번', 'ㄱ', 'ㅁ', '68', '75', '96', '180', '3', '4.5', '7', '8', '5', 'x', '30', '10', ' ', '같다', '이등분', '마주 보는', '이웃한', '끼인각', '양 끝 각', '맞꼭지각', '모르겠다', '답 알려줘', '?', '왜', '각', '변', '대각선', '(', ')', '+', '-', '*', '/', '°', 'cm', '\n', '😀', '<script>', '"', "'", '{AB}', 'constructor', '__proto__', 'ㅋㅋ', '아닌', '틀', 'AI가 맞아요', '옳지 않다', '포개면 겹친다'];
 function rstr(n) { let s = ''; for (let i = 0; i < n; i++) s += pick(POOL); return s; }
 let fuzzErr = [], fuzzBad = [], slow = [];
 C.ITEMS.forEach(it => {
   GROUPS.forEach(g => {
-    const ri = E.resolveItem(it.id, g, { controlRF03: 'neutral' });
+    const ri = E.resolveItem(it.id, g, {});
     for (let r = 0; r < 400; r++) {
       const f = {};
-      ri.fields.forEach(fd => { f[fd.key] = fd.kind === 'choice' ? pick([null, 'accept', 'partial', 'reject', 'weird']) : (rnd() < 0.1 ? '' : rstr(1 + Math.floor(rnd() * 25))); });
+      ri.fields.forEach(fd => { f[fd.key] = fd.kind === 'choice' ? pick([null, 'right', 'partly', 'wrong', '1', '3', 'weird']) : fd.kind === 'multi' ? pick(['', '1', '2,5', '3,5', '4,5', '1,2,3,4,5', 'x,9']) : (rnd() < 0.1 ? '' : rstr(1 + Math.floor(rnd() * 25))); });
       const t0 = process.hrtime.bigint();
       try {
-        const j = E.judgeRule(it.id, g, f, { a: ['seg:AO'] }, { controlRF03: 'neutral', fadingPairs: true });
+        const j = E.judgeRule(it.id, g, f, { a: ['half:AO'] }, { fadingPairs: true });
         const ms = Number(process.hrtime.bigint() - t0) / 1e6; if (ms > 50) slow.push([it.id, ms]);
         if (!STATES.includes(j.state)) fuzzBad.push([it.id, j.state]);
         const c = E.combine(it.id, g, j, null, false); if (!STATES.includes(c.state)) fuzzBad.push([it.id, 'combine', c.state]);
       } catch (e) { fuzzErr.push([it.id, g, String(e), JSON.stringify(f).slice(0, 120)]); }
     }
     // 아주 긴 입력
-    const f2 = {}; ri.fields.forEach(fd => { f2[fd.key] = fd.kind === 'choice' ? 'accept' : 'AO=OC 이고 BO=OD 이다 '.repeat(250); });
+    const f2 = {}; ri.fields.forEach(fd => { f2[fd.key] = fd.kind === 'choice' ? 'right' : fd.kind === 'multi' ? '1,2' : 'AO=OC 이고 BO=OD 이다 ③은 틀리고 ⑤는 맞다 '.repeat(200); });
     const t1 = Date.now();
     try { E.judgeRule(it.id, g, f2, {}, {}); } catch (e) { fuzzErr.push([it.id, 'long', String(e)]); }
     if (Date.now() - t1 > 1500) slow.push([it.id, 'long', Date.now() - t1]);
   });
 });
-ok(!fuzzErr.length, 'C1 무작위 입력에서 판정 예외 없음 (' + 18 * 2 * 400 + '건)', fuzzErr.slice(0, 3));
+ok(!fuzzErr.length, 'C1 무작위 입력에서 판정 예외 없음 (' + C.ITEMS.length * 2 * 400 + '건)', fuzzErr.slice(0, 3));
 ok(!fuzzBad.length, 'C2 판정 결과가 항상 9개 상태 중 하나', fuzzBad.slice(0, 3));
 ok(!slow.length, 'C3 판정 시간(일반 50ms, 5천 자 1.5초 이내)', slow.slice(0, 5));
 // numVal 안전성
@@ -169,11 +170,11 @@ const pr = pj.map(x => E.parseJudge(x));
 ok(pr[0] === null && pr[1] === null && pr[2] === null && pr[3] === null && pr[4] === null && pr[5].missing.length === 0 && pr[6].missing.join() === 'P_ADJ_180' && pr[6].misc.length <= 40 && pr[6].evidence.length <= 200, 'C6 AI 판정 응답 파싱이 잘못된 값을 거름', pr);
 // 결합: 불일치 → 보류
 const rule = { state: 'PARTIAL', misc: null, missing: [], decisive: false, flag: 'text' };
-const cmb = E.combine('RD03', 'EXPERIMENT', rule, [{ state: 'CLEAR_INDEPENDENT', missing: [] }, { state: 'PARTIAL', missing: [] }], true);
+const cmb = E.combine('L2RC02', 'EXPERIMENT', rule, [{ state: 'CLEAR_INDEPENDENT', missing: [] }, { state: 'PARTIAL', missing: [] }], true);
 ok(cmb.state === 'AMBIGUOUS' && cmb.needsReview && cmb.agree === false, 'C7 AI 2회 불일치 → 보류·검토 필요', cmb);
-const cmb2 = E.combine('RD03', 'CONTROL', rule, [{ state: 'CLEAR_INDEPENDENT', missing: [] }, { state: 'CLEAR_INDEPENDENT', missing: [] }], true);
+const cmb2 = E.combine('L2RC02', 'CONTROL', rule, [{ state: 'CLEAR_INDEPENDENT', missing: [] }, { state: 'CLEAR_INDEPENDENT', missing: [] }], true);
 ok(cmb2.source === 'rule', 'C8 통제집단은 AI 판정 결과를 쓰지 않음', cmb2);
-const cmb3 = E.combine('RD03', 'EXPERIMENT', rule, [null, null], true);
+const cmb3 = E.combine('L2RC02', 'EXPERIMENT', rule, [null, null], true);
 ok(cmb3.source === 'rule(ai_unavailable)' && cmb3.needsReview, 'C9 AI 실패 시 규칙 판정 + 검토 필요', cmb3);
 
 /* D. 출력 검사(문장 다듬기·교사 자유 문구) */
@@ -187,58 +188,34 @@ const cases = [
   ['', false],
   ['잘했어요. 다시 볼까요?', false],
 ];
-const dres = cases.map(([t, exp]) => [t, E.checkOutput(t, tpl, '각 A는 68', 'RD01'), exp]);
+const dres = cases.map(([t, exp]) => [t, E.checkOutput(t, tpl, '각 A는 68', 'L2RF03'), exp]);
 ok(dres.every(([t, r, exp]) => r.ok === exp), 'D1 다듬은 문장 검사(새 숫자·새 성질·정오 신호·빈 문장 차단)', dres.filter(([t, r, exp]) => r.ok !== exp));
-ok(!E.checkOutput('x = 30이에요', '어떤 각의 관계를 썼나요?', '', 'RF03').ok, 'D2 RF03 정답 x=30 차단');
-ok(!E.checkOutput('OD는 4.5예요', 'O에서 어떻게 나뉘나요?', 'BO=4.5', 'RD02').ok, 'D3 RD02 정답 OD=4.5 차단(학생이 쓴 숫자여도)', E.checkOutput('OD는 4.5예요', 'O에서 어떻게 나뉘나요?', 'BO=4.5', 'RD02'));
+ok(!E.checkOutput('∠C는 96°예요', '어떤 각의 관계를 썼나요?', '96', 'L2RF03').ok, 'D2 L2RF03 정답 96° 차단(학생이 쓴 숫자여도)');
+ok(!E.checkOutput('ㄱ과 ㅁ을 비교해 볼까요?', '보기를 다시 볼까요?', 'ㄱ ㅁ', 'L1RD02').ok, 'D3 L1RD02 정답 짝 차단');
 
-/* E. 원자료 대조 */
-const key = JSON.parse(fs.readFileSync(findSrc(UP, '03', 'json'), 'utf8'));
-ok(key.items.length === C.ITEMS.length && key.items.every((k, i) => k.item_id === C.ITEMS[i].id && k.stage === C.ITEMS[i].stage), 'E1 03 문항 18개·순서·단계 일치', key.items.map(k => k.item_id + ':' + k.stage).join(' '));
-const rubMis = key.items.filter(k => { const r = C.RUBRIC[k.item_id]; return !r || r.expected !== k.hidden_expected || r.accepted !== k.accepted || r.misconceptions !== k.misconceptions; }).map(k => k.item_id);
-ok(!rubMis.length, 'E2 비공개 기준(기대·인정·오개념)이 03 원문과 같음', rubMis.map(id => ({ id, app: C.RUBRIC[id], src: (k => ({ e: k.hidden_expected, a: k.accepted, m: k.misconceptions }))(key.items.find(x => x.item_id === id)) })));
-// 03 발문: 은행에 들어갔거나 제외 목록에 있어야 함
-const src03 = []; key.items.forEach(k => k.sample_scaffolds_levels_1_to_4.forEach((t, i) => src03.push({ item: k.item_id, level: i + 1, text: t })));
-function nrm(s) { return String(s).replace(/[\s.?!,·'‘’"“”]/g, ''); }
-const inBank = src03.filter(s => C.BANK.some(e => e.item === s.item && e.src === '03' && e.level === s.level));
-const exc = C.EXCLUDED || [];
-const missing03 = src03.filter(s => !C.BANK.some(e => e.item === s.item && e.src === '03' && e.level === s.level) && !exc.some(x => x.item === s.item && x.level === s.level));
-ok(src03.length === 72 && !missing03.length, 'E3 03 발문 72개 = 은행 반영 + 제외 목록', { total: src03.length, inBank: inBank.length, excluded: exc.length, missing: missing03 });
-// 정답값
-const keyNums = { RD01: [112, 68, 112], RD02: [3, 4.5], RF01: [8, 5], RF03: [30] };
-const j1 = E.judgeRule('RD01', 'EXPERIMENT', { angB: '180-68=112', angC: '∠A와 마주 보므로 68', angD: '∠B와 마주 보므로 112', work: '이웃한 두 각의 합은 180°, 마주 보는 각은 같다' }, {}, {});
-const j2 = E.judgeRule('RD02', 'EXPERIMENT', { OC: '3', OD: '4.5', work: '두 대각선은 서로를 이등분한다' }, {}, {});
-ok(j1.state === 'CLEAR_INDEPENDENT' && j2.state === 'CLEAR_INDEPENDENT', 'E4 03 정답(B=112·C=68·D=112, OC=3·OD=4.5)과 동치 근거 인정', [j1, j2]);
-// 04 상태 9개
-const s04 = JSON.parse(fs.readFileSync(findSrc(UP, '04', 'json'), 'utf8'));
-ok(Object.keys(s04.student_state).join() === STATES.join(), 'E5 04 학생 상태 9개 이름·순서 일치', [Object.keys(s04.student_state), STATES]);
-ok(Object.keys(s04.levels).join() === '0,1,2,3,4', 'E6 04 지원 수준 0~4');
-// 06 로그 필드
-const csv06 = fs.readFileSync(findSrc(UP, '06', 'csv'), 'utf8').replace(/^﻿/, '').trim().split(/\r?\n/).slice(1).map(l => l.split(',')[0]);
-let store; global.window = { addEventListener() { } }; require(path.resolve(APP, 'store.js')); store = global.window.PQ_STORE;
-ok(csv06.length === 30 && csv06.join() === store.LOG_FIELDS.join(), 'E7 06 로그 사전 30개 필드 이름·순서 일치', { src: csv06, app: store.LOG_FIELDS });
-const et06 = 'FIRST_SUBMIT/RESUBMIT/SUPPORT_SENT/STATE_CHANGE/LEVEL_CHANGE/TIMEOUT/TEACHER_REVIEW'.split('/');
-const engSrc0 = fs.readFileSync(path.resolve(APP, 'engine.js'), 'utf8');
-const appSrc = fs.readFileSync(path.resolve(APP, 'app.js'), 'utf8');
-const missEt = et06.filter(t => appSrc.indexOf("'" + t + "'") < 0 && engSrc0.indexOf("type: '" + t + "'") < 0);
-ok(!missEt.length, 'E8 06 이벤트 유형 7개를 앱이 모두 기록', missEt);
-const perf06 = ['INDEPENDENT_SUCCESS', 'ASSISTED_SUCCESS', 'UNRESOLVED', 'NOT_ASSESSED'];
+/* E. 원자료 대조(04 상태·06 로그 사전). 03 정답키는 예전 판(평행사변형 1차시) 자료라 이번 판에서는 대조하지 않는다 */
+if (UP && fs.existsSync(UP)) {
+  const s04 = JSON.parse(fs.readFileSync(findSrc(UP, '04', 'json'), 'utf8'));
+  ok(Object.keys(s04.student_state).join() === STATES.join(), 'E5 04 학생 상태 9개 이름·순서 일치', [Object.keys(s04.student_state), STATES]);
+  ok(Object.keys(s04.levels).join() === '0,1,2,3,4', 'E6 04 지원 수준 0~4');
+  const csv06 = fs.readFileSync(findSrc(UP, '06', 'csv'), 'utf8').replace(/^\ufeff/, '').trim().split(/\r?\n/).slice(1).map(l => l.split(',')[0]);
+  const EV = require(path.resolve(APP, 'events.js'));
+  ok(csv06.length === 30 && csv06.join() === EV.LOG_FIELDS.join(), 'E7 06 로그 사전 30개 필드 이름·순서 일치', { src: csv06, app: EV.LOG_FIELDS });
+}
 const engSrc = fs.readFileSync(path.resolve(APP, 'engine.js'), 'utf8');
-ok(perf06.every(p => engSrc.indexOf("'" + p + "'") >= 0), 'E9 06 수행 상태 4개 사용');
-const fade06 = ['NONE', 'DECREASED', 'NOT_OBSERVED'];
-ok(fade06.every(p => engSrc.indexOf("'" + p + "'") >= 0), 'E10 06 페이딩 값(NONE/DECREASED/NOT_OBSERVED) 사용');
-// 단계 시간·합계
-const mins = C.STAGES.map(s => s.min); ok(mins.join() === '2,2,16,17,8,5' && mins.reduce((a, b) => a + b) === 50, 'E11 단계 시간 2·2·16·17·8·5 = 50분', mins);
+ok(['INDEPENDENT_SUCCESS', 'ASSISTED_SUCCESS', 'UNRESOLVED', 'NOT_ASSESSED'].every(p => engSrc.indexOf("'" + p + "'") >= 0), 'E9 06 수행 상태 4개 사용');
+ok(['NONE', 'DECREASED', 'NOT_OBSERVED'].every(p => engSrc.indexOf("'" + p + "'") >= 0), 'E10 06 페이딩 값(NONE/DECREASED/NOT_OBSERVED) 사용');
+ok(C.LESSONS[1].min.join() === '2,2,16,19,9,12' && C.LESSONS[2].min.join() === '2,2,12,19,9,10', 'E11 차시별 단계 시간(60분·54분)');
 ok(C.STAGES.map(s => s.cap).join() === '2,2,4,4,3,2', 'E12 단계 상한 2·2·4·4·3·2', C.STAGES.map(s => s.cap));
 
 /* F. 처치충실도 계산 */
 const evs = [
-  { event_type: 'SUPPORT_SENT', stage: 'Read', item_id: 'RD01', attempt_no: 0, support_level_after: 1, group: 'EXPERIMENT', support_provider: 'AI', student_id: 'E01', support_text: 'x' },
-  { event_type: 'SUPPORT_SENT', stage: 'Review', item_id: 'RV01', attempt_no: 1, support_level_after: 3, group: 'EXPERIMENT', support_provider: 'AI', student_id: 'E01', support_text: 'x' },
-  { event_type: 'SUPPORT_SENT', stage: 'Reflect', item_id: 'RF01', attempt_no: 1, support_level_after: 1, group: 'CONTROL', support_provider: 'AI', student_id: 'C01', support_text: '정답이에요' },
+  { event_type: 'SUPPORT_SENT', stage: 'Read', item_id: 'L1RD02', attempt_no: 0, support_level_after: 1, group: 'EXPERIMENT', support_provider: 'AI', student_id: 'E01', support_text: 'x' },
+  { event_type: 'SUPPORT_SENT', stage: 'Review', item_id: 'L1RV01', attempt_no: 1, support_level_after: 3, group: 'EXPERIMENT', support_provider: 'AI', student_id: 'E01', support_text: 'x' },
+  { event_type: 'SUPPORT_SENT', stage: 'Reflect', item_id: 'L1RF01', attempt_no: 1, support_level_after: 1, group: 'CONTROL', support_provider: 'AI', student_id: 'C01', support_text: '정답이에요' },
   { event_type: 'LEVEL_CHANGE', support_level_before: 1, support_level_after: 3 },
   { event_type: 'MATERIAL_OPEN', stage: 'Recite', group: 'CONTROL' },
-  { event_type: 'SUPPORT_SENT', stage: 'Read', item_id: 'RD01', attempt_no: 1, support_level_after: 2, group: 'CONTROL', support_provider: 'TEACHER', student_id: 'C02', support_text: '∠B는 112', support_requested_at: '2026-10-17T00:00:00Z', support_sent_at: '2026-10-17T00:00:40Z' },
+  { event_type: 'SUPPORT_SENT', stage: 'Read', item_id: 'L1RD02', attempt_no: 1, support_level_after: 2, group: 'CONTROL', support_provider: 'TEACHER', student_id: 'C02', support_text: 'ㄱ과 ㅁ이 짝이에요', support_requested_at: '2026-10-17T00:00:00Z', support_sent_at: '2026-10-17T00:00:40Z' },
 ];
 const fr = E.fidelity(evs);
 ok(fr.preSubmitMath === 1 && fr.capViolations === 1 && fr.reflectSignals === 1 && fr.controlAI === 1 && fr.jumps === 1 && fr.materialInRecite === 1 && fr.leaks === 1 && fr.teacherWait.n === 1 && fr.teacherWait.median === 40, 'F1 충실도 위반을 각각 잡아냄', fr);

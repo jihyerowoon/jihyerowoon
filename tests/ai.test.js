@@ -49,53 +49,53 @@ const RUN = 'A' + Date.now().toString(36).toUpperCase().slice(-4);
 
   // 1) 두 번 판정이 다르면 보류
   let n0 = calls.length;
-  r = await call('POST', 'me/submit', { item_id: 'RD03', fields: { text: '각 성질을 썼어요 AIDISAGREE' } }, te);
+  r = await call('POST', 'me/submit', { item_id: 'L1RD02', fields: { answer: '2,5', work: '그렇게 생각했어요 AIDISAGREE' } }, te);
   const c1 = calls.slice(n0);
   ok(r.status === 200 && c1.length === 2, 'AI 판정 2회 호출', c1.length);
   const b0 = c1[0] && c1[0].body;
   ok(b0 && b0.model === 'claude-sonnet-5-5' && b0.output_config && b0.output_config.effort === 'medium' && b0.output_config.format.type === 'json_schema' && b0.output_config.format.schema.properties.state.enum.length === 9, '요청 형식: 모델·effort·JSON 스키마(9개 상태)', b0 && { model: b0.model, oc: b0.output_config && Object.keys(b0.output_config) });
   ok(c1.every(function (c) { return c.key === 'test-key' && c.prompt.indexOf(RUN) < 0 && c.prompt.indexOf('1234') < 0; }), '학생 코드·PIN은 AI로 보내지 않음');
-  ok(c1[0].prompt.indexOf('[비공개 기준]') >= 0 && c1[0].prompt.indexOf('대각은 같고 인접각 합180') >= 0, '프롬프트에 03 원문 기준');
+  ok(c1[0].prompt.indexOf('[비공개 기준]') >= 0 && c1[0].prompt.indexOf('세 변의 길이가 각각 같으므로 SSS 합동') >= 0 && c1[0].prompt.indexOf('[그림] <보기>') >= 0 && c1[0].prompt.indexOf('②, ⑤') >= 0, '프롬프트에 정답 기준·그림 설명·고른 보기');
   ok(r.body.messages.length === 1 && /어떤 뜻인지/.test(r.body.messages[0].text), '불일치 → 뜻 확인 질문');
-  let ev = (await sql`select data from events where student_code = ${RUN + 'E1'} and item_id = 'RD03' and event_type = 'FIRST_SUBMIT'`)[0].data;
+  let ev = (await sql`select data from events where student_code = ${RUN + 'E1'} and item_id = 'L1RD02' and event_type = 'FIRST_SUBMIT'`)[0].data;
   ok(ev.judge_source === 'hold' && ev.judge_agreement === false && ev.needs_review === true && ev.student_state === 'AMBIGUOUS', '기록: 보류·검토 필요', ev);
-  ok(ev.extra.ai_model === 'claude-sonnet-5-5' && ev.extra.ai.length === 2 && ev.prompt_version === 'judge-0.2/bank-0.2-draft/claude-sonnet-5-5', '기록: 모델·AI 근거·prompt_version', ev.prompt_version);
+  ok(ev.extra.ai_model === 'claude-sonnet-5-5' && ev.extra.ai.length === 2 && ev.prompt_version === 'judge-0.3/bank-0.3-draft/claude-sonnet-5-5', '기록: 모델·AI 근거·prompt_version', ev.prompt_version);
 
   // 2) 두 번 일치
-  r = await call('POST', 'me/submit', { item_id: 'RD03', fields: { text: '마주 보는 각은 같다 AIAGREE' } }, te);
-  ev = (await sql`select data from events where student_code = ${RUN + 'E1'} and item_id = 'RD03' and event_type = 'RESUBMIT' order by seq desc limit 1`)[0].data;
+  r = await call('POST', 'me/submit', { item_id: 'L1RD02', fields: { answer: '2,5', work: '다시 썼어요 AIAGREE' } }, te);
+  ev = (await sql`select data from events where student_code = ${RUN + 'E1'} and item_id = 'L1RD02' and event_type = 'RESUBMIT' order by seq desc limit 1`)[0].data;
   ok(ev.judge_source === 'ai(2회 일치)' && ev.student_state === 'PARTIAL' && ev.judge_agreement === true, 'AI 2회 일치 → AI 판정 사용', ev.judge_source);
 
   // 3) 규칙이 확정하면 AI를 부르지 않음
   n0 = calls.length;
-  r = await call('POST', 'me/submit', { item_id: 'RD01', fields: { angB: '68', angC: '68', angD: '68' } }, te);
+  r = await call('POST', 'me/submit', { item_id: 'L1RD02', fields: { answer: '1,5' } }, te);
   ok(calls.length === n0, '규칙이 확정한 답은 AI 호출 없음');
 
   // 4) 통제집단은 AI 없음
   await call('POST', 'me/stage', { stage: 2 }, te);
   n0 = calls.length;
-  r = await call('POST', 'me/submit', { item_id: 'RD03', fields: { text: '각 성질을 썼어요 AIDISAGREE' } }, tc);
+  r = await call('POST', 'me/submit', { item_id: 'L1RD02', fields: { answer: '2,5', work: '그렇게 생각했어요 AIDISAGREE' } }, tc);
   ok(r.status === 200 && calls.length === n0 && r.body.messages.length === 0, '통제집단 AI 호출 0회');
 
   // 5) AI 실패 → 규칙 판정 + 검토 필요
-  r = await call('POST', 'me/submit', { item_id: 'RD02', fields: { OC: '3', OD: '4.5', work: '그냥 AIFAIL' } }, te);
-  ev = (await sql`select data from events where student_code = ${RUN + 'E1'} and item_id = 'RD02' and event_type = 'FIRST_SUBMIT'`)[0].data;
+  r = await call('POST', 'me/submit', { item_id: 'L1RD02', fields: { answer: '2,5', work: '그냥 AIFAIL' } }, te);
+  ev = (await sql`select data from events where student_code = ${RUN + 'E1'} and item_id = 'L1RD02' and event_type = 'RESUBMIT' order by seq desc limit 1`)[0].data;
   ok(r.status === 200 && ev.judge_source === 'rule(ai_unavailable)' && ev.needs_review === true && ev.extra.ai_error === 'api_error', 'AI 오류 → 규칙 판정·검토 필요·오류 기록', { s: ev.judge_source, e: ev.extra.ai_error });
   const t0 = Date.now();
-  r = await call('POST', 'me/submit', { item_id: 'RD02', fields: { OC: '3', OD: '4.5', work: '그냥 AILIMIT' } }, te);
-  ev = (await sql`select data from events where student_code = ${RUN + 'E1'} and item_id = 'RD02' and event_type = 'RESUBMIT' order by seq desc limit 1`)[0].data;
+  r = await call('POST', 'me/submit', { item_id: 'L1RD02', fields: { answer: '2,5', work: '그냥 AILIMIT' } }, te);
+  ev = (await sql`select data from events where student_code = ${RUN + 'E1'} and item_id = 'L1RD02' and event_type = 'RESUBMIT' order by seq desc limit 1`)[0].data;
   ok(r.status === 200 && ev.extra.ai_error === 'rate_limited' && Date.now() - t0 < 15000, '요청 한도(429) → 규칙 판정으로 계속', ev.extra.ai_error);
 
   // 6) 문장 다듬기: 정답 노출이면 버리고 은행 문장
   r = await call('POST', 'admin/session/update', { session: RUN, key: 'aiPhrase', value: true }, RT);
-  r = await call('POST', 'me/submit', { item_id: 'RF03', fields: { use: 'accept', judgment: 'x=10 AI가 맞아요 LEAKPHRASE', final: '10' } }, te);
+  r = await call('POST', 'me/submit', { item_id: 'L1RF02', fields: { verdict: 'right', reason: 'AI가 맞아요 LEAKPHRASE' } }, te);
   ok(r.status === 409, 'Reflect 열리기 전 제출 거부');
   await call('POST', 'me/stage', { stage: 3 }, te);
-  r = await call('POST', 'me/submit', { item_id: 'RF03', fields: { use: 'accept', judgment: 'x=10 AI가 맞아요 LEAKPHRASE', final: '10' } }, te);
-  const sup = (await sql`select data from events where student_code = ${RUN + 'E1'} and item_id = 'RF03' and event_type = 'SUPPORT_SENT'`)[0].data;
+  r = await call('POST', 'me/submit', { item_id: 'L1RF02', fields: { verdict: 'right', reason: 'AI가 맞아요 LEAKPHRASE' } }, te);
+  const sup = (await sql`select data from events where student_code = ${RUN + 'E1'} and item_id = 'L1RF02' and event_type = 'SUPPORT_SENT'`)[0].data;
   ok(r.status === 200 && sup.error_flag === true && sup.extra.reason && r.body.messages[0].text.indexOf('112') < 0, '다듬은 문장에 새 숫자 → 차단·은행 문장 대체', { flag: sup.error_flag, extra: sup.extra, text: r.body.messages[0].text });
-  r = await call('POST', 'me/submit', { item_id: 'RF01', fields: { use: 'accept', judgment: 'AI 말이 맞는 것 같아요' } }, te);
-  const sup2 = (await sql`select data from events where student_code = ${RUN + 'E1'} and item_id = 'RF01' and event_type = 'SUPPORT_SENT'`)[0].data;
+  r = await call('POST', 'me/submit', { item_id: 'L1RF01', fields: { verdict: 'right', reason: 'AI 말이 맞는 것 같아요' } }, te);
+  const sup2 = (await sql`select data from events where student_code = ${RUN + 'E1'} and item_id = 'L1RF01' and event_type = 'SUPPORT_SENT'`)[0].data;
   ok(sup2.error_flag === false && sup2.extra.status === 'used' && sup2.support_text === r.body.messages[0].text && sup2.extra.template, '깨끗한 다듬기 문장은 사용·원문 함께 기록', sup2.extra);
 
   // 7) 연구자 AI 연결 시험

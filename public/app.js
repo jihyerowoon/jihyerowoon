@@ -1,4 +1,4 @@
-/* PQ4R 튜터 1차시 MVP — 화면. 판정·발문 선택·기록은 모두 서버(/api/v1)가 한다. */
+/* PQ4R 튜터 MVP(1차시 삼각형의 합동 · 2차시 평행사변형의 성질) — 화면. 판정·발문 선택·기록은 모두 서버(/api/v1)가 한다. */
 (function () {
   'use strict';
   var C = null, ITEM = {};
@@ -8,8 +8,8 @@
   function $(s, r) { return (r || document).querySelector(s); }
   function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function fmt(s) { return esc(s).replace(/\{([A-DO]{2})\}/g, '<span class="seg">$1</span>'); }
-  function plain(s) { return String(s == null ? '' : s).replace(/\{([A-DO]{2})\}/g, '$1'); }
+  function fmt(s) { return esc(s).replace(/\{([A-FO]{2})\}/g, '<span class="seg">$1</span>'); }
+  function plain(s) { return String(s == null ? '' : s).replace(/\{([A-FO]{2})\}/g, '$1'); }
   function nowMs() { return Date.now() + App.skew; }
   function kst(iso, withDate) {
     if (!iso) return '';
@@ -81,12 +81,27 @@
   /* ---------- 문항 내용(공개분) ---------- */
   function resolveItem(itemId, group, settings) {
     var it = ITEM[itemId], g = (it.byGroup && it.byGroup[group]) || {};
-    var sub = g.sub || null;
-    if (sub === 'RF03_SWITCH') sub = settings && settings.controlRF03 === 'original' ? C.control_rf_sub.RF03_original : C.control_rf_sub.RF03_neutral;
-    return { id: it.id, stage: it.stage, mark: it.mark, recall: it.recall || null, title: g.title || it.title, sub: sub, problem: it.problem || null, groupTitle: it.groupTitle || null, fixedAI: g.fixedAI ? C.fixed_ai[g.fixedAI] : null, fields: g.fields || it.fields };
+    return { id: it.id, lesson: it.lesson, stage: it.stage, mark: it.mark, short: it.short || it.id, recall: it.recall || null, title: g.title || it.title, sub: g.sub || it.sub || null, hint: g.hint || it.hint || null,
+      fig: it.fig ? C.figs[it.fig] : null, choices: it.choices || null, fixedAI: g.fixedAI ? C.fixed_ai[g.fixedAI] : null, fields: g.fields || it.fields };
   }
-  function itemsForStage(stageId, group, settings) { return C.items.filter(function (it) { return it.stage === stageId; }).map(function (it) { return resolveItem(it.id, group, settings); }); }
+  function itemsForStage(stageId, group, settings, lesson) { return C.items.filter(function (it) { return it.stage === stageId && it.lesson === (lesson || 1); }).map(function (it) { return resolveItem(it.id, group, settings); }); }
   function stageIdxOf(id) { for (var i = 0; i < C.stages.length; i++) if (C.stages[i].id === id) return i; return -1; }
+  /* 차시 */
+  function lessonOf(n) { return C.lessons[n] || C.lessons[1]; }
+  function lessonLabel(n) { var L = C.lessons[n]; return L ? n + '차시 · ' + L.title : n + '차시'; }
+  function stageMin(n, i) { return lessonOf(n).min[i]; }
+  function stageIntro(n, st, g) { var L = lessonOf(n); return ((L.intro && L.intro[st.id]) || st.intro)[g]; }
+  function shortOf(id) { return ITEM[id] ? (ITEM[id].short || id) : id; }
+  var CIRC = ['①', '②', '③', '④', '⑤'];
+  function figHTML(f, cls) {
+    if (!f) return '';
+    return '<figure class="probfig' + (cls ? ' ' + cls : '') + '"><img src="' + esc(f.file) + '" width="' + f.w + '" height="' + f.h + '" alt="' + esc(plain(f.desc)) + '" loading="lazy"></figure>';
+  }
+  function choicesHTML(list) {
+    if (!list || !list.length) return '';
+    return '<ol class="choicelist">' + list.map(function (c, i) { return '<li><span class="cn">' + CIRC[i] + '</span> ' + fmt(c) + '</li>'; }).join('') + '</ol>';
+  }
+  function multiVals(v) { return String(v || '').split(',').filter(Boolean); }
 
   /* ---------- 도형 ---------- */
   function elLabel(el) {
@@ -101,7 +116,7 @@
   function figureSVG() {
     var pt = C.figure.points;
     function L(a, b, cls, el) { return '<line class="' + cls + '" data-el="' + el + '" x1="' + pt[a][0] + '" y1="' + pt[a][1] + '" x2="' + pt[b][0] + '" y2="' + pt[b][1] + '"/>'; }
-    var s = '<svg class="fig" viewBox="0 0 470 272" role="group" aria-label="평행사변형 ABCD 그림: 꼭짓점, 변, 각, 대각선을 눌러 선택">';
+    var s = '<svg class="fig" viewBox="0 0 470 272" role="group" aria-label="평행사변형 ABCD와 두 대각선의 교점 O: 꼭짓점, 변, 각, 대각선을 눌러 선택">';
     C.figure.angles.forEach(function (v) {
       var order = ['A', 'B', 'C', 'D'], i = order.indexOf(v), prev = order[(i + 3) % 4], next = order[(i + 1) % 4];
       var o = pt[v], a = pt[prev], b = pt[next], r = 30;
@@ -115,7 +130,7 @@
     sides.forEach(function (h) { s += L(h[0], h[1], 'side-line', h[2]); });
     halves.concat(sides).forEach(function (h) { s += L(h[0], h[1], 'hit', h[2]); });
     ['A', 'B', 'C', 'D', 'O'].forEach(function (v) { s += '<circle class="pt" data-el="pt:' + v + '" cx="' + pt[v][0] + '" cy="' + pt[v][1] + '" r="5"/><circle class="hit-pt" data-el="pt:' + v + '" cx="' + pt[v][0] + '" cy="' + pt[v][1] + '" r="13"/>'; });
-    var lab = { A: [-6, -14], B: [10, -14], C: [12, 22], D: [-20, 22], O: [12, -8] };
+    var lab = C.figure.labels;
     ['A', 'B', 'C', 'D', 'O'].forEach(function (v) { s += '<text class="lbl" x="' + (pt[v][0] + lab[v][0]) + '" y="' + (pt[v][1] + lab[v][1]) + '">' + v + '</text>'; });
     return s + '</svg>';
   }
@@ -182,9 +197,9 @@
   };
 
   /* ---------- 공통 화면 조각 ---------- */
-  function topbar(roleLabel, extra) {
+  function topbar(roleLabel, extra, lesson) {
     return '<header class="topbar"><div class="tb-l"><button class="linkbtn" id="btn-exit" title="나가기">◂</button>' +
-      '<div><p class="tb-k">1차시 · 평행사변형의 성질</p><p class="tb-t">' + roleLabel + '</p></div></div>' +
+      '<div><p class="tb-k" id="tb-lesson">' + (lesson ? esc(lessonLabel(lesson)) : 'PQ4R 튜터') + '</p><p class="tb-t">' + roleLabel + '</p></div></div>' +
       '<div class="tb-c" id="stepper" role="group" aria-label="수업 단계" tabindex="0"></div>' +
       '<div class="tb-r">' + (extra || '') + '<span class="timer" id="timer"></span></div></header>';
   }
@@ -194,19 +209,21 @@
   }
   function stepperHTML(open, view, opts) {
     opts = opts || {};
+    var n = opts.lesson || 1;
     return C.stages.map(function (s, i) {
+      var min = stageMin(n, i);
       var state = i < open ? 'past' : i === open ? 'now' : 'future';
       var hidden = opts.reciteHide && open === 4 && i < 4;
       var disabled = state === 'future' || hidden || opts.noNav;
       return '<button class="step ' + STAGE_KEYS[i] + ' ' + state + (i === view ? ' viewing' : '') + (hidden ? ' hidden-stage' : '') + '" data-step="' + i + '"' + (disabled ? ' disabled' : '') +
-        ' title="' + s.id + ' ' + s.ko + ' · ' + s.min + '분' + (hidden ? ' (Recite 동안 가림)' : '') + '"><span class="n">' + (i + 1) + '</span><span class="nm">' + s.id + '</span><span class="mn">' + s.min + '′</span></button>';
+        ' title="' + s.id + ' ' + s.ko + ' · ' + min + '분' + (hidden ? ' (Recite 동안 가림)' : '') + '"><span class="n">' + (i + 1) + '</span><span class="nm">' + s.id + '</span><span class="mn">' + min + '′</span></button>';
     }).join('');
   }
   function timerText(sess) {
     if (!sess) return '';
     var i = sess.stage || 0, st = C.stages[i], opened = sess.stage_opened && sess.stage_opened[i];
     if (!opened) return '';
-    var left = st.min * 60 - (nowMs() - Date.parse(opened)) / 1000;
+    var left = stageMin(sess.lesson, i) * 60 - (nowMs() - Date.parse(opened)) / 1000;
     return left >= 0 ? '<span class="tm-k">' + st.id + '</span> ' + mmss(left) + ' 남음' : '<span class="tm-k">' + st.id + '</span> <b class="over">시간 종료 +' + mmss(-left) + '</b>';
   }
   function every(ms, fn, hiddenMs) {
@@ -225,7 +242,7 @@
     tab = tab || last.tab || 'student';
     $('#app').innerHTML = '<main class="entry"><section class="entry-card">' +
       '<div class="brand"><svg viewBox="0 0 64 40" class="brand-mark" aria-hidden="true"><path d="M18 4 H60 L46 36 H4 Z"/><path d="M18 4 L46 36 M60 4 L4 36" class="d"/></svg>' +
-      '<div><p class="eyebrow">연구용 MVP · ' + esc(C.versions.app) + '</p><h1>PQ4R 튜터 1차시</h1><p class="sub">평행사변형의 성질 · 중학교 2학년 · 50분</p></div></div>' +
+      '<div><p class="eyebrow">연구용 MVP · ' + esc(C.versions.app) + '</p><h1>PQ4R 튜터</h1><p class="sub">' + Object.keys(C.lessons).map(function (k) { return esc(lessonLabel(+k)) + ' ' + C.lessons[k].total + '분'; }).join(' / ') + ' · 중학교 2학년</p></div></div>' +
       '<p class="lead">학생이 먼저 풀고, 필요한 만큼만 0~4단계로 돕고, 모든 과정을 지우지 않고 기록합니다.</p>' +
       '<nav class="login-tabs" role="tablist">' + [['student', '학생'], ['teacher', '교사'], ['researcher', '연구자']].map(function (t) {
         return '<button class="login-tab' + (t[0] === tab ? ' on' : '') + '" role="tab" aria-selected="' + (t[0] === tab) + '" data-ltab="' + t[0] + '">' + t[1] + '</button>';
@@ -286,6 +303,8 @@
     },
     pendKey: function () { return 'pq4r:pending:' + this.me.session.code + ':' + this.me.student.code; },
     group: function () { return this.me.student.group; },
+    lesson: function () { return Number(this.me.session.lesson) || 1; },
+    hasTool: function (sid) { var L = lessonOf(this.lesson()); return !!L.tool && (!sid || (L.toolStages || []).indexOf(sid) >= 0); },
     settings: function () { return this.me.session.settings || {}; },
     stageIdx: function () { return this.me.session.stage; },
     item: function (id) { var it = this.me.items[id]; if (!it) it = this.me.items[id] = { draft: {}, draft_sel: {}, versions: [], reason: '', status: 'open', attempts: 0 }; return it; },
@@ -317,14 +336,14 @@
     },
     shell: function () {
       var self = this, g = self.group();
-      $('#app').innerHTML = topbar('학생 ' + esc(self.me.student.code) + ' · <span class="grp ' + g.toLowerCase() + '">' + groupKo(g) + ' · ' + supporterKo(g) + '</span>') +
-        '<div class="demo" id="demo" hidden></div><div class="layout"><aside class="left" id="left"></aside><section class="right" id="right"></section></div>';
+      $('#app').innerHTML = topbar('학생 ' + esc(self.me.student.code) + ' · <span class="grp ' + g.toLowerCase() + '">' + groupKo(g) + ' · ' + supporterKo(g) + '</span>', '', self.lesson()) +
+        '<div class="demo" id="demo" hidden></div><div class="layout" id="layout"><aside class="left" id="left"></aside><section class="right" id="right"></section></div>';
       bindExit('나가면 다시 들어올 때 PIN을 넣어야 해요. 나갈까요?');
       self.renderStepper(); self.renderDemo(); self.renderLeft(); self.renderStage();
       $('#stepper').addEventListener('click', function (ev) { var b = ev.target.closest('[data-step]'); if (!b || b.disabled) return; self.view = +b.getAttribute('data-step'); self.renderStepper(); self.renderStage(); });
       self.bindRight(); self.bindLeft();
     },
-    renderStepper: function () { var n = $('#stepper'); if (n) n.innerHTML = stepperHTML(this.stageIdx(), this.view, { reciteHide: true }); var t = $('#timer'); if (t) t.innerHTML = timerText(this.me.session); },
+    renderStepper: function () { var n = $('#stepper'); if (n) n.innerHTML = stepperHTML(this.stageIdx(), this.view, { reciteHide: true, lesson: this.lesson() }); var t = $('#timer'); if (t) t.innerHTML = timerText(this.me.session); },
     renderDemo: function () {
       var self = this, n = $('#demo'); if (!n) return;
       if (!self.settings().demoControls) { n.hidden = true; return; }
@@ -335,22 +354,25 @@
       $('#demo-prev').onclick = function () { go(-1); }; $('#demo-next').onclick = function () { go(1); };
     },
     renderLeft: function () {
-      $('#left').innerHTML = '<div class="figcard"><div class="figcard-h"><h2>평행사변형 ABCD</h2><span class="figtarget" id="figtarget">답 칸을 고르면 여기서 선택해요</span></div>' +
-        figureSVG() + '<div class="chips">' + chipRows() + '</div><p class="fig-note">눌러서 고른 요소는 지금 쓰고 있는 답 칸에 함께 저장되고, 설명과 같이 점검돼요.</p></div><div id="leftstage"></div>';
+      $('#left').innerHTML = (lessonOf(this.lesson()).tool ? '<div class="figcard" id="figcard"><div class="figcard-h"><h2>평행사변형 ABCD</h2><span class="figtarget" id="figtarget">답 칸을 고르면 여기서 선택해요</span></div>' +
+        figureSVG() + '<div class="chips">' + chipRows() + '</div><p class="fig-note">눌러서 고른 요소는 지금 쓰고 있는 답 칸에 함께 저장되고, 설명과 같이 점검돼요.</p></div>' : '') + '<div id="leftstage"></div>';
       this.renderLeftStage();
     },
     matVisible: function (sid) { return sid === 'Read' || (sid === 'Reflect' && this.settings().materialsInReflect); },
     renderLeftStage: function () {
       var n = $('#leftstage'); if (!n) return;
-      var sid = C.stages[this.view].id, h = '';
-      if (sid === 'Read') h += '<div class="panel problem"><p class="k">문제</p><p>' + fmt(C.read_problem) + '</p></div>';
+      var self = this, sid = C.stages[this.view].id, L = lessonOf(this.lesson()), h = '';
+      var pk = L.stageProblem && L.stageProblem[sid], pb = pk ? C.problems[pk] : null;
+      if (pb) h += '<div class="panel problem"><p class="k">' + (sid === 'Preview' ? '문제' : sid === 'Question' ? '문제 다시 보기 (Preview)' : '처음 본 문제') + '</p><p>' + fmt(pb.text) + '</p>' + figHTML(C.figs[pb.fig]) + '</div>';
       if (this.matVisible(sid)) {
-        h += '<div class="panel material"><p class="k">교재 · 개념 자료</p><div class="mat-list">' + lessonMaterials(1).map(function (m, i) {
+        h += '<div class="panel material"><p class="k">개념 정리 · 교재</p><div class="mat-list">' + lessonMaterials(this.lesson()).map(function (m, i) {
           return '<button type="button" class="mat ' + m.role + '" data-mat="' + i + '"><img src="' + esc(m.thumb) + '" alt="" loading="lazy"><span class="mat-t">' + esc(m.title) + '</span><span class="mat-s">' + esc(m.topic) + '</span></button>';
-        }).join('') + '</div><p class="hint small">눌러서 크게 보세요. ' + (sid === 'Read' ? '변, 각, 대각선의 성질을 확인하세요. ' : '') + 'Recite에서는 가려져요.</p></div>';
+        }).join('') + '</div><p class="hint small">눌러서 크게 보세요. Recite에서는 가려져요.</p></div>';
       }
-      if (sid === 'Recite') h += '<div class="panel cover"><p class="k">가린 내용</p><p>Recite 동안은 앞 단계의 답과 교재를 가려요. 먼저 내 말로 설명해 보세요.</p></div>';
+      if (sid === 'Recite') h += '<div class="panel cover"><p class="k">가린 내용</p><p>Recite 동안은 앞 단계의 답과 개념 정리를 가려요. 먼저 내 말로 설명해 보세요.</p></div>';
       n.innerHTML = h;
+      var fc = $('#figcard'); if (fc) fc.hidden = !self.hasTool(sid);
+      var lay = $('#layout'); if (lay) lay.classList.toggle('noleft', !h && !(fc && !fc.hidden));
     },
     bindLeft: function () {
       var self = this;
@@ -366,11 +388,12 @@
     openMaterial: function (i) {
       var self = this, sid = C.stages[self.view].id;
       if (!(self.editable() && self.matVisible(sid))) return;
-      MatViewer.open(lessonMaterials(1), i, function (m) { self.logEvent('MATERIAL_OPEN', null, { material: m.id }); },
+      MatViewer.open(lessonMaterials(self.lesson()), i, function (m) { self.logEvent('MATERIAL_OPEN', null, { material: m.id }); },
         function (m, sec, why) { self.logEvent('MATERIAL_CLOSE', null, { material: m.id, seconds: Math.round(sec), reason: why }); });
     },
     toggleSel: function (el) {
       var self = this, f = self.focus;
+      if (!self.hasTool(C.stages[self.view].id)) return;
       if (!f || !self.editable()) { toast('먼저 답을 쓸 칸을 눌러 고르세요.', 'warn'); return; }
       var it = self.item(f.item); if (it.status === 'incomplete') return;
       var arr = (it.draft_sel[f.field] = it.draft_sel[f.field] || []);
@@ -379,11 +402,12 @@
     },
     renderFigSel: function () {
       var f = this.focus, sel = f ? (this.item(f.item).draft_sel[f.field] || []) : [];
+      if (!$('#figcard')) return;
       highlightFigure($('#left'), sel);
       var t = $('#figtarget');
       if (t) {
         if (!f) t.textContent = '답 칸을 고르면 여기서 선택해요';
-        else { var it = resolveItem(f.item, this.group(), this.settings()), fd = it.fields.filter(function (x) { return x.key === f.field; })[0]; t.innerHTML = '선택 대상: <b>' + esc(f.item) + '</b> ' + fmt(fd ? fd.label : f.field); }
+        else { var it = resolveItem(f.item, this.group(), this.settings()), fd = it.fields.filter(function (x) { return x.key === f.field; })[0]; t.innerHTML = '선택 대상: <b>' + esc(shortOf(f.item)) + '</b> ' + fmt(fd ? fd.label : f.field); }
       }
     },
     editable: function () { return this.view === this.stageIdx() && this.me.session.status === 'open'; },
@@ -391,54 +415,56 @@
     renderStage: function () {
       var self = this;
       if (!self.visibleStage(self.view)) self.view = self.stageIdx();
-      var st = C.stages[self.view], key = STAGE_KEYS[self.view], g = self.group();
-      var items = itemsForStage(st.id, g, self.settings()), editable = self.editable();
-      var h = '<div class="stagehead ' + key + '"><p class="stage-k"><span class="sdot"></span>' + (self.view + 1) + '. ' + st.id.toUpperCase() + '<span class="ko">' + st.ko + '</span><span class="min">' + st.min + '분</span></p>' +
-        '<p class="stage-intro">' + esc(st.intro[g]) + '</p>' + (editable ? '' : '<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') +
-        (editable && self.matVisible(st.id) ? '<p class="row"><button type="button" class="btn sm" data-openmat="0">교재 보기 · 평행사변형의 성질</button><button type="button" class="btn sm ghost" data-openmat="1">참고: 삼각형의 합동</button></p>' : '') + '</div>';
+      var st = C.stages[self.view], key = STAGE_KEYS[self.view], g = self.group(), ln = self.lesson();
+      var items = itemsForStage(st.id, g, self.settings(), ln), editable = self.editable();
+      var mats = lessonMaterials(ln);
+      var h = '<div class="stagehead ' + key + '"><p class="stage-k"><span class="sdot"></span>' + (self.view + 1) + '. ' + st.id.toUpperCase() + '<span class="ko">' + st.ko + '</span><span class="min">' + stageMin(ln, self.view) + '분</span></p>' +
+        '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (editable ? '' : '<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') +
+        (editable && self.matVisible(st.id) && mats.length ? '<p class="row">' + mats.map(function (m, i) { return '<button type="button" class="btn sm' + (m.role === 'main' ? '' : ' ghost') + '" data-openmat="' + i + '">' + esc(m.title) + '</button>'; }).join('') + '</p>' : '') + '</div>';
       if (editable) h += self.toolbarHTML();
-      var lastGroupTitle = null;
-      items.forEach(function (it) {
-        if (it.groupTitle && it.groupTitle !== lastGroupTitle) { h += '<p class="group-title">' + esc(it.mark) + ' ' + esc(it.groupTitle) + '</p>'; lastGroupTitle = it.groupTitle; }
-        h += self.itemHTML(it, editable);
-      });
+      items.forEach(function (it) { h += self.itemHTML(it, editable); });
       h += '<p class="savestate" id="savestate"></p>';
       $('#right').innerHTML = h;
       items.forEach(function (it) { self.refreshItem(it.id); });
       if (!self.focus || ITEM[self.focus.item].stage !== st.id) {
         var first = items.filter(function (it) { return self.item(it.id).status !== 'clear'; })[0] || items[0];
-        var ff = first && first.fields.filter(function (f) { return f.kind !== 'choice'; })[0];
+        var ff = first && first.fields.filter(function (f) { return f.kind !== 'choice' && f.kind !== 'multi'; })[0];
         self.focus = editable && ff ? { item: first.id, field: ff.key } : null;
       }
       self.markFocus(); self.renderFigSel(); self.renderLeftStage();
     },
     toolbarHTML: function () {
-      var syms = [['∠', '각'], ['∥', '평행'], ['⊥', '수직'], ['=', '같음'], ['°', '도'], ['+', '더하기'], ['−', '빼기'], ['×', '곱하기'], ['x', '미지수 x']];
+      var syms = [['△', '삼각형'], ['≡', '합동'], ['∠', '각'], ['∥', '평행'], ['⊥', '수직'], ['=', '같음'], ['°', '도'], ['+', '더하기'], ['−', '빼기'], ['×', '곱하기'], ['÷', '나누기']];
+      var segs = this.lesson() === 1 ? ['AB', 'BC', 'CA', 'DE', 'EF', 'FD', 'AO', 'CO', 'BD'] : ['AB', 'BC', 'CD', 'DA', 'AC', 'BD', 'AO', 'OC', 'BO', 'OD', 'AE', 'EO'];
       return '<div class="symbar" role="toolbar" aria-label="수학 기호 입력"><span class="symbar-k">기호</span>' +
         syms.map(function (s) { return '<button type="button" class="sym" data-sym="' + s[0] + '" title="' + s[1] + '">' + s[0] + '</button>'; }).join('') +
         '<span class="segpick"><button type="button" class="sym wide" data-act="segmenu" aria-expanded="false">선분 <span class="seg">AB</span> ▾</button>' +
-        '<span class="segmenu" id="segmenu" hidden>' + ['AB', 'BC', 'CD', 'DA', 'AC', 'BD', 'AO', 'OC', 'BO', 'OD'].map(function (s) { return '<button type="button" class="sym" data-segins="' + s + '"><span class="seg">' + s + '</span></button>'; }).join('') + '</span></span>' +
+        '<span class="segmenu" id="segmenu" hidden>' + segs.map(function (s) { return '<button type="button" class="sym" data-segins="' + s + '"><span class="seg">' + s + '</span></button>'; }).join('') + '</span></span>' +
         '<span class="symbar-hint">마지막으로 누른 칸에 들어가요</span></div>';
     },
     itemHTML: function (it, editable) {
       var self = this, rec = self.item(it.id);
       var last = rec.versions.length ? rec.versions[rec.versions.length - 1].fields : {};
-      var h = '<article class="item" data-item="' + it.id + '"><header class="item-h"><div class="item-t">' + (it.mark && !it.groupTitle ? '<span class="mark">' + esc(it.mark) + '</span>' : '') +
+      var h = '<article class="item" data-item="' + it.id + '"><header class="item-h"><div class="item-t">' + (it.mark ? '<span class="mark">' + esc(it.mark) + '</span>' : '') +
         '<h3>' + fmt(it.title) + '</h3></div><span class="chip-status" data-status="' + it.id + '"></span></header>';
-      if (it.fixedAI) h += '<div class="aiout"><p class="aiout-k">AI 튜터의 응답 <small>검토할 자료</small></p><p>' + fmt(it.fixedAI.text) + '</p></div>';
+      if (it.fig || it.choices) h += '<div class="probblock">' + figHTML(it.fig) + choicesHTML(it.choices) + '</div>';
+      if (it.fixedAI) h += '<div class="aiout"><p class="aiout-k">AI의 설명 <small>검토할 자료</small></p><p>' + fmt(it.fixedAI.text) + '</p></div>';
       if (it.sub) h += '<p class="item-sub">' + fmt(it.sub) + '</p>';
+      if (it.hint) h += '<p class="item-hint">' + fmt(it.hint) + '</p>';
       if (it.recall) {
         var src = self.item(it.recall), txt = src.versions.length ? src.versions[0].fields.text : (src.draft.text || '');
-        h += '<blockquote class="recall"><span>' + (it.recall === 'QU01' ? '처음 만든 나의 질문' : '처음 생각 (Preview ①)') + '</span>' + (txt ? esc(txt) : '<i>기록 없음</i>') + '</blockquote>';
+        h += '<blockquote class="recall"><span>처음 생각 (Preview)</span>' + (txt ? esc(txt) : '<i>기록 없음</i>') + '</blockquote>';
       }
       h += '<div class="fields' + (it.fields.some(function (f) { return f.narrow; }) ? ' has-narrow' : '') + '">';
       it.fields.forEach(function (f) {
         var val = rec.draft[f.key] != null ? rec.draft[f.key] : (last[f.key] || '');
         var id = 'in-' + it.id + '-' + f.key, dis = editable && rec.status !== 'incomplete' ? '' : ' disabled';
-        h += '<div class="field' + (f.narrow ? ' narrow' : '') + (f.kind === 'choice' ? ' choice' : '') + '" data-fieldwrap="' + it.id + ':' + f.key + '">';
-        if (f.kind === 'choice') {
-          h += '<fieldset><legend>' + fmt(f.label) + '</legend><div class="choices">' + f.options.map(function (o) {
-            return '<label class="opt"><input type="radio" name="' + id + '" value="' + o.v + '" data-item="' + it.id + '" data-field="' + f.key + '"' + (val === o.v ? ' checked' : '') + dis + '><span>' + esc(o.label) + '</span></label>';
+        var pick = f.kind === 'choice' || f.kind === 'multi';
+        h += '<div class="field' + (f.narrow ? ' narrow' : '') + (pick ? ' choice' : '') + '" data-fieldwrap="' + it.id + ':' + f.key + '">';
+        if (pick) {
+          var on = f.kind === 'multi' ? multiVals(val) : [val];
+          h += '<fieldset><legend>' + fmt(f.label) + (f.kind === 'multi' ? ' <small>(여러 개 고를 수 있어요)</small>' : '') + '</legend><div class="choices">' + f.options.map(function (o) {
+            return '<label class="opt"><input type="' + (f.kind === 'multi' ? 'checkbox' : 'radio') + '" name="' + id + '" value="' + o.v + '" data-item="' + it.id + '" data-field="' + f.key + '"' + (on.indexOf(o.v) >= 0 ? ' checked' : '') + dis + '><span>' + fmt(o.label) + '</span></label>';
           }).join('') + '</div></fieldset>';
         } else {
           h += '<label for="' + id + '">' + fmt(f.label) + (f.unit ? ' <small>(' + esc(f.unit) + ')</small>' : '') + '</label>';
@@ -478,7 +504,7 @@
       }
       var rv = $('[data-revise="' + id + '"]'); if (rv) rv.hidden = !(r.attempts > 0 && r.status !== 'incomplete');
       var bz = $('[data-busy="' + id + '"]'); if (bz) bz.hidden = !self.busy[id];
-      resolveItem(id, self.group(), self.settings()).fields.forEach(function (f) { if (f.kind !== 'choice') self.renderSelRow(id, f.key); });
+      resolveItem(id, self.group(), self.settings()).fields.forEach(function (f) { if (f.kind !== 'choice' && f.kind !== 'multi') self.renderSelRow(id, f.key); });
       self.renderThread(id);
     },
     refreshItemLight: function (id) {
@@ -541,13 +567,16 @@
       right.addEventListener('input', function (ev) {
         var t = ev.target;
         if (t.hasAttribute('data-reason')) { var id0 = t.getAttribute('data-reason'); self.item(id0).reason = t.value; self.saveDraft(id0); return; }
-        if (!t.hasAttribute('data-field') || t.type === 'radio') return;
+        if (!t.hasAttribute('data-field') || t.type === 'radio' || t.type === 'checkbox') return;
         var id = t.getAttribute('data-item');
         self.item(id).draft[t.getAttribute('data-field')] = t.value; self.refreshItemLight(id); self.saveDraft(id);
       });
       right.addEventListener('change', function (ev) {
-        var t = ev.target; if (t.type !== 'radio') return;
-        var id = t.getAttribute('data-item'); self.item(id).draft[t.getAttribute('data-field')] = t.value; self.refreshItemLight(id); self.saveDraft(id);
+        var t = ev.target; if (t.type !== 'radio' && t.type !== 'checkbox') return;
+        var id = t.getAttribute('data-item'), fk = t.getAttribute('data-field');
+        if (t.type === 'checkbox') self.item(id).draft[fk] = $$('input[type=checkbox][data-item="' + id + '"][data-field="' + fk + '"]', right).filter(function (x) { return x.checked; }).map(function (x) { return x.value; }).join(',');
+        else self.item(id).draft[fk] = t.value;
+        self.refreshItemLight(id); self.saveDraft(id);
       });
       right.addEventListener('paste', function (ev) {
         var t = ev.target; if (!t.hasAttribute('data-field')) return;
@@ -633,7 +662,7 @@
     pick: function (list) {
       var self = this;
       $('#app').innerHTML = '<main class="entry"><section class="entry-card"><h1>수업 고르기</h1><p class="lead">진행할 수업을 고르세요. 수업은 연구자 화면에서 만듭니다.</p><div class="sesslist">' +
-        (list.length ? list.map(function (s) { return '<button class="sessrow" data-pick="' + esc(s.code) + '"><span><b>' + esc(s.code) + '</b> · ' + s.lesson + '차시' + (s.class_name ? ' · ' + esc(s.class_name) + '반' : '') + '</span><span class="pill">' + s.joined + '명 · ' + C.stages[s.stage].id + '</span></button>'; }).join('') : '<p class="empty">열린 수업이 없어요.</p>') +
+        (list.length ? list.map(function (s) { return '<button class="sessrow" data-pick="' + esc(s.code) + '"><span><b>' + esc(s.code) + '</b> · ' + esc(lessonLabel(s.lesson)) + (s.class_name ? ' · ' + esc(s.class_name) + '반' : '') + '</span><span class="pill">' + s.joined + '명 · ' + C.stages[s.stage].id + '</span></button>'; }).join('') : '<p class="empty">열린 수업이 없어요.</p>') +
         '</div><p><button class="btn" id="pick-out">나가기</button></p></section></main>';
       $$('[data-pick]').forEach(function (b) { b.onclick = function () { self.code = b.getAttribute('data-pick'); store('pq4r:teacher-session', self.code); self.shell(); }; });
       $('#pick-out').onclick = function () { logout(); };
@@ -661,29 +690,31 @@
       var self = this;
       return api('GET', 'staff/overview?session=' + encodeURIComponent(self.code) + (self.data ? '&fp=' + encodeURIComponent(self.data.fp) : '')).then(function (r) {
         if (r.same) return;
-        self.data = r; self.renderTop(); self.renderRoster(); self.renderQueue();
+        self.data = r; var tl = $('#tb-lesson'); if (tl) tl.textContent = lessonLabel(r.session.lesson); self.renderTop(); self.renderRoster(); self.renderQueue();
         if (self.sel) return self.loadDetail();
       }).catch(function (e) { if (e.status === 404) { toast(e.message, 'warn'); store('pq4r:teacher-session', null); Teacher.start(); } });
     },
     stage: function () { return this.data ? this.data.session.stage : 0; },
+    lesson: function () { return this.data ? (Number(this.data.session.lesson) || 1) : 1; },
+    stageItems: function () { var stg = C.stages[this.stage()].id, ln = this.lesson(); return C.items.filter(function (it) { return it.stage === stg && it.lesson === ln; }).map(function (it) { return it.id; }); },
     setStage: function (d) {
       var self = this, next = self.stage() + d;
       if (d > 0 && !window.confirm(C.stages[next].id + ' 단계를 열까요? 지금 단계에서 제출하지 않은 답은 미완료로 기록돼요.')) return;
       api('POST', 'staff/stage', { session: self.code, stage: next }).then(function () { self.data = null; return self.refresh(); }).catch(function (e) { toast(e.message, 'crit'); });
     },
     renderTop: function () {
-      var s = this.stage(), n = $('#stepper'); if (n) n.innerHTML = stepperHTML(s, s, { noNav: true });
+      var s = this.stage(), n = $('#stepper'); if (n) n.innerHTML = stepperHTML(s, s, { noNav: true, lesson: this.lesson() });
       var t = $('#timer'); if (t) t.innerHTML = timerText(this.data.session);
       var p = $('#t-prev'), x = $('#t-next'); if (p) p.disabled = s === 0; if (x) x.disabled = s === 5;
     },
     renderQueue: function () {
       var q = this.data.requests, n = $('#queue'); if (!n) return;
       n.innerHTML = q.length ? q.map(function (r) {
-        return '<button class="req" data-req="' + esc(r.code) + '|' + esc(r.item_id) + '"><b>' + esc(r.code) + '</b><span>' + esc(r.item_id) + ' · ' + esc(r.stage) + '</span><span class="w">대기 <span data-wait="' + r.at + '">' + mmss((nowMs() - Date.parse(r.at)) / 1000) + '</span></span></button>';
+        return '<button class="req" data-req="' + esc(r.code) + '|' + esc(r.item_id) + '"><b>' + esc(r.code) + '</b><span>' + esc(shortOf(r.item_id)) + ' · ' + esc(r.stage) + '</span><span class="w">대기 <span data-wait="' + r.at + '">' + mmss((nowMs() - Date.parse(r.at)) / 1000) + '</span></span></button>';
       }).join('') : '<p class="empty">기다리는 요청이 없어요.</p>';
     },
     cell: function (group, x, itemId) {
-      if (!x) return '<span class="cell none" title="' + itemId + ': 아직 안 씀">·</span>';
+      if (!x) return '<span class="cell none" title="' + shortOf(itemId) + ': 아직 안 씀">·</span>';
       var cls = 'none', label = '·', title = '아직 안 씀';
       if (x.s === 'incomplete') { cls = 'inc'; label = '미'; title = '미제출'; }
       else if (x.a > 0) {
@@ -698,14 +729,14 @@
           if (x.f === 'empty') { cls = 'inc'; label = '–'; title = '빈칸·막힘'; }
         }
       } else if (x.d) { cls = 'draft'; label = '…'; title = '작성 중'; }
-      return '<span class="cell ' + cls + '" title="' + itemId + ': ' + title + '">' + label + '</span>';
+      return '<span class="cell ' + cls + '" title="' + shortOf(itemId) + ': ' + title + '">' + label + '</span>';
     },
     renderRoster: function () {
       var self = this, n = $('#roster'); if (!n) return;
-      var stg = C.stages[self.stage()].id, items = C.items.filter(function (it) { return it.stage === stg; }).map(function (it) { return it.id; });
+      var stg = C.stages[self.stage()].id, items = self.stageItems();
       var list = self.data.students;
       $('#t-count').textContent = list.length + '명 접속 · 현재 ' + stg + ' 단계 문항';
-      n.innerHTML = '<thead><tr><th>학생</th><th>집단</th>' + items.map(function (i) { return '<th>' + i + '</th>'; }).join('') + '<th>최근 활동</th></tr></thead><tbody>' +
+      n.innerHTML = '<thead><tr><th>학생</th><th>집단</th>' + items.map(function (i) { return '<th title="' + esc(plain(ITEM[i].title)) + '">' + esc(shortOf(i)) + '</th>'; }).join('') + '<th>최근 활동</th></tr></thead><tbody>' +
         (list.length ? list.map(function (s) {
           var idle = (nowMs() - Date.parse(s.last_seen)) / 1000;
           return '<tr data-code="' + esc(s.code) + '" class="' + (self.sel === s.code ? 'on' : '') + '"><td><b>' + esc(s.code) + '</b></td><td><span class="grp ' + s.group.toLowerCase() + '">' + groupKo(s.group) + '</span></td>' +
@@ -735,10 +766,10 @@
     },
     renderDetailTop: function () {
       var self = this, d = self.detail, s = d.student, n = $('#td-top'); if (!n) return;
-      var stg = C.stages[self.stage()].id, items = C.items.filter(function (it) { return it.stage === stg; }).map(function (it) { return it.id; });
-      if (!self.selItem || (items.indexOf(self.selItem) < 0 && !d.items[self.selItem])) self.selItem = items[0];
+      var items = self.stageItems();
+      if (!self.selItem || !ITEM[self.selItem] || (items.indexOf(self.selItem) < 0 && !d.items[self.selItem])) self.selItem = items[0];
       var it = d.items[self.selItem], ri = resolveItem(self.selItem, s.group, self.data.session.settings);
-      var h = '<div class="itabs">' + items.map(function (i) { return '<button class="itab' + (i === self.selItem ? ' on' : '') + '" data-itab="' + i + '">' + i + '</button>'; }).join('') + '</div><p class="td-q">' + fmt(ri.title) + '</p>';
+      var h = '<div class="itabs">' + items.map(function (i) { return '<button class="itab' + (i === self.selItem ? ' on' : '') + '" data-itab="' + i + '">' + esc(shortOf(i)) + '</button>'; }).join('') + '</div><p class="td-q">' + fmt(ri.title) + '</p>' + (ri.choices ? choicesHTML(ri.choices) : '');
       if (!it || !it.versions || !it.versions.length) {
         var dk = it && it.draft ? Object.keys(it.draft).filter(function (k) { return String(it.draft[k] || '').trim(); }) : [];
         h += dk.length ? '<p class="muted">작성 중(아직 제출 안 함)</p>' + fieldsView(ri, it.draft, it.draft_sel) : '<p class="muted">아직 제출하지 않았어요.</p>';
@@ -760,7 +791,7 @@
       var it = d.items[self.selItem], cap = C.stages[stageIdxOf(ITEM[self.selItem].stage)].cap;
       var opt = it ? it.options : { preSubmitOnly: true, levels: [0], suggested: 0, cap: cap };
       var openReq = d.requests.filter(function (r) { return r.item_id === self.selItem && !r.answered_at; });
-      n.innerHTML = '<form class="sendform" id="sendform"><h3>지원 보내기 <small>' + esc(self.selItem) + '</small></h3>' +
+      n.innerHTML = '<form class="sendform" id="sendform"><h3>지원 보내기 <small>' + esc(shortOf(self.selItem)) + '</small></h3>' +
         (opt.preSubmitOnly ? '<p class="note">학생이 아직 제출하지 않았어요. 두 집단 공통 원칙에 따라 “먼저 생각 적기” 안내만 보낼 수 있어요.</p>' : '') +
         '<label>지원 수준<select id="sf-level">' + opt.levels.map(function (l) { return '<option value="' + l + '"' + (l === opt.suggested ? ' selected' : '') + '>수준 ' + l + (l === opt.suggested && !opt.preSubmitOnly ? ' (권장: 한 단계 위)' : '') + '</option>'; }).join('') + '</select></label>' +
         '<p class="hint small">이 단계 상한 ' + opt.cap + ' · 현재 ' + ((it && it.rec.level) || 0) + '</p><div id="sf-bank" class="bank"></div>' +
@@ -796,7 +827,8 @@
     fields = fields || {}; sel = sel || {};
     return '<dl class="fv">' + ri.fields.map(function (f) {
       var v = fields[f.key];
-      if (f.kind === 'choice') { var o = (f.options || []).filter(function (x) { return x.v === v; })[0]; v = o ? o.label : ''; }
+      if (f.kind === 'choice') { var o = (f.options || []).filter(function (x) { return x.v === v; })[0]; v = o ? plain(o.label) : ''; }
+      if (f.kind === 'multi') { v = multiVals(v).map(function (x) { var o2 = (f.options || []).filter(function (y) { return y.v === x; })[0]; return o2 ? plain(o2.label) : x; }).join(', '); }
       var s = (sel[f.key] || []).map(elLabel).join(', ');
       return '<dt>' + fmt(f.label) + '</dt><dd>' + (String(v || '').trim() ? esc(v) : '<i>빈칸</i>') + (s ? '<span class="fv-sel">도형: ' + s + '</span>' : '') + '</dd>';
     }).join('') + '</dl>';
@@ -831,8 +863,9 @@
       });
     },
     renderTop: function () {
-      var s = this.cur(), n = $('#stepper'); if (n) n.innerHTML = s ? stepperHTML(s.stage, s.stage, { noNav: true }) : '';
+      var s = this.cur(), n = $('#stepper'); if (n) n.innerHTML = s ? stepperHTML(s.stage, s.stage, { noNav: true, lesson: s.lesson }) : '';
       var p = $('#r-sess'); if (p) p.textContent = s ? '수업 ' + s.code : '수업 없음';
+      var tl = $('#tb-lesson'); if (tl) tl.textContent = s ? lessonLabel(s.lesson) : 'PQ4R 튜터';
     },
     render: function () {
       var self = this;
@@ -855,11 +888,11 @@
       function tog(key, label, desc) { return '<label class="tog"><input type="checkbox" data-set="' + key + '"' + (s.settings[key] ? ' checked' : '') + '><span class="tog-t"><b>' + label + '</b><small>' + desc + '</small></span></label>'; }
       $('#rbody').innerHTML = '<div class="rgrid">' +
         '<section class="rcard"><h2>수업 <small>차시 × 반마다 하나</small></h2><div class="sesslist">' +
-        (self.sessions.length ? self.sessions.map(function (x) { return '<button class="sessrow' + (x.code === self.code ? ' on' : '') + '" data-sess="' + esc(x.code) + '"><span><b>' + esc(x.code) + '</b> · ' + x.lesson + '차시' + (x.class_name ? ' · ' + esc(x.class_name) + '반' : ' · 반 제한 없음') + '</span><span class="pill ' + (x.status === 'open' ? 'ok' : '') + '">' + (x.status === 'open' ? '열림' : '끝남') + ' · ' + x.joined + '명 · ' + C.stages[x.stage].id + '</span></button>'; }).join('') : '<p class="empty">아직 수업이 없어요. 아래에서 만드세요.</p>') +
-        '</div><h3>새 수업 만들기</h3><form class="formrow" id="newsess"><label>수업 코드<input id="ns-code" required maxlength="24" placeholder="예: 2A-L1" autocapitalize="characters"></label><label>반(명단의 반과 같게)<input id="ns-class" maxlength="40" placeholder="예: 2A"></label><label>차시<select id="ns-lesson"><option value="1">1차시</option></select></label>' +
+        (self.sessions.length ? self.sessions.map(function (x) { return '<button class="sessrow' + (x.code === self.code ? ' on' : '') + '" data-sess="' + esc(x.code) + '"><span><b>' + esc(x.code) + '</b> · ' + esc(lessonLabel(x.lesson)) + (x.class_name ? ' · ' + esc(x.class_name) + '반' : ' · 반 제한 없음') + '</span><span class="pill ' + (x.status === 'open' ? 'ok' : '') + '">' + (x.status === 'open' ? '열림' : '끝남') + ' · ' + x.joined + '명 · ' + C.stages[x.stage].id + '</span></button>'; }).join('') : '<p class="empty">아직 수업이 없어요. 아래에서 만드세요.</p>') +
+        '</div><h3>새 수업 만들기</h3><form class="formrow" id="newsess"><label>수업 코드<input id="ns-code" required maxlength="24" placeholder="예: 2A-L1" autocapitalize="characters"></label><label>반(명단의 반과 같게)<input id="ns-class" maxlength="40" placeholder="예: 2A"></label><label>차시<select id="ns-lesson">' + Object.keys(C.lessons).map(function (k) { return '<option value="' + k + '">' + esc(lessonLabel(+k)) + ' (' + C.lessons[k].total + '분)</option>'; }).join('') + '</select></label>' +
         '<label class="tog" style="border:0;padding:0"><input type="checkbox" id="ns-demo"><span class="tog-t"><b>시연용</b><small>학생 화면에서 단계 넘기기</small></span></label><button class="btn primary" type="submit">만들기</button></form>' +
         '<p class="hint small">반을 적으면 그 반 명단의 학생만 들어올 수 있어요. 수업 코드는 학생에게 알려 주는 입장 코드예요.</p></section>' +
-        (s ? '<section class="rcard"><h2>' + esc(s.code) + ' 진행 <small>' + (s.status === 'open' ? '열림' : '끝남') + '</small></h2><p>현재 단계: <b>' + (s.stage + 1) + '. ' + C.stages[s.stage].id + ' ' + C.stages[s.stage].ko + '</b> · <span class="mono">' + timerText(s) + '</span></p>' +
+        (s ? '<section class="rcard"><h2>' + esc(s.code) + ' 진행 <small>' + esc(lessonLabel(s.lesson)) + ' · ' + (s.status === 'open' ? '열림' : '끝남') + '</small></h2><p>현재 단계: <b>' + (s.stage + 1) + '. ' + C.stages[s.stage].id + ' ' + C.stages[s.stage].ko + '</b> · <span class="mono">' + timerText(s) + '</span></p>' +
           '<div class="row"><button class="btn sm" id="r-prev"' + (s.stage === 0 || s.status !== 'open' ? ' disabled' : '') + '>이전 단계</button><button class="btn sm primary" id="r-next"' + (s.stage === 5 || s.status !== 'open' ? ' disabled' : '') + '>다음 단계 열기</button><button class="btn sm" id="r-teacher">교사 화면으로</button>' +
           '<button class="btn sm ghost" id="r-close">' + (s.status === 'open' ? '수업 끝내기' : '다시 열기') + '</button></div>' +
           '<p class="hint">단계를 열면 이전 단계는 학생 화면에서 보기 전용이 되고, 제출하지 않은 답은 미완료로 기록돼요. Recite 동안은 앞 단계가 가려집니다.</p>' +
@@ -867,9 +900,8 @@
           tog('aiJudge', 'AI 판정 사용', '서술형 답을 학생 상태 9가지 중 하나로 분류해요(실험집단만). API 키가 없으면 규칙 판정만 써요.') +
           tog('aiJudgeTwice', 'AI 판정 두 번 확인', '같은 판정을 두 번 돌려 다르면 보류하고 뜻 확인 질문을 보내요(사람 검토 대상).') +
           tog('aiPhrase', 'AI 문장 다듬기', '은행 문장을 뼈대로 학생 표현만 인용해 넣어요. 새 수학 내용·숫자·정오 표현이 있으면 버리고 원래 문장을 보내요.') +
-          tog('fadingPairs', '짝 문항으로 지원 감소 관찰', 'RD01↔RF03(각), RD02↔RF02(대각선).') +
-          '<label class="tog sel"><span class="tog-t"><b>통제집단 RF03 문구</b><small>원문에는 실험집단에 없는 단서가 있어요.</small></span><select data-set="controlRF03"><option value="neutral"' + (s.settings.controlRF03 !== 'original' ? ' selected' : '') + '>중립 문장(권장)</option><option value="original"' + (s.settings.controlRF03 === 'original' ? ' selected' : '') + '>활동지 원문</option></select></label>' +
-          tog('materialsInReflect', 'Reflect에서도 교재 열람 허용', '기본은 Read에서만 보여요.') +
+          tog('fadingPairs', '짝 문항으로 지원 감소 관찰', '1차시 RD02(개념확인)↔RF01(합동조건), 2차시 RD02(대각선 증명)↔RF02(대각선 길이).') +
+          tog('materialsInReflect', 'Reflect에서도 개념 정리 열람 허용', '기본은 Read에서만 보여요.') +
           tog('demoControls', '학생 화면에 시연 제어 표시', '실제 수업에서는 끄세요.') + '</section>' : '') + '</div>';
       $$('[data-sess]').forEach(function (b) { b.onclick = function () { self.code = b.getAttribute('data-sess'); store('pq4r:researcher-session', self.code); self.render(); }; });
       $('#newsess').onsubmit = function (ev) {
@@ -1011,24 +1043,30 @@
       var byItem = {}; rows.forEach(function (b) { (byItem[b.item] = byItem[b.item] || []).push(b); });
       var cap = {}; A.caps.forEach(function (c) { cap[c.id] = c.cap; });
       $('#rbody').innerHTML = '<section class="rcard wide"><h2>발문 은행 <small>' + esc(A.versions.bank) + ' · ' + A.bank.length + '문장 + 공통 ' + Object.keys(A.common).length + ' · 연구자 승인 필요</small></h2>' +
-        '<p class="hint">출처 03은 정답키 원문을 ‘-요’체로 다듬은 것, STD는 행동규칙 표준 발문, NEW는 새로 쓴 문장입니다. 상태가 * 이면 학생 상태와 관계없이 쓰여요. a는 처음, b는 같은 수준에서 다시 표현할 때 씁니다. 이 화면과 정답 기준은 연구자에게만 보여요.</p>' +
-        C.items.map(function (it) {
-          return '<details class="bankitem"><summary><b>' + it.id + '</b> ' + esc(it.stage) + ' · 상한 ' + cap[it.stage] + ' · ' + (byItem[it.id] || []).length + '문장</summary>' +
-            (A.rubric[it.id] ? '<p class="small"><b>기준(03 원문)</b> 기대: ' + esc(A.rubric[it.id].expected) + ' / 인정: ' + esc(A.rubric[it.id].accepted) + ' / 오개념: ' + esc(A.rubric[it.id].misconceptions) + (A.rubric[it.id].add ? '<br><b>추가 기준</b> ' + esc(A.rubric[it.id].add) : '') + '</p>' : '') +
+        '<p class="hint">이번 판(활동지 PPTX 반영)의 정답 기준과 발문은 Claude가 쓴 초안이라 연구자 검토가 필요해요. 출처 NEW는 새로 쓴 문장, STD는 행동규칙 표준 발문(이전 판에서 옮김)입니다. 상태가 * 이면 학생 상태와 관계없이 쓰여요. a는 처음, b는 같은 수준에서 다시 표현할 때 씁니다. 이 화면과 정답 기준은 연구자에게만 보여요.</p>' +
+        Object.keys(C.lessons).map(function (ln) {
+          return '<h3>' + esc(lessonLabel(+ln)) + '</h3>' + C.items.filter(function (it) { return String(it.lesson) === ln; }).map(function (it) {
+          var rbx = A.rubric[it.id], fxs = it.byGroup && it.byGroup.EXPERIMENT && it.byGroup.EXPERIMENT.fixedAI ? A.fixed_ai[it.byGroup.EXPERIMENT.fixedAI] : null;
+          var vk = function (l) { return (l || []).map(function (v) { return ({ right: '옳다', partly: '일부만 옳다', wrong: '다 틀리다' })[v]; }).join('·') || '없음'; };
+          return '<details class="bankitem"><summary><b>' + esc(it.short) + '</b> ' + esc(it.stage) + ' · 상한 ' + cap[it.stage] + ' · ' + (byItem[it.id] || []).length + '문장' + (rbx && rbx.draft ? ' <span class="pill warn">기준 초안</span>' : '') + '</summary>' +
+            '<p class="small muted">' + fmt(it.title) + '</p>' +
+            (rbx ? '<p class="small"><b>정답 기준' + (rbx.draft ? '(초안 · 연구자 검토 필요)' : '') + '</b> 기대: ' + fmt(rbx.expected) + ' / 인정: ' + fmt(rbx.accepted) + ' / 오개념: ' + fmt(rbx.misconceptions) + (rbx.add ? '<br><b>추가 기준</b> ' + fmt(rbx.add) : '') + '</p>' : '') +
+            (fxs ? '<p class="small"><b>실험집단 AI의 설명</b> “' + fmt(fxs.text) + '” · 실제 성격 <span class="mono">' + esc(fxs.type) + '</span> · 충족으로 보는 판단: ' + vk(fxs.ok) + (fxs.near && fxs.near.length ? ' · 일부 충족: ' + vk(fxs.near) : '') + '</p>' : '') +
             '<table class="banktab"><thead><tr><th>수준</th><th>상태</th><th>변형</th><th>집단</th><th>출처</th><th>문장</th></tr></thead><tbody>' +
             (byItem[it.id] || []).map(function (b) { return '<tr><td class="mono">L' + b.level + '</td><td class="mono small">' + esc(b.state) + '</td><td>' + esc(b.variant) + '</td><td>' + (b.group ? groupKo(b.group).replace('집단', '') : '공통') + '</td><td>' + esc(b.src) + '</td><td>' + fmt(b.text) + '</td></tr>'; }).join('') + '</tbody></table></details>';
+          }).join('');
         }).join('') +
         '<h3>공통 응답</h3><table class="banktab"><tbody>' + Object.keys(A.common).map(function (k) { var c = A.common[k]; return '<tr><td class="mono small">' + k + '</td><td>' + fmt(c.text) + '</td></tr>'; }).join('') + '</tbody></table>' +
-        '<h3>은행에서 뺀 03 원문</h3><table class="banktab"><tbody>' + A.excluded.map(function (x) { return '<tr><td class="mono">' + esc(x.item) + ' L' + x.level + '</td><td>' + esc(x.text) + '</td><td class="muted">' + esc(x.reason) + '</td></tr>'; }).join('') + '</tbody></table></section>';
+        (A.excluded.length ? '<h3>은행에서 뺀 문장</h3><table class="banktab"><tbody>' + A.excluded.map(function (x) { return '<tr><td class="mono">' + esc(x.item) + ' L' + x.level + '</td><td>' + esc(x.text) + '</td><td class="muted">' + esc(x.reason) + '</td></tr>'; }).join('') + '</tbody></table>' : '') + '</section>';
     },
     renderMat: function () {
       var notes = this.admin.material_notes || [];
-      $('#rbody').innerHTML = '<section class="rcard wide"><h2>개념 자료 <small>클라이언트 제공 9장 · 차시별 연결</small></h2>' +
-        '<p class="hint">1차시 학생 화면에는 ‘평행사변형의 성질’과 ‘참고: 삼각형의 합동’이 Read 단계에서만 보여요(두 집단 같음). 열고 닫은 시각과 본 시간은 기록에 남아요.</p>' +
+      $('#rbody').innerHTML = '<section class="rcard wide"><h2>개념 자료 <small>활동지 개념 정리 3장 + 교재 9장 · 차시별 연결</small></h2>' +
+        '<p class="hint">학생 화면에는 그 차시의 개념 정리(활동지)와 교재가 Read 단계에서만 보여요(두 집단 같음). 열고 닫은 시각과 본 시간은 기록에 남아요.</p>' +
         '<div class="matgrid">' + C.materials.map(function (m, i) {
           var ns = notes.filter(function (n) { return n.id === m.id; });
           return '<article class="matcard"><button type="button" class="mat-thumb" data-rmat="' + i + '"><img src="' + esc(m.thumb) + '" alt="' + esc(m.title) + ' 미리보기" loading="lazy"></button>' +
-            '<div class="matcard-t"><p class="mc-k">' + (m.lesson === 1 ? '1차시 · ' + (m.role === 'main' ? '사용 중' : '참고 자료로 사용 중') : m.lesson + '차시 · 준비됨') + '</p><h3>' + esc(m.title) + '</h3><p class="muted small">' + esc(m.topic) + '</p>' +
+            '<div class="matcard-t"><p class="mc-k">' + (m.lesson ? esc(lessonLabel(m.lesson)) + ' · ' + (m.role === 'main' ? '개념 정리로 사용 중' : '교재(참고)로 사용 중') : '다음 차시용 · 아직 연결 안 함') + '</p><h3>' + esc(m.title) + '</h3><p class="muted small">' + esc(m.topic) + '</p>' +
             (ns.length ? '<ul class="mc-notes">' + ns.map(function (n) { return '<li><b>' + esc(n.kind) + '</b> ' + esc(n.text) + '</li>'; }).join('') + '</ul>' : '<p class="small ok-note">검토 메모 없음</p>') + '</div></article>';
         }).join('') + '</div></section>';
       $$('[data-rmat]').forEach(function (b) { b.onclick = function () { MatViewer.open(C.materials, +b.getAttribute('data-rmat')); }; });
@@ -1040,7 +1078,7 @@
         function li(ok, label, note) { return '<li><span class="pill ' + (ok === true ? 'ok' : ok === false ? 'crit' : 'warn') + '">' + (ok === true ? '정상' : ok === false ? '필요' : '확인') + '</span><span>' + label + (note ? '<small>' + note + '</small>' : '') + '</span></li>'; }
         var hbAge = r.db.heartbeat ? (Date.now() - Date.parse(r.db.heartbeat)) / 3600000 : null;
         $('#rbody').innerHTML = '<div class="rgrid"><section class="rcard"><h2>운영 점검</h2><ul class="checklist">' +
-          li(r.db.ok, '데이터베이스 연결 · ' + r.db.ms + 'ms', '학생 ' + r.db.students + '명 · 수업 ' + r.db.sessions + '개 · 기록 ' + r.db.events + '건 · 크기 ' + r.db.size_mb + 'MB / 무료 500MB') +
+          li(r.db.ok, '데이터베이스 연결 · ' + r.db.ms + 'ms', '학생 ' + r.db.students + '명 · 수업 ' + r.db.sessions + '개 · 기록 ' + r.db.events + '건 · 크기 ' + r.db.size_mb + 'MB / Neon 무료 1GB') +
           li(r.ai.configured ? true : null, r.ai.configured ? 'AI 판정 연결됨 · ' + esc(r.ai.model) + ' · effort ' + esc(r.ai.effort) : 'AI 키 없음 — 규칙 판정만 쓰여요', r.ai.configured ? '아래 ‘AI 연결 시험’으로 실제 호출을 확인하세요.' : 'Vercel 환경 변수 ANTHROPIC_API_KEY를 넣으면 켜져요.') +
           li(r.env.teacher_password && r.env.researcher_password, '교사·연구자 비밀번호 설정') +
           li(r.env.cron_secret ? true : null, '하루 한 번 점검 작업(무료 DB 일시정지 방지) · 마지막 ' + (r.db.heartbeat ? kst(r.db.heartbeat, true) : '기록 없음'), hbAge != null && hbAge > 30 ? '30시간 넘게 기록이 없어요. Vercel의 Cron Jobs를 확인하세요.' : 'CRON_SECRET이 있으면 외부에서 이 작업을 부를 수 없어요.') +

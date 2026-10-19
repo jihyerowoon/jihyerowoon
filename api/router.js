@@ -7,10 +7,13 @@ const T = require('../lib/staff');
 const D = require('../lib/db');
 const { HttpError, readBody, send, sendText } = require('../lib/util');
 
+/* 브라우저로 보내는 공개분. 정답(KEYS)·정답 기준(RUBRIC)·발문 은행(BANK)·AI 설명의 정오 판단(FIXED_AI.type/ok)은 보내지 않는다 */
 function publicContent() {
+  const fixed = {};
+  Object.keys(C.FIXED_AI).forEach(function (k) { fixed[k] = { text: C.FIXED_AI[k].text }; });
   return {
-    versions: C.VERSIONS, stages: C.STAGES, items: C.ITEMS, fixed_ai: C.FIXED_AI, control_rf_sub: C.CONTROL_RF_SUB,
-    figure: C.FIGURE, materials: C.MATERIALS, read_problem: C.READ_PROBLEM, use_choices: C.USE_CHOICES
+    versions: C.VERSIONS, stages: C.STAGES, lessons: C.LESSONS, problems: C.PROBLEMS, figs: C.FIGS, items: C.ITEMS, fixed_ai: fixed,
+    verdict_choices: C.VERDICT_CHOICES, figure: C.FIGURE, materials: C.MATERIALS
   };
 }
 

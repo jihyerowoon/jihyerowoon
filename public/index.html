@@ -134,6 +134,8 @@ input:disabled, textarea:disabled { background: var(--surface-2); color: var(--m
 .left { min-width: 0; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 70px); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; max-height: calc(100dvh - 90px); overflow-y: auto; overscroll-behavior: contain; }
 #leftstage { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
 .right { display: grid; gap: 16px; min-width: 0; }
+.layout.noleft { grid-template-columns: minmax(0, 1fr); max-width: 920px; }
+.layout.noleft .left { display: none; }
 @media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } .left { position: static; max-height: none; overflow: visible; } .topbar { grid-template-columns: minmax(0, 1fr) auto; } .tb-c { grid-column: 1 / -1; grid-row: 2; } }
 
 .figcard { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-width: 0; }
@@ -163,7 +165,7 @@ input:disabled, textarea:disabled { background: var(--surface-2); color: var(--m
 .fig-note { font-size: 12.5px; color: var(--muted); }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: grid; gap: 6px; }
 .panel .k { font-size: 12px; color: var(--muted); font-weight: 600; }
-.panel.problem p:last-child { font-size: 16px; font-weight: 500; }
+.panel.problem > p:not(.k) { font-size: 16px; font-weight: 500; }
 .media-box { aspect-ratio: 16 / 9; width: 100%; max-width: 100%; min-width: 0; border: 1px dashed var(--line-2); border-radius: var(--r-sm); display: grid; place-content: center; text-align: center; gap: 4px; color: var(--muted); padding: 12px; background: var(--surface-2); }
 .media-box span { font-weight: 600; } .media-box small { max-width: 30ch; }
 .mat-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -218,7 +220,7 @@ input:disabled, textarea:disabled { background: var(--surface-2); color: var(--m
 .item-h { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
 .item-t { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
 .item-t h3 { font-size: 16px; font-weight: 600; }
-.mark { font-weight: 700; color: var(--muted); }
+.mark { font-weight: 700; color: var(--muted); white-space: nowrap; flex: none; }
 .chip-status { flex: none; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 2px 10px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
 .chip-status.draft { background: var(--accent-soft); color: var(--accent); }
 .chip-status.sent { background: var(--warn-soft); color: var(--warn); }
@@ -228,6 +230,16 @@ input:disabled, textarea:disabled { background: var(--surface-2); color: var(--m
 .aiout-k { font-size: 12.5px; font-weight: 700; color: var(--s-reflect); }
 .aiout-k small { font-weight: 500; color: var(--muted); margin-left: 6px; }
 .recall { margin: 0; border-left: 3px solid var(--line-2); padding: 4px 12px; color: var(--muted); display: grid; gap: 2px; }
+.probblock { display: grid; gap: 10px; min-width: 0; }
+.probfig { margin: 0; background: #FFFFFF; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px; justify-self: start; max-width: 100%; min-width: 0; }
+.probfig img { display: block; max-width: 100%; width: auto; height: auto; max-height: 300px; }
+.panel .probfig { justify-self: stretch; }
+.panel .probfig img { margin: 0 auto; max-height: 240px; }
+.choicelist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr)); gap: 4px 16px; }
+.choicelist li { font-size: 15px; min-width: 0; overflow-wrap: anywhere; }
+.choicelist .cn { font-weight: 700; color: var(--accent); }
+.item-hint { font-size: 13.5px; color: var(--muted); background: var(--surface-2); border-radius: var(--r-sm); padding: 6px 10px; }
+.td-q + .choicelist li { font-size: 13px; }
 .recall span { font-size: 12px; font-weight: 600; }
 .fields { display: grid; gap: 12px; }
 .fields.has-narrow { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
