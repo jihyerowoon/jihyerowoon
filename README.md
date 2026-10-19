@@ -129,6 +129,7 @@ bash tests/run-local.sh      # 자동 표 생성·엔진·API·AI(가짜 API)·�
 - `lib/` 판정 엔진(`engine.js`), 문항·기준·발문 은행(`content.js`), 학생·교직원 처리, 기록(06), AI 호출
 - `db/schema.sql` 데이터베이스(빈 DB이거나 파일 내용이 바뀌면 앱이 첫 요청 때 자동 실행, 기존 기록은 그대로), `vercel.json` 경로·서버 지역·보안 헤더·점검 일정
 - `tests/` 시험, `dev/server.js` 로컬 서버
+- `CLAUDE.md` 이 저장소를 맡는 Claude가 먼저 읽는 안내(연구 규칙·작업 절차·요청자와 말하는 법)
 
 ## 운영 전에 남은 결정(연구자)
 발문 은행 147문장 승인, 무관한 답(off_topic)의 지원 수준 처리, Preview·Question의 독립 성공 정의, AI 사용 여부와 모델, 동의서의 국외 처리(데이터 저장 위치 포함)·보관 기간, Read 동영상 탑재, 저장소 공개 유지 여부.
