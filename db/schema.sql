@@ -16,6 +16,8 @@ create table if not exists students (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+-- 연구자 화면에 PIN을 다시 보여 주기 위한 암호문(AES-GCM, 키는 서버 APP_SECRET). 로그인 확인은 pin_hash로만.
+alter table students add column if not exists pin_enc text;
 
 -- 수업(차시 × 반). 단계·설정·변경 번호를 가진다.
 create table if not exists sessions (
@@ -130,6 +132,13 @@ create table if not exists heartbeat (
   note text
 );
 
+-- 이 파일의 판(앱이 내용이 바뀐 것을 알아채고 다시 실행하는 데 씀)
+create table if not exists schema_meta (
+  id int primary key default 1 check (id = 1),
+  version text not null,
+  applied_at timestamptz not null default now()
+);
+
 -- 브라우저용 공개 키(anon/publishable)로는 어떤 표도 읽거나 쓸 수 없게 한다.
 -- 앱 서버는 데이터베이스 연결 문자열(postgres 사용자)로만 접근한다.
 alter table students enable row level security;
@@ -141,3 +150,4 @@ alter table help_requests enable row level security;
 alter table events enable row level security;
 alter table auth_failures enable row level security;
 alter table heartbeat enable row level security;
+alter table schema_meta enable row level security;

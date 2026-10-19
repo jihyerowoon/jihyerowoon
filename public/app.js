@@ -899,11 +899,11 @@
     renderRoster: function () {
       var self = this;
       $('#rbody').innerHTML = '<div class="rgrid"><section class="rcard"><h2>명단 올리기 <small>가명 코드만</small></h2>' +
-        '<p class="hint">한 줄에 한 명: <span class="mono">학생코드, 집단(실험/통제), 반, PIN(선택)</span>. 이름은 넣지 마세요. PIN을 비우면 4자리를 새로 만들어요. 새로 만든 PIN은 이번에만 보이니 꼭 내려받으세요.</p>' +
+        '<p class="hint">한 줄에 한 명: <span class="mono">학생코드, 집단(실험/통제), 반, PIN(선택)</span>. 이름은 넣지 마세요. PIN을 비우면 4자리를 새로 만들어요. PIN은 오른쪽 학생 목록(연구자 화면)에서 언제든 다시 볼 수 있어요.</p>' +
         '<p class="row"><input type="file" id="ro-file" accept=".csv,.txt,text/csv" aria-label="명단 CSV 파일 고르기"><button class="btn sm" id="ro-sample">예시 넣기</button></p>' +
         '<textarea id="ro-csv" class="roster-in" rows="10" aria-label="명단 CSV 내용" placeholder="code,group,class,pin&#10;S2A01,실험,2A,&#10;S2A02,통제,2A,"></textarea>' +
         '<p class="row"><button class="btn primary" id="ro-up">올리기</button></p><div id="ro-out"></div></section>' +
-        '<section class="rcard"><h2>학생 <small id="st-n"></small></h2><div class="tablewrap"><table id="st-t"><tbody><tr><td class="empty">불러오는 중…</td></tr></tbody></table></div></section></div>';
+        '<section class="rcard"><h2>학생 <small id="st-n"></small></h2><p class="row"><button class="btn sm" id="st-pins">PIN 목록 내려받기</button><button class="btn sm ghost" id="st-mask" aria-pressed="false">PIN 가리기</button><span class="hint small">입장 카드 인쇄용. 화면을 띄워 둘 때는 가려 두세요.</span></p><div class="tablewrap"><table id="st-t"><tbody><tr><td class="empty">불러오는 중…</td></tr></tbody></table></div></section></div>';
       $('#ro-sample').onclick = function () { $('#ro-csv').value = 'code,group,class,pin\nS2A01,실험,2A,\nS2A02,통제,2A,\nS2A03,실험,2A,'; };
       $('#ro-file').onchange = function () { var f = this.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { $('#ro-csv').value = rd.result; }; rd.readAsText(f, 'utf-8'); };
       $('#ro-up').onclick = function () {
@@ -923,11 +923,20 @@
       var self = this;
       api('GET', 'admin/students').then(function (r) {
         $('#st-n').textContent = r.students.length + '명 · 실험 ' + r.students.filter(function (s) { return s.group === 'EXPERIMENT'; }).length + ' · 통제 ' + r.students.filter(function (s) { return s.group === 'CONTROL'; }).length;
-        $('#st-t').innerHTML = '<thead><tr><th>코드</th><th>집단</th><th>반</th><th>참여 수업</th><th>상태</th><th></th></tr></thead><tbody>' + (r.students.length ? r.students.map(function (s) {
-          return '<tr><td class="mono"><b>' + esc(s.code) + '</b></td><td>' + groupKo(s.group) + '</td><td>' + esc(s.class_name) + '</td><td class="mono">' + s.sessions + '</td><td>' + (s.active ? (s.locked ? '<span class="pill warn">잠김</span>' : '<span class="pill ok">사용</span>') : '<span class="pill">중지</span>') + '</td>' +
+        var masked = !!self.pinMasked;
+        $('#st-mask').textContent = masked ? 'PIN 보기' : 'PIN 가리기'; $('#st-mask').setAttribute('aria-pressed', masked ? 'true' : 'false');
+        $('#st-mask').onclick = function () { self.pinMasked = !self.pinMasked; self.loadStudents(); };
+        $('#st-pins').onclick = function () {
+          var list = r.students.filter(function (s) { return s.pin; });
+          if (!list.length) { toast('보여 줄 PIN이 없어요. PIN 새로를 눌러 만들어 주세요.', 'warn'); return; }
+          saveText('pq4r_pins_' + new Date().toISOString().slice(0, 10) + '.csv', '\ufeffcode,group,class,pin\r\n' + list.map(function (p) { return [p.code, p.group === 'EXPERIMENT' ? '실험' : '통제', p.class_name, p.pin].join(','); }).join('\r\n'));
+        };
+        $('#st-t').innerHTML = '<thead><tr><th>코드</th><th>PIN</th><th>집단</th><th>반</th><th>참여 수업</th><th>상태</th><th></th></tr></thead><tbody>' + (r.students.length ? r.students.map(function (s) {
+          var pinCell = s.pin ? (masked ? '••••' : esc(s.pin)) : '<span class="muted" title="예전에 만든 PIN이라 다시 볼 수 없어요. PIN 새로를 누르면 보여요.">—</span>';
+          return '<tr><td class="mono"><b>' + esc(s.code) + '</b></td><td class="mono">' + pinCell + '</td><td>' + groupKo(s.group) + '</td><td>' + esc(s.class_name) + '</td><td class="mono">' + s.sessions + '</td><td>' + (s.active ? (s.locked ? '<span class="pill warn">잠김</span>' : '<span class="pill ok">사용</span>') : '<span class="pill">중지</span>') + '</td>' +
             '<td><button class="btn sm" data-pin="' + esc(s.code) + '">PIN 새로</button> <button class="btn sm ghost" data-act-st="' + esc(s.code) + '" data-v="' + (!s.active) + '">' + (s.active ? '중지' : '다시 사용') + '</button></td></tr>';
-        }).join('') : '<tr><td colspan="6" class="empty">명단이 비어 있어요.</td></tr>') + '</tbody>';
-        $$('[data-pin]').forEach(function (b) { b.onclick = function () { var c = b.getAttribute('data-pin'); if (!window.confirm(c + '의 PIN을 새로 만들까요? 예전 PIN은 쓸 수 없게 돼요.')) return; api('POST', 'admin/student', { code: c, reset_pin: true }).then(function (r2) { window.alert(c + '의 새 PIN: ' + r2.pin + '\n이 창을 닫으면 다시 볼 수 없어요.'); self.loadStudents(); }).catch(function (e) { toast(e.message, 'crit'); }); }; });
+        }).join('') : '<tr><td colspan="7" class="empty">명단이 비어 있어요.</td></tr>') + '</tbody>';
+        $$('[data-pin]').forEach(function (b) { b.onclick = function () { var c = b.getAttribute('data-pin'); if (!window.confirm(c + '의 PIN을 새로 만들까요? 예전 PIN은 쓸 수 없게 돼요.')) return; api('POST', 'admin/student', { code: c, reset_pin: true }).then(function (r2) { toast(c + '의 새 PIN: ' + r2.pin); self.loadStudents(); }).catch(function (e) { toast(e.message, 'crit'); }); }; });
         $$('[data-act-st]').forEach(function (b) { b.onclick = function () { api('POST', 'admin/student', { code: b.getAttribute('data-act-st'), active: b.getAttribute('data-v') === 'true' }).then(function () { self.loadStudents(); }).catch(function (e) { toast(e.message, 'crit'); }); }; });
       }).catch(function (e) { toast(e.message, 'crit'); });
     },

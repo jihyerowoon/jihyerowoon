@@ -49,8 +49,13 @@ const S = 'T' + RUN, S2 = 'U' + RUN, SD = 'D' + RUN;
   ok(r.status === 200 && r.body.created === 31 && r.body.pins.length === 31 && r.body.errors.length === 0, '명단 31명 올리기·PIN 발급', r.body.errors);
   const PIN = {}; r.body.pins.forEach(function (p) { PIN[p.code] = p.pin; });
   ok(PIN['L' + RUN + '01'] === '4321' && /^\d{4}$/.test(PIN['E' + RUN + '01']), '지정 PIN 유지·새 PIN 4자리');
-  const [row] = await sql`select pin_hash from students where code = ${'E' + RUN + '01'}`;
-  ok(row.pin_hash.indexOf(PIN['E' + RUN + '01']) < 0 && row.pin_hash.indexOf('s1$') === 0, 'PIN은 해시로만 저장');
+  const [row] = await sql`select pin_hash, pin_enc from students where code = ${'E' + RUN + '01'}`;
+  ok(row.pin_hash.indexOf(PIN['E' + RUN + '01']) < 0 && row.pin_hash.indexOf('s1$') === 0, 'PIN 확인용은 해시로 저장');
+  ok(row.pin_enc && row.pin_enc.indexOf('p1$') === 0 && row.pin_enc.indexOf(PIN['E' + RUN + '01']) < 0, 'PIN 표시용은 암호문으로 저장(평문 없음)');
+  r = await call('GET', 'admin/students', undefined, RT);
+  const listed = {}; (r.body.students || []).forEach(function (s) { listed[s.code] = s.pin; });
+  ok(listed['L' + RUN + '01'] === '4321' && listed['E' + RUN + '01'] === PIN['E' + RUN + '01'] && listed['C' + RUN + '15'] === PIN['C' + RUN + '15'], '연구자 학생 목록에 PIN 표시', r.body.students && r.body.students.slice(0, 2));
+  r = await call('GET', 'admin/students', undefined, TT); ok(r.status === 403, '교사는 학생 목록(PIN) 못 봄');
   const E1 = 'E' + RUN + '01', E2 = 'E' + RUN + '02', C1 = 'C' + RUN + '01', C2 = 'C' + RUN + '02', LATE = 'L' + RUN + '01';
 
   // ---------- 학생 로그인 ----------
@@ -60,6 +65,7 @@ const S = 'T' + RUN, S2 = 'U' + RUN, SD = 'D' + RUN;
   for (let i = 0; i < 5; i++) await call('POST', 'login/student', { session_code: S, student_code: E2, pin: PIN[E2] === '9999' ? '9998' : '9999' });
   r = await call('POST', 'login/student', { session_code: S, student_code: E2, pin: PIN[E2] }); ok(r.status === 423, '5번 틀리면 잠김(맞는 PIN도 거부)');
   r = await call('POST', 'admin/student', { code: E2, reset_pin: true }, RT); ok(r.status === 200 && /^\d{4}$/.test(r.body.pin), '연구자 PIN 재발급·잠금 해제'); PIN[E2] = r.body.pin;
+  r = await call('GET', 'admin/students', undefined, RT); ok(r.body.students.filter(function (s) { return s.code === E2; })[0].pin === PIN[E2], '재발급한 PIN이 목록에 반영');
   const tok = {}, meOf = {};
   for (const code of [E1, E2, C1, C2]) {
     r = await call('POST', 'login/student', { session_code: S.toLowerCase(), student_code: code.toLowerCase(), pin: PIN[code] });
