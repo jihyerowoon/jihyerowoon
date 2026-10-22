@@ -243,7 +243,7 @@
     $('#app').innerHTML = '<main class="entry"><section class="entry-card">' +
       '<div class="brand"><svg viewBox="0 0 64 40" class="brand-mark" aria-hidden="true"><path d="M18 4 H60 L46 36 H4 Z"/><path d="M18 4 L46 36 M60 4 L4 36" class="d"/></svg>' +
       '<div><p class="eyebrow">연구용 MVP · ' + esc(C.versions.app) + '</p><h1>PQ4R 튜터</h1><p class="sub">' + Object.keys(C.lessons).map(function (k) { return esc(lessonLabel(+k)) + ' ' + C.lessons[k].total + '분'; }).join(' / ') + ' · 중학교 2학년</p></div></div>' +
-      '<p class="lead">학생이 먼저 풀고, 필요한 만큼만 0~4단계로 돕고, 모든 과정을 지우지 않고 기록합니다.</p>' +
+      '<p class="lead">학생이 먼저 생각하고 답을 제출한 뒤 필요할 때 같은 수준의 메타인지 점검 질문을 요청합니다. 반복 과정은 모두 기록됩니다.</p>' +
       '<nav class="login-tabs" role="tablist">' + [['student', '학생'], ['teacher', '교사'], ['researcher', '연구자']].map(function (t) {
         return '<button class="login-tab' + (t[0] === tab ? ' on' : '') + '" role="tab" aria-selected="' + (t[0] === tab) + '" data-ltab="' + t[0] + '">' + t[1] + '</button>';
       }).join('') + '</nav><div id="loginbox"></div></section></main>';
@@ -448,7 +448,7 @@
       var h = '<article class="item" data-item="' + it.id + '"><header class="item-h"><div class="item-t">' + (it.mark ? '<span class="mark">' + esc(it.mark) + '</span>' : '') +
         '<h3>' + fmt(it.title) + '</h3></div><span class="chip-status" data-status="' + it.id + '"></span></header>';
       if (it.fig || it.choices) h += '<div class="probblock">' + figHTML(it.fig) + choicesHTML(it.choices) + '</div>';
-      if (it.fixedAI) h += '<div class="aiout"><p class="aiout-k">AI의 설명 <small>검토할 자료</small></p><p>' + fmt(it.fixedAI.text) + '</p></div>';
+      if (it.fixedAI) h += '<div class="aiout"><p class="aiout-k">검토할 풀이 설명 <small>두 집단 공통 검토자료</small></p><p>' + fmt(it.fixedAI.text) + '</p></div>';
       if (it.sub) h += '<p class="item-sub">' + fmt(it.sub) + '</p>';
       if (it.hint) h += '<p class="item-hint">' + fmt(it.hint) + '</p>';
       if (it.recall) {
@@ -793,19 +793,19 @@
       var openReq = d.requests.filter(function (r) { return r.item_id === self.selItem && !r.answered_at; });
       n.innerHTML = '<form class="sendform" id="sendform"><h3>지원 보내기 <small>' + esc(shortOf(self.selItem)) + '</small></h3>' +
         (opt.preSubmitOnly ? '<p class="note">학생이 아직 제출하지 않았어요. 두 집단 공통 원칙에 따라 “먼저 생각 적기” 안내만 보낼 수 있어요.</p>' : '') +
-        '<label>지원 수준<select id="sf-level">' + opt.levels.map(function (l) { return '<option value="' + l + '"' + (l === opt.suggested ? ' selected' : '') + '>수준 ' + l + (l === opt.suggested && !opt.preSubmitOnly ? ' (권장: 한 단계 위)' : '') + '</option>'; }).join('') + '</select></label>' +
-        '<p class="hint small">이 단계 상한 ' + opt.cap + ' · 현재 ' + ((it && it.rec.level) || 0) + '</p><div id="sf-bank" class="bank"></div>' +
-        '<label class="custom">직접 쓰기 <small>(표준 발문 대신 쓸 때만, 기록에 표시돼요)</small><textarea id="sf-custom" rows="2" maxlength="500"></textarea></label>' +
+        '<p class="hint small">메타인지적 점검 질문 · 단일 지원 수준</p><input id="sf-level" type="hidden" value="1">' +
+        '<div id="sf-bank" class="bank"></div>' +
+        '<input id="sf-custom" type="hidden" value="">' +
         '<p class="warnline" id="sf-warn" hidden></p><button class="btn primary" type="submit">보내기</button>' +
         '<span class="hint small">' + (openReq.length ? '요청에 답하는 지원으로 기록돼요' : '교사가 먼저 건네는 지원으로 기록돼요') + '</span></form>';
       var renderBank = function () {
         var L = +$('#sf-level').value;
-        var list = L === 0 ? [self.bank.pre_submit] : self.bank.bank.filter(function (b) { return b.item === self.selItem && b.level === L; });
+        var list = L === 0 ? [] : self.bank.bank.filter(function (b) { return b.item === self.selItem && b.level === 1 && !b.group; });
         $('#sf-bank').innerHTML = list.map(function (b, i) { return '<label class="bankopt"><input type="radio" name="sf-b" value="' + esc(b.id) + '"' + (i === 0 ? ' checked' : '') + '><span>' + fmt(b.text) + '</span></label>'; }).join('');
       };
       renderBank();
-      $('#sf-level').onchange = renderBank;
-      $('#sf-custom').oninput = function () { self.confirmCustom = false; $('#sf-warn').hidden = true; };
+      // 단일 수준이므로 수준 변경 버튼은 제공하지 않는다.
+      // 직접 문장 입력은 연구 처치 기준을 위해 비활성화한다.
       $('#sendform').onsubmit = function (ev) {
         ev.preventDefault();
         var btn = $('#sendform button[type=submit]'); btn.disabled = true;
