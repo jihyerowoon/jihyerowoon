@@ -434,8 +434,10 @@
           '<div class="panel"><h4>정답과 검증용 풀이 초안</h4><p><b>' + esc(sol.answer) + '</b></p><ol>' + (sol.steps||[]).map(function (line){return '<li>' + fmt(line) + '</li>';}).join('') + '</ol></div></div></div></details>';
       }).join('');
       var ref = data.reflection;
-      var completed = ref ? '<section class="panel"><h3>해설 후 성찰 저장 완료</h3><p><b>이해 정도:</b> ' + esc(confidence[ref.understanding]||'') + '</p><p><b>내 풀이와 비교:</b> ' + esc(ref.comparison) + '</p><p><b>다음 점검:</b> ' + esc(ref.next_step) + '</p></section>' :
-        '<section class="panel"><h3>해설을 본 뒤 나의 이해 정도 성찰</h3>' +
+      var completed = ref ? '<section class="panel"><h3>해설 후 성찰 저장 완료</h3><p><b>중심 문제:</b> ' + esc(ref.focus_item || '') + '</p><p><b>이해 정도:</b> ' + esc(confidence[ref.understanding]||'') + '</p><p><b>내 풀이와 비교:</b> ' + esc(ref.comparison) + '</p><p><b>다음 점검:</b> ' + esc(ref.next_step) + '</p></section>' :
+        '<section class="panel"><h3>해설을 본 뒤 나의 이해 정도 성찰</h3><p class="hint small">어려웠던 문제 한 개를 골라 깊이 비교해 보세요. 이해하지 못한 점도 그대로 기록하면 됩니다.</p>' +
+        '<label style="display:block;margin:10px 0">성찰할 문제<select id="post-focus-item"><option value="">문제를 선택하세요</option>' +
+        (data.solutions||[]).map(function(x,i){return '<option value="'+esc(x.item_id)+'">'+(i<3?'Reflect 문제 '+(i+1):'Review 다시 풀기')+'</option>';}).join('') + '</select></label>' +
         '<fieldset><legend>지금 이 문제의 풀이를 다른 사람에게 설명할 수 있나요?</legend>' +
         Object.keys(confidence).map(function(k){return '<label style="display:block;margin:8px 0"><input type="radio" name="post-understanding" value="'+k+'"> '+esc(confidence[k])+'</label>';}).join('') + '</fieldset>' +
         '<label style="display:block;margin:10px 0">내 풀이와 해설에서 같았거나 달랐던 점<textarea id="post-comparison" rows="3" maxlength="1200" placeholder="모르는 부분이 남았다면 그대로 적어도 됩니다."></textarea></label>' +
@@ -459,7 +461,7 @@
     },
     submitReviewReflection: function(){
       var self=this, checked=$('input[name="post-understanding"]:checked');
-      var body={understanding:checked?checked.value:'',comparison:($('#post-comparison')||{}).value||'',next_step:($('#post-next-step')||{}).value||''};
+      var body={focus_item:($('#post-focus-item')||{}).value||'',understanding:checked?checked.value:'',comparison:($('#post-comparison')||{}).value||'',next_step:($('#post-next-step')||{}).value||''};
       var btn=$('[data-act="review-reflect"]'); if(btn) btn.disabled=true;
       api('POST','me/review-reflection',body).then(function(r){
         if(self.reviewFeedback) self.reviewFeedback.reflection=r.saved;
