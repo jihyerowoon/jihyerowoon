@@ -6,8 +6,9 @@ let passes=0;
 function ok(v,label){assert.ok(v,label);passes++;}
 for(const lesson of [1,2]){
   const sols=R.publicSolutions(lesson);
-  ok(sols.length===4,lesson+'차시 3개 Reflect + 1개 Review 정답');
+  ok(sols.length===5,lesson+'차시 3개 Reflect + 1개 Review + 1개 Read 정답');
   ok(sols.filter(x=>x.item_id.includes('RF')).length===3,lesson+'차시 Reflect 세 문항');
+  ok(sols.some(x=>x.item_id==='L'+lesson+'RD02'),lesson+'차시 Read 개념확인 해설 반영');
   ok(sols.every(x=>x.answer&&x.steps.length>=2&&x.problem),lesson+'차시 정답과 단계별 해설');
   ok(C.LESSONS[lesson].min[5]===12,lesson+'차시 Review 12분');
 }
