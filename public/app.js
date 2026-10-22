@@ -287,18 +287,18 @@
    * 학생
    * ===================================================================== */
   var Student = {
-    me: null, view: 0, focus: null, busy: {}, saveTimers: {}, pending: {}, reviewFeedback: null, reviewLoading: false, lastReviewFetch: 0,
+    me: null, view: 0, focus: null, busy: {}, saveTimers: {}, pending: {}, reviewFeedback: null, reviewLoading: false, lastReviewFetch: 0, reviewReflectionShown: false,
     start: function (me) {
       cleanup(); App.screen = 'student';
       var self = this;
-      self.me = me; self.view = me.session.stage; self.focus = null; self.busy = {}; self.pending = store(self.pendKey()) || {}; self.reviewFeedback = null; self.reviewLoading = false; self.lastReviewFetch = 0;
+      self.me = me; self.view = me.session.stage; self.focus = null; self.busy = {}; self.pending = store(self.pendKey()) || {}; self.reviewFeedback = null; self.reviewLoading = false; self.lastReviewFetch = 0; self.reviewReflectionShown = false;
       document.body.className = 'is-student g-' + me.student.group.toLowerCase();
       Object.keys(self.pending).forEach(function (id) { var p = self.pending[id]; var it = self.item(id); it.draft = p.draft; it.draft_sel = p.draft_sel; it.reason = p.reason; self.flushDraft(id); });
       self.shell();
       every(4000, function () { return self.poll(); }, 15000);
       App.timers.push(setInterval(function () {
         var t = $('#timer'); if (t) t.innerHTML = timerText(self.me.session);
-        if (self.view === 5 && self.stageIdx() === 5) { var due = self.me.review && self.me.review.release_at; var count = $('#review-release-count'); if (count && due) count.textContent = '해설까지 ' + mmss((Date.parse(due)-nowMs())/1000); if (due && nowMs() >= Date.parse(due)) self.loadReviewFeedback(); }
+        if (self.view === 5 && self.stageIdx() === 5) { var due = self.me.review && self.me.review.release_at; var reflectAt = self.me.review && self.me.review.reflection_at; var count = $('#review-release-count'); if (count && due) count.textContent = '해설까지 ' + mmss((Date.parse(due)-nowMs())/1000); if (due && nowMs() >= Date.parse(due)) self.loadReviewFeedback(); var rc = $('#review-reflect-count'); if (rc && reflectAt) rc.textContent = '성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000); if (reflectAt && nowMs() >= Date.parse(reflectAt) && self.reviewFeedback && !self.reviewReflectionShown) { self.reviewReflectionShown = true; self.renderStage(); } }
         $('.waiting[data-at]').forEach(function (n) { n.textContent = '도움 요청 보냄 · ' + mmss((nowMs() - Date.parse(n.getAttribute('data-at'))) / 1000) + ' 기다리는 중'; });
       }, 1000));
     },
@@ -421,7 +421,7 @@
     reviewPanel: function () {
       var due = this.me.review && this.me.review.release_at, data = this.reviewFeedback, self = this;
       if (!due) return '';
-      if (nowMs() < Date.parse(due)) return '<section class="panel"><h3>Review 자기점검 · 첫 8분</h3><p>정답과 풀이를 보기 전, 나의 판단과 근거를 작성하여 제출해 주세요.</p><p id="review-release-count" class="hint small">해설까지 ' + mmss((Date.parse(due)-nowMs())/1000) + '</p><p class="small">8분이 지나면 현재까지의 응답을 보존하고 해설을 동시에 공개합니다.</p></section>';
+      if (nowMs() < Date.parse(due)) return '<section class="panel"><h3>Review 첫 6분 · 문제 풀이</h3><p>정답 없이 문제를 풀고 풀이 근거를 작성해 제출해 주세요.</p><p id="review-release-count" class="hint small">정답 공개까지 ' + mmss((Date.parse(due)-nowMs())/1000) + '</p><p class="small">6분 뒤 두 집단에 정답과 풀이를 동시에 공개합니다. 작성한 답변은 보존됩니다.</p></section>';
       if (!data) return '<section class="panel"><h3>해설 공개 시간</h3><p>나의 답변을 보존하고 정답과 해설을 불러오는 중입니다.</p></section>';
       var confidence = {explain:'다른 사람에게 설명할 수 있다',partial:'일부는 이해했지만 아직 어렵다',uncertain:'아직 이해하지 못했다'};
       var solutionName = function(x) { var id=x.item_id||''; return id.indexOf('RV')>=0?'Review 다시 풀기':id.indexOf('RD')>=0?'Read 개념확인':'Reflect 문제 '+id.slice(-1); };
@@ -435,16 +435,18 @@
           '<div class="panel"><h4>정답과 검증용 풀이 초안</h4><p><b>' + esc(sol.answer) + '</b></p><ol>' + (sol.steps||[]).map(function (line){return '<li>' + fmt(line) + '</li>';}).join('') + '</ol></div></div></div></details>';
       }).join('');
       var ref = data.reflection;
-      var completed = ref ? '<section class="panel"><h3>해설 후 성찰 저장 완료</h3><p><b>중심 문제:</b> ' + esc(ref.focus_item || '') + '</p><p><b>이해 정도:</b> ' + esc(confidence[ref.understanding]||'') + '</p><p><b>내 풀이와 비교:</b> ' + esc(ref.comparison) + '</p><p><b>다음 점검:</b> ' + esc(ref.next_step) + '</p></section>' :
+      var reflectAt = this.me.review && this.me.review.reflection_at;
+      var canReflect = reflectAt && nowMs() >= Date.parse(reflectAt);
+      var completed = ref ? '<section class="panel"><h3>해설 후 성찰 저장 완료</h3><p><b>중심 문제:</b> ' + esc(ref.focus_item || '') + '</p><p><b>이해 정도:</b> ' + esc(confidence[ref.understanding]||'') + '</p><p><b>내 풀이와 비교:</b> ' + esc(ref.comparison) + '</p></section>' :
         '<section class="panel"><h3>해설을 본 뒤 나의 이해 정도 성찰</h3><p class="hint small">5문항의 해설을 확인하고 어려웠던 문제 한 개를 골라 깊이 비교해 보세요. 이해하지 못한 점도 그대로 기록하면 됩니다.</p>' +
         '<label style="display:block;margin:10px 0">성찰할 문제<select id="post-focus-item"><option value="">문제를 선택하세요</option>' +
         (data.solutions||[]).map(function(x,i){return '<option value="'+esc(x.item_id)+'">'+solutionName(x)+'</option>';}).join('') + '</select></label>' +
         '<fieldset><legend>지금 이 문제의 풀이를 다른 사람에게 설명할 수 있나요?</legend>' +
         Object.keys(confidence).map(function(k){return '<label style="display:block;margin:8px 0"><input type="radio" name="post-understanding" value="'+k+'"> '+esc(confidence[k])+'</label>';}).join('') + '</fieldset>' +
-        '<label style="display:block;margin:10px 0">내 풀이와 해설에서 같았거나 달랐던 점<textarea id="post-comparison" rows="3" maxlength="1200" placeholder="모르는 부분이 남았다면 그대로 적어도 됩니다."></textarea></label>' +
-        '<label style="display:block;margin:10px 0">다음에 비슷한 문제에서 먼저 확인할 것<textarea id="post-next-step" rows="2" maxlength="1200" placeholder="다음에 점검할 조건이나 개념을 적어 보세요."></textarea></label>' +
+        '<label style="display:block;margin:10px 0">해설을 보고 새롭게 확인한 점 또는 아직 어려운 점 한 가지<textarea id="post-comparison" rows="2" maxlength="350" placeholder="한두 문장으로 적어 보세요."></textarea></label>' +
         '<button type="button" class="btn primary" data-act="review-reflect">해설 후 성찰 저장</button></section>';
-      return '<section class="panel"><h2>Review 해설 공개 · 마지막 4분</h2><p>정답 공개 전까지의 응답은 별도 기록으로 보존되었습니다. 아래 문제와 나의 답안을 비교하세요.</p><p class="hint small">이 페이지는 두 집단 공통으로 열립니다. 문항별 수학적 검수 후 실제 수업에 사용하세요.</p>' + cards + '</section>' + completed;
+      var reflectUI = ref || canReflect ? completed : '<section class="panel"><h3>6~10분: 정답과 내 풀이 비교</h3><p>풀이에서 무엇이 같고 다른지 확인하세요. 마지막 2분에 짧은 이해도 성찰이 열립니다.</p><p id="review-reflect-count" class="hint small">성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000) + '</p></section>';
+      return '<section class="panel"><h2>Review 정답과 풀이 · 6분 후 공개</h2><p>첫 6분의 자기 풀이를 보존했습니다. 다음 4분은 정답 비교, 마지막 2분은 성찰입니다.</p><p class="hint small">두 집단에 동일하게 제공하는 검증용 해설 초안입니다.</p>' + cards + '</section>' + reflectUI;
     },
     loadReviewFeedback: function () {
       var self=this, due=self.me.review && self.me.review.release_at;
@@ -462,7 +464,7 @@
     },
     submitReviewReflection: function(){
       var self=this, checked=$('input[name="post-understanding"]:checked');
-      var body={focus_item:($('#post-focus-item')||{}).value||'',understanding:checked?checked.value:'',comparison:($('#post-comparison')||{}).value||'',next_step:($('#post-next-step')||{}).value||''};
+      var body={focus_item:($('#post-focus-item')||{}).value||'',understanding:checked?checked.value:'',comparison:($('#post-comparison')||{}).value||'',next_step:''};
       var btn=$('[data-act="review-reflect"]'); if(btn) btn.disabled=true;
       api('POST','me/review-reflection',body).then(function(r){
         if(self.reviewFeedback) self.reviewFeedback.reflection=r.saved;
@@ -1068,7 +1070,7 @@
           row(r.preSubmitMath === 0, '첫 제출 전 메타인지 지원 없음', r.preSubmitMath + '건') + row(r.leaks === 0, '지원 문장에 정답 노출 없음', r.leaks + '건') +
           row(r.levelViolations === 0, '지원 강도 1수준만 사용', r.levelViolations + '건') + row(r.typeViolations === 0, '메타인지 발문 한 유형만 사용', r.typeViolations + '건') + row(r.unsolicited === 0, '학생 요청에 근거한 발문만 제공', r.unsolicited + '건') + row(r.unapprovedText === 0, '발문은행 외 질문 사용 없음', r.unapprovedText + '건') +
           row(r.reflectSignals === 0, 'Reflect에서 정오 신호 없음', r.reflectSignals + '건') + row(r.controlAI === 0, '통제집단 AI 지원 0건', r.controlAI + '건') +
-          row(r.earlyReviewDisclosure === 0, 'Review 8분 이전 정답 공개 없음', r.earlyReviewDisclosure + '건') +
+          row(r.earlyReviewDisclosure === 0, 'Review 6분 이전 정답 공개 없음', r.earlyReviewDisclosure + '건') +
           row(true, '공개 전 답변 고정', r.reviewSnapshots + '명', '첫 해설 열람 시 원래 답변 보존') +
           row(true, '해설 공개 학생', r.reviewFeedbackOpens + '명') +
           row(true, '해설 후 이해도 성찰 제출', r.reviewPostReflections + '명') +
