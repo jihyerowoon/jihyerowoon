@@ -1065,6 +1065,10 @@
           row(r.preSubmitMath === 0, '첫 제출 전 메타인지 지원 없음', r.preSubmitMath + '건') + row(r.leaks === 0, '지원 문장에 정답 노출 없음', r.leaks + '건') +
           row(r.levelViolations === 0, '지원 강도 1수준만 사용', r.levelViolations + '건') + row(r.typeViolations === 0, '메타인지 발문 한 유형만 사용', r.typeViolations + '건') + row(r.unsolicited === 0, '학생 요청에 근거한 발문만 제공', r.unsolicited + '건') + row(r.unapprovedText === 0, '발문은행 외 질문 사용 없음', r.unapprovedText + '건') +
           row(r.reflectSignals === 0, 'Reflect에서 정오 신호 없음', r.reflectSignals + '건') + row(r.controlAI === 0, '통제집단 AI 지원 0건', r.controlAI + '건') +
+          row(r.earlyReviewDisclosure === 0, 'Review 8분 이전 정답 공개 없음', r.earlyReviewDisclosure + '건') +
+          row(true, '공개 전 답변 고정', r.reviewSnapshots + '명', '첫 해설 열람 시 원래 답변 보존') +
+          row(true, '해설 공개 학생', r.reviewFeedbackOpens + '명') +
+          row(true, '해설 후 이해도 성찰 제출', r.reviewPostReflections + '명') +
           row(r.reciteBeforeStudent === 0, 'Recite에서 학생 설명이 먼저', r.reciteBeforeStudent + '건') + row(true, 'AI 문장 차단(대체됨)', r.blocked + '건', '차단되면 원래 은행 문장이 나가요') +
           row(r.needsReview === 0, '사람 검토가 필요한 판정', r.needsReview + '건', '사람 검토 탭에서 코딩') +
           row(true, '미완료(시간 종료)', r.timeouts + '건', r.lateJoin ? '늦게 들어와 이미 닫힌 단계 문항 ' + r.lateJoin + '건은 따로 셈' : '') +
