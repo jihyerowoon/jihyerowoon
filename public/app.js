@@ -794,9 +794,10 @@
       n.innerHTML = '<form class="sendform" id="sendform"><h3>지원 보내기 <small>' + esc(shortOf(self.selItem)) + '</small></h3>' +
         (opt.preSubmitOnly ? '<p class="note">학생이 아직 제출하지 않았어요. 두 집단 공통 원칙에 따라 “먼저 생각 적기” 안내만 보낼 수 있어요.</p>' : '') +
         '<p class="hint small">메타인지적 점검 질문 · 단일 지원 수준</p><input id="sf-level" type="hidden" value="1">' +
+        (!openReq.length ? '<p class="note">학생의 도움 요청이 오면 발문을 보낼 수 있습니다.</p>' : '') +
         '<div id="sf-bank" class="bank"></div>' +
         '<input id="sf-custom" type="hidden" value="">' +
-        '<p class="warnline" id="sf-warn" hidden></p><button class="btn primary" type="submit">보내기</button>' +
+        '<p class="warnline" id="sf-warn" hidden></p><button class="btn primary" type="submit"' + ((!openReq.length || opt.preSubmitOnly) ? ' disabled' : '') + '>보내기</button>' +
         '<span class="hint small">' + (openReq.length ? '요청에 답하는 지원으로 기록돼요' : '교사가 먼저 건네는 지원으로 기록돼요') + '</span></form>';
       var renderBank = function () {
         var L = +$('#sf-level').value;
@@ -1004,8 +1005,8 @@
         function row(ok, label, val, note) { return '<li class="' + (ok ? 'pass' : 'fail') + '"><span class="mk">' + (ok ? '통과' : '확인') + '</span><span class="lb">' + label + '</span><span class="vl mono">' + val + '</span>' + (note ? '<small>' + note + '</small>' : '') + '</li>'; }
         var maxl = r.maxLevelByStudent, ks = Object.keys(maxl).sort();
         $('#rbody').innerHTML = '<div class="rgrid"><section class="rcard"><h2>처치충실도 <small>' + esc(sc) + ' · 기록에서 자동 계산</small></h2><ul class="fid">' +
-          row(r.preSubmitMath === 0, '첫 제출 전 수학 지원 없음', r.preSubmitMath + '건') + row(r.leaks === 0, '지원 문장에 정답 노출 없음', r.leaks + '건') +
-          row(r.capViolations === 0, '단계별 지원 상한 지킴', r.capViolations + '건') + row(r.jumps === 0, '한 번에 한 단계씩만 상승', r.jumps + '건', '교사가 건너뛴 경우 포함') +
+          row(r.preSubmitMath === 0, '첫 제출 전 메타인지 지원 없음', r.preSubmitMath + '건') + row(r.leaks === 0, '지원 문장에 정답 노출 없음', r.leaks + '건') +
+          row(r.levelViolations === 0, '지원 강도 1수준만 사용', r.levelViolations + '건') + row(r.typeViolations === 0, '메타인지 발문 한 유형만 사용', r.typeViolations + '건') + row(r.unsolicited === 0, '학생 요청에 근거한 발문만 제공', r.unsolicited + '건') + row(r.unapprovedText === 0, '발문은행 외 질문 사용 없음', r.unapprovedText + '건') +
           row(r.reflectSignals === 0, 'Reflect에서 정오 신호 없음', r.reflectSignals + '건') + row(r.controlAI === 0, '통제집단 AI 지원 0건', r.controlAI + '건') +
           row(r.reciteBeforeStudent === 0, 'Recite에서 학생 설명이 먼저', r.reciteBeforeStudent + '건') + row(true, 'AI 문장 차단(대체됨)', r.blocked + '건', '차단되면 원래 은행 문장이 나가요') +
           row(r.needsReview === 0, '사람 검토가 필요한 판정', r.needsReview + '건', '사람 검토 탭에서 코딩') +
@@ -1014,7 +1015,7 @@
           '</ul></section><section class="rcard"><h2>지원 분량</h2><p>AI 수학 지원 <b class="mono">' + r.supportCount.AI + '</b>회 · 교사 수학 지원 <b class="mono">' + r.supportCount.TEACHER + '</b>회</p>' +
           '<p>교재 열람: 실험 <b class="mono">' + r.materialOpens.EXPERIMENT + '</b>회 · 통제 <b class="mono">' + r.materialOpens.CONTROL + '</b>회</p>' +
           '<p>교사 응답 대기: ' + (r.teacherWait.n ? '중앙값 <b class="mono">' + mmss(r.teacherWait.median) + '</b> · 최대 <b class="mono">' + mmss(r.teacherWait.max) + '</b> (' + r.teacherWait.n + '건)' : '기록 없음') + '</p>' +
-          '<h3>학생별 최고 지원 수준</h3>' + (ks.length ? '<div class="lvls">' + ks.map(function (k) { return '<span class="lv"><b>' + esc(k) + '</b> L' + maxl[k] + '</span>'; }).join('') + '</div>' : '<p class="muted">아직 지원 기록이 없어요.</p>') + '</section></div>';
+          '<h3>학생별 적용된 지원 수준</h3>' + (ks.length ? '<div class="lvls">' + ks.map(function (k) { return '<span class="lv"><b>' + esc(k) + '</b> L' + maxl[k] + '</span>'; }).join('') + '</div>' : '<p class="muted">아직 지원 기록이 없어요.</p>') + '</section></div>';
       }).catch(function (e) { $('#rbody').innerHTML = '<p class="empty">' + esc(e.message) + '</p>'; });
     },
     renderRev: function () {
@@ -1051,7 +1052,7 @@
           return '<details class="bankitem"><summary><b>' + esc(it.short) + '</b> ' + esc(it.stage) + ' · 상한 ' + cap[it.stage] + ' · ' + (byItem[it.id] || []).length + '문장' + (rbx && rbx.draft ? ' <span class="pill warn">기준 초안</span>' : '') + '</summary>' +
             '<p class="small muted">' + fmt(it.title) + '</p>' +
             (rbx ? '<p class="small"><b>정답 기준' + (rbx.draft ? '(초안 · 연구자 검토 필요)' : '') + '</b> 기대: ' + fmt(rbx.expected) + ' / 인정: ' + fmt(rbx.accepted) + ' / 오개념: ' + fmt(rbx.misconceptions) + (rbx.add ? '<br><b>추가 기준</b> ' + fmt(rbx.add) : '') + '</p>' : '') +
-            (fxs ? '<p class="small"><b>실험집단 AI의 설명</b> “' + fmt(fxs.text) + '” · 실제 성격 <span class="mono">' + esc(fxs.type) + '</span> · 충족으로 보는 판단: ' + vk(fxs.ok) + (fxs.near && fxs.near.length ? ' · 일부 충족: ' + vk(fxs.near) : '') + '</p>' : '') +
+            (fxs ? '<p class="small"><b>두 집단 공통 검토 설명</b> “' + fmt(fxs.text) + '” · 실제 성격 <span class="mono">' + esc(fxs.type) + '</span> · 충족으로 보는 판단: ' + vk(fxs.ok) + (fxs.near && fxs.near.length ? ' · 일부 충족: ' + vk(fxs.near) : '') + '</p>' : '') +
             '<table class="banktab"><thead><tr><th>수준</th><th>상태</th><th>변형</th><th>집단</th><th>출처</th><th>문장</th></tr></thead><tbody>' +
             (byItem[it.id] || []).map(function (b) { return '<tr><td class="mono">L' + b.level + '</td><td class="mono small">' + esc(b.state) + '</td><td>' + esc(b.variant) + '</td><td>' + (b.group ? groupKo(b.group).replace('집단', '') : '공통') + '</td><td>' + esc(b.src) + '</td><td>' + fmt(b.text) + '</td></tr>'; }).join('') + '</tbody></table></details>';
           }).join('');
