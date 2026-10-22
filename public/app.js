@@ -80,7 +80,7 @@
 
   /* ---------- 문항 내용(공개분) ---------- */
   function resolveItem(itemId, group, settings) {
-    var it = ITEM[itemId], g = (it.byGroup && it.byGroup[group]) || {};
+    var it = ITEM[itemId], g = (it.stage === 'Reflect' && it.byGroup && it.byGroup.EXPERIMENT) || (it.byGroup && it.byGroup[group]) || {};
     return { id: it.id, lesson: it.lesson, stage: it.stage, mark: it.mark, short: it.short || it.id, recall: it.recall || null, title: g.title || it.title, sub: g.sub || it.sub || null, hint: g.hint || it.hint || null,
       fig: it.fig ? C.figs[it.fig] : null, choices: it.choices || null, fixedAI: g.fixedAI ? C.fixed_ai[g.fixedAI] : null, fields: g.fields || it.fields };
   }
