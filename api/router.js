@@ -29,6 +29,8 @@ const routes = {
   'POST me/draft': { roles: STUDENT, body: true, fn: async function (ctx) { return S.saveDraft(ctx.tok, ctx.body); } },
   'POST me/submit': { roles: STUDENT, body: true, fn: async function (ctx) { return S.submit(ctx.tok, ctx.body); } },
   'POST me/help': { roles: STUDENT, body: true, fn: async function (ctx) { return S.help(ctx.tok, ctx.body); } },
+  'GET me/review-feedback': { roles: STUDENT, fn: async function (ctx) { return S.reviewFeedback(ctx.tok); } },
+  'POST me/review-reflection': { roles: STUDENT, body: true, fn: async function (ctx) { return S.reviewReflect(ctx.tok, ctx.body); } },
   'POST me/event': { roles: STUDENT, body: true, fn: async function (ctx) { return S.clientEvent(ctx.tok, ctx.body); } },
   'POST me/stage': { roles: STUDENT, body: true, fn: async function (ctx) { return S.demoStage(ctx.tok, ctx.body); } },
 
