@@ -18,9 +18,10 @@ ok(R.status(sess,t+480000).unlocked,'8분부터 해설 공개');
 ok(R.status(sess,t+1).release_at===new Date(t+480000).toISOString(),'서버 절대 시각 공개');
 ok(!R.status({...sess,stage:4},t+500000).unlocked,'Recite 단계 정답 비공개');
 ok(!R.status({...sess,status:'closed'},t+500000).unlocked,'수업 종료 후 신규 응답 불가');
-ok(R.normalizeReflection({understanding:'uncertain',comparison:'이해 안 됨',next_step:'다시 확인'}).understanding==='uncertain','이해 안 됨도 성찰로 인정');
-for (const x of ['explain','partial','uncertain']) ok(R.normalizeReflection({understanding:x,comparison:'a',next_step:'b'}).understanding===x,'세 자기평가 선택지');
-try {R.normalizeReflection({understanding:'no',comparison:'a',next_step:'b'});throw new Error('미승인 응답 통과');} catch(e){ok(e.message!=='미승인 응답 통과','미승인 응답 차단');}
+ok(R.normalizeReflection({focus_item:'L1RF01',understanding:'uncertain',comparison:'이해 안 됨',next_step:'다시 확인'}).understanding==='uncertain','이해 안 됨도 성찰로 인정');
+for (const x of ['explain','partial','uncertain']) ok(R.normalizeReflection({focus_item:'L2RF03',understanding:x,comparison:'a',next_step:'b'}).understanding===x,'세 자기평가 선택지');
+try {R.normalizeReflection({focus_item:'L1RV01',understanding:'no',comparison:'a',next_step:'b'});throw new Error('미승인 응답 통과');} catch(e){ok(e.message!=='미승인 응답 통과','미승인 응답 차단');}
+try {R.normalizeReflection({focus_item:'L2RF04',understanding:'explain',comparison:'a',next_step:'b'});throw new Error('없는 문항 통과');} catch(e){ok(e.message!=='없는 문항 통과','없는 문항 선택 금지');}
 let audit=E.fidelity([
 {event_type:'REVIEW_PRE_SNAPSHOT'},
 {event_type:'REVIEW_FEEDBACK_OPEN',event_timestamp:new Date(t+480010).toISOString(),extra:{release_at:new Date(t+480000).toISOString()}},
