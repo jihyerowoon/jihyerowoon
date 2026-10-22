@@ -84,7 +84,7 @@
     return { id: it.id, lesson: it.lesson, stage: it.stage, mark: it.mark, short: it.short || it.id, recall: it.recall || null, title: g.title || it.title, sub: g.sub || it.sub || null, hint: g.hint || it.hint || null,
       fig: it.fig ? C.figs[it.fig] : null, choices: it.choices || null, fixedAI: g.fixedAI ? C.fixed_ai[g.fixedAI] : null, fields: g.fields || it.fields };
   }
-  function itemsForStage(stageId, group, settings, lesson) { return C.items.filter(function (it) { return it.stage === stageId && it.lesson === (lesson || 1); }).map(function (it) { return resolveItem(it.id, group, settings); }); }
+  function itemsForStage(stageId, group, settings, lesson) { return C.items.filter(function (it) { return !it.archived && it.stage === stageId && it.lesson === (lesson || 1); }).map(function (it) { return resolveItem(it.id, group, settings); }); }
   function stageIdxOf(id) { for (var i = 0; i < C.stages.length; i++) if (C.stages[i].id === id) return i; return -1; }
   /* 차시 */
   function lessonOf(n) { return C.lessons[n] || C.lessons[1]; }
