@@ -424,10 +424,11 @@
       if (nowMs() < Date.parse(due)) return '<section class="panel"><h3>Review 자기점검 · 첫 8분</h3><p>정답과 풀이를 보기 전, 나의 판단과 근거를 작성하여 제출해 주세요.</p><p id="review-release-count" class="hint small">해설까지 ' + mmss((Date.parse(due)-nowMs())/1000) + '</p><p class="small">8분이 지나면 현재까지의 응답을 보존하고 해설을 동시에 공개합니다.</p></section>';
       if (!data) return '<section class="panel"><h3>해설 공개 시간</h3><p>나의 답변을 보존하고 정답과 해설을 불러오는 중입니다.</p></section>';
       var confidence = {explain:'다른 사람에게 설명할 수 있다',partial:'일부는 이해했지만 아직 어렵다',uncertain:'아직 이해하지 못했다'};
+      var solutionName = function(x) { var id=x.item_id||''; return id.indexOf('RV')>=0?'Review 다시 풀기':id.indexOf('RD')>=0?'Read 개념확인':'Reflect 문제 '+id.slice(-1); };
       var cards = (data.solutions || []).map(function (sol,i) {
         var p = sol.problem || {}, a = (data.answers || []).filter(function (v) {return v.item_id === sol.item_id;})[0] || {}, ans = a.pre_response || {};
         var own = Object.keys(ans).filter(function(k) {return String(ans[k]||'').trim();}).map(function (k) {return '<p><b>' + esc(k) + ':</b> ' + fmt(String(ans[k])) + '</p>';}).join('') || '<p class="muted">작성된 답안이 없습니다.</p>';
-        return '<details class="review-solution"' + (i === 0 ? ' open' : '') + '><summary><b>' + (i+1) + '. ' + (i<3 ? 'Reflect 문제 ' + (i+1) : 'Review 다시 풀기') + '</b> · ' + esc(sol.answer) + '</summary>' +
+        return '<details class="review-solution"' + (i === 0 ? ' open' : '') + '><summary><b>' + (i+1) + '. ' + solutionName(sol) + '</b> · ' + esc(sol.answer) + '</summary>' +
           '<div style="padding:12px 0"><h4>문제와 그림</h4><p>' + fmt(p.title || '') + '</p>' + figHTML(p.fig) + choicesHTML(p.choices) +
           '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:14px 0">' +
           '<div class="panel"><h4>나의 공개 전 답변</h4>' + own + (a.source==='saved_draft_only'?'<p class="hint">제출 전 임시저장본입니다.</p>':'') + '</div>' +
@@ -435,9 +436,9 @@
       }).join('');
       var ref = data.reflection;
       var completed = ref ? '<section class="panel"><h3>해설 후 성찰 저장 완료</h3><p><b>중심 문제:</b> ' + esc(ref.focus_item || '') + '</p><p><b>이해 정도:</b> ' + esc(confidence[ref.understanding]||'') + '</p><p><b>내 풀이와 비교:</b> ' + esc(ref.comparison) + '</p><p><b>다음 점검:</b> ' + esc(ref.next_step) + '</p></section>' :
-        '<section class="panel"><h3>해설을 본 뒤 나의 이해 정도 성찰</h3><p class="hint small">어려웠던 문제 한 개를 골라 깊이 비교해 보세요. 이해하지 못한 점도 그대로 기록하면 됩니다.</p>' +
+        '<section class="panel"><h3>해설을 본 뒤 나의 이해 정도 성찰</h3><p class="hint small">5문항의 해설을 확인하고 어려웠던 문제 한 개를 골라 깊이 비교해 보세요. 이해하지 못한 점도 그대로 기록하면 됩니다.</p>' +
         '<label style="display:block;margin:10px 0">성찰할 문제<select id="post-focus-item"><option value="">문제를 선택하세요</option>' +
-        (data.solutions||[]).map(function(x,i){return '<option value="'+esc(x.item_id)+'">'+(i<3?'Reflect 문제 '+(i+1):'Review 다시 풀기')+'</option>';}).join('') + '</select></label>' +
+        (data.solutions||[]).map(function(x,i){return '<option value="'+esc(x.item_id)+'">'+solutionName(x)+'</option>';}).join('') + '</select></label>' +
         '<fieldset><legend>지금 이 문제의 풀이를 다른 사람에게 설명할 수 있나요?</legend>' +
         Object.keys(confidence).map(function(k){return '<label style="display:block;margin:8px 0"><input type="radio" name="post-understanding" value="'+k+'"> '+esc(confidence[k])+'</label>';}).join('') + '</fieldset>' +
         '<label style="display:block;margin:10px 0">내 풀이와 해설에서 같았거나 달랐던 점<textarea id="post-comparison" rows="3" maxlength="1200" placeholder="모르는 부분이 남았다면 그대로 적어도 됩니다."></textarea></label>' +
