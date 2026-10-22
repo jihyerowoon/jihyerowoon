@@ -287,18 +287,19 @@
    * 학생
    * ===================================================================== */
   var Student = {
-    me: null, view: 0, focus: null, busy: {}, saveTimers: {}, pending: {},
+    me: null, view: 0, focus: null, busy: {}, saveTimers: {}, pending: {}, reviewFeedback: null, reviewLoading: false, lastReviewFetch: 0,
     start: function (me) {
       cleanup(); App.screen = 'student';
       var self = this;
-      self.me = me; self.view = me.session.stage; self.focus = null; self.busy = {}; self.pending = store(self.pendKey()) || {};
+      self.me = me; self.view = me.session.stage; self.focus = null; self.busy = {}; self.pending = store(self.pendKey()) || {}; self.reviewFeedback = null; self.reviewLoading = false; self.lastReviewFetch = 0;
       document.body.className = 'is-student g-' + me.student.group.toLowerCase();
       Object.keys(self.pending).forEach(function (id) { var p = self.pending[id]; var it = self.item(id); it.draft = p.draft; it.draft_sel = p.draft_sel; it.reason = p.reason; self.flushDraft(id); });
       self.shell();
       every(4000, function () { return self.poll(); }, 15000);
       App.timers.push(setInterval(function () {
         var t = $('#timer'); if (t) t.innerHTML = timerText(self.me.session);
-        $$('.waiting[data-at]').forEach(function (n) { n.textContent = '도움 요청 보냄 · ' + mmss((nowMs() - Date.parse(n.getAttribute('data-at'))) / 1000) + ' 기다리는 중'; });
+        if (self.view === 5 && self.stageIdx() === 5) { var due = self.me.review && self.me.review.release_at; var count = $('#review-release-count'); if (count && due) count.textContent = '해설까지 ' + mmss((Date.parse(due)-nowMs())/1000); if (due && nowMs() >= Date.parse(due)) self.loadReviewFeedback(); }
+        $('.waiting[data-at]').forEach(function (n) { n.textContent = '도움 요청 보냄 · ' + mmss((nowMs() - Date.parse(n.getAttribute('data-at'))) / 1000) + ' 기다리는 중'; });
       }, 1000));
     },
     pendKey: function () { return 'pq4r:pending:' + this.me.session.code + ':' + this.me.student.code; },
@@ -321,11 +322,13 @@
         var stageChanged = r.stage_rev !== self.me.session.stage_rev;
         if (r.messages.length) { self.me.messages = self.me.messages.concat(r.messages); self.me.msgSeq = r.messages[r.messages.length - 1].seq; }
         if (self.group() === 'CONTROL') self.me.requests = r.requests;
+        if (r.review) self.me.review = r.review;
         if (stageChanged) {
           var prev = self.me.session.stage;
           return self.reload().then(function () { self.onStageChange(prev, self.me.session.stage); });
         }
         if (r.messages.length || self.group() === 'CONTROL') self.refreshThreads();
+        if (r.review && r.review.unlocked && self.view === 5 && self.stageIdx() === 5) self.loadReviewFeedback();
       });
     },
     onStageChange: function (prev, cur) {
@@ -410,7 +413,59 @@
         else { var it = resolveItem(f.item, this.group(), this.settings()), fd = it.fields.filter(function (x) { return x.key === f.field; })[0]; t.innerHTML = '선택 대상: <b>' + esc(shortOf(f.item)) + '</b> ' + fmt(fd ? fd.label : f.field); }
       }
     },
-    editable: function () { return this.view === this.stageIdx() && this.me.session.status === 'open'; },
+    editable: function () {
+      var due = this.me.review && this.me.review.release_at;
+      return this.view === this.stageIdx() && this.me.session.status === 'open' &&
+        !(this.stageIdx() === 5 && due && nowMs() >= Date.parse(due));
+    },
+    reviewPanel: function () {
+      var due = this.me.review && this.me.review.release_at, data = this.reviewFeedback, self = this;
+      if (!due) return '';
+      if (nowMs() < Date.parse(due)) return '<section class="panel"><h3>Review 자기점검 · 첫 8분</h3><p>정답과 풀이를 보기 전, 나의 판단과 근거를 작성하여 제출해 주세요.</p><p id="review-release-count" class="hint small">해설까지 ' + mmss((Date.parse(due)-nowMs())/1000) + '</p><p class="small">8분이 지나면 현재까지의 응답을 보존하고 해설을 동시에 공개합니다.</p></section>';
+      if (!data) return '<section class="panel"><h3>해설 공개 시간</h3><p>나의 답변을 보존하고 정답과 해설을 불러오는 중입니다.</p></section>';
+      var confidence = {explain:'다른 사람에게 설명할 수 있다',partial:'일부는 이해했지만 아직 어렵다',uncertain:'아직 이해하지 못했다'};
+      var cards = (data.solutions || []).map(function (sol,i) {
+        var p = sol.problem || {}, a = (data.answers || []).filter(function (v) {return v.item_id === sol.item_id;})[0] || {}, ans = a.pre_response || {};
+        var own = Object.keys(ans).filter(function(k) {return String(ans[k]||'').trim();}).map(function (k) {return '<p><b>' + esc(k) + ':</b> ' + fmt(String(ans[k])) + '</p>';}).join('') || '<p class="muted">작성된 답안이 없습니다.</p>';
+        return '<details class="review-solution"' + (i === 0 ? ' open' : '') + '><summary><b>' + (i+1) + '. ' + (i<3 ? 'Reflect 문제 ' + (i+1) : 'Review 다시 풀기') + '</b> · ' + esc(sol.answer) + '</summary>' +
+          '<div style="padding:12px 0"><h4>문제와 그림</h4><p>' + fmt(p.title || '') + '</p>' + figHTML(p.fig) + choicesHTML(p.choices) +
+          '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:14px 0">' +
+          '<div class="panel"><h4>나의 공개 전 답변</h4>' + own + (a.source==='saved_draft_only'?'<p class="hint">제출 전 임시저장본입니다.</p>':'') + '</div>' +
+          '<div class="panel"><h4>정답과 검증용 풀이 초안</h4><p><b>' + esc(sol.answer) + '</b></p><ol>' + (sol.steps||[]).map(function (line){return '<li>' + fmt(line) + '</li>';}).join('') + '</ol></div></div></div></details>';
+      }).join('');
+      var ref = data.reflection;
+      var completed = ref ? '<section class="panel"><h3>해설 후 성찰 저장 완료</h3><p><b>이해 정도:</b> ' + esc(confidence[ref.understanding]||'') + '</p><p><b>내 풀이와 비교:</b> ' + esc(ref.comparison) + '</p><p><b>다음 점검:</b> ' + esc(ref.next_step) + '</p></section>' :
+        '<section class="panel"><h3>해설을 본 뒤 나의 이해 정도 성찰</h3>' +
+        '<fieldset><legend>지금 이 문제의 풀이를 다른 사람에게 설명할 수 있나요?</legend>' +
+        Object.keys(confidence).map(function(k){return '<label style="display:block;margin:8px 0"><input type="radio" name="post-understanding" value="'+k+'"> '+esc(confidence[k])+'</label>';}).join('') + '</fieldset>' +
+        '<label style="display:block;margin:10px 0">내 풀이와 해설에서 같았거나 달랐던 점<textarea id="post-comparison" rows="3" maxlength="1200" placeholder="모르는 부분이 남았다면 그대로 적어도 됩니다."></textarea></label>' +
+        '<label style="display:block;margin:10px 0">다음에 비슷한 문제에서 먼저 확인할 것<textarea id="post-next-step" rows="2" maxlength="1200" placeholder="다음에 점검할 조건이나 개념을 적어 보세요."></textarea></label>' +
+        '<button type="button" class="btn primary" data-act="review-reflect">해설 후 성찰 저장</button></section>';
+      return '<section class="panel"><h2>Review 해설 공개 · 마지막 4분</h2><p>정답 공개 전까지의 응답은 별도 기록으로 보존되었습니다. 아래 문제와 나의 답안을 비교하세요.</p><p class="hint small">이 페이지는 두 집단 공통으로 열립니다. 문항별 수학적 검수 후 실제 수업에 사용하세요.</p>' + cards + '</section>' + completed;
+    },
+    loadReviewFeedback: function () {
+      var self=this, due=self.me.review && self.me.review.release_at;
+      if (!due || self.stageIdx()!==5 || self.view!==5 || self.reviewFeedback || self.reviewLoading || nowMs()<Date.parse(due)) return;
+      if (Date.now()-self.lastReviewFetch<3500) return;
+      self.lastReviewFetch=Date.now(); self.reviewLoading=true;
+      api('GET','me/review-feedback').then(function(r){
+        self.reviewFeedback=r;
+        if(self.me.review) self.me.review.reflection=r.reflection;
+        Object.keys(self.pending).forEach(function(id){if (ITEM[id] && ITEM[id].stage === 'Review') delete self.pending[id];});
+        store(self.pendKey(),self.pending);
+        self.renderStage(); self.renderLeftStage();
+      }).catch(function(e){ if(e.code!=='review_locked') toast('해설을 불러오지 못했어요: '+e.message,'warn'); })
+        .then(function(){self.reviewLoading=false;});
+    },
+    submitReviewReflection: function(){
+      var self=this, checked=$('input[name="post-understanding"]:checked');
+      var body={understanding:checked?checked.value:'',comparison:($('#post-comparison')||{}).value||'',next_step:($('#post-next-step')||{}).value||''};
+      var btn=$('[data-act="review-reflect"]'); if(btn) btn.disabled=true;
+      api('POST','me/review-reflection',body).then(function(r){
+        if(self.reviewFeedback) self.reviewFeedback.reflection=r.saved;
+        self.renderStage(); toast('해설 후 성찰이 저장됐어요.');
+      }).catch(function(e){toast(e.message,'warn'); if(btn)btn.disabled=false;});
+    },
     visibleStage: function (i) { var open = this.stageIdx(); if (i > open) return false; if (open === 4 && i < 4) return false; return true; },
     renderStage: function () {
       var self = this;
@@ -423,6 +478,7 @@
         (editable && self.matVisible(st.id) && mats.length ? '<p class="row">' + mats.map(function (m, i) { return '<button type="button" class="btn sm' + (m.role === 'main' ? '' : ' ghost') + '" data-openmat="' + i + '">' + esc(m.title) + '</button>'; }).join('') + '</p>' : '') + '</div>';
       if (editable) h += self.toolbarHTML();
       items.forEach(function (it) { h += self.itemHTML(it, editable); });
+      if (self.view === 5 && self.stageIdx() === 5) h += self.reviewPanel();
       h += '<p class="savestate" id="savestate"></p>';
       $('#right').innerHTML = h;
       items.forEach(function (it) { self.refreshItem(it.id); });
@@ -499,8 +555,8 @@
       var sb = $('[data-act="submit"][data-id="' + id + '"]');
       if (sb) {
         sb.textContent = r.attempts ? '다시 제출' : '제출';
-        sb.disabled = !!self.busy[id] || self.isEmpty(id) || r.status === 'incomplete';
-        var hb = $('[data-act="help"][data-id="' + id + '"]'); if (hb) hb.disabled = !!self.busy[id] || r.status === 'incomplete';
+        sb.disabled = !!self.busy[id] || self.isEmpty(id) || r.status === 'incomplete' || !self.editable();
+        var hb = $('[data-act="help"][data-id="' + id + '"]'); if (hb) hb.disabled = !!self.busy[id] || r.status === 'incomplete' || !self.editable();
       }
       var rv = $('[data-revise="' + id + '"]'); if (rv) rv.hidden = !(r.attempts > 0 && r.status !== 'incomplete');
       var bz = $('[data-busy="' + id + '"]'); if (bz) bz.hidden = !self.busy[id];
@@ -510,7 +566,7 @@
     refreshItemLight: function (id) {
       var r = this.item(id), chip = $('[data-status="' + id + '"]');
       if (chip) { var st = this.statusText(id); chip.textContent = st[0]; chip.className = 'chip-status ' + st[1]; }
-      var sb = $('[data-act="submit"][data-id="' + id + '"]'); if (sb) sb.disabled = !!this.busy[id] || this.isEmpty(id) || r.status === 'incomplete';
+      var sb = $('[data-act="submit"][data-id="' + id + '"]'); if (sb) sb.disabled = !!this.busy[id] || this.isEmpty(id) || r.status === 'incomplete' || !this.editable();
     },
     renderSelRow: function (id, field) {
       var n = $('[data-selrow="' + id + ':' + field + '"]'); if (!n) return;
@@ -591,6 +647,7 @@
         if (b.hasAttribute('data-segins')) { insertAt(lastInput, b.getAttribute('data-segins').split('').map(function (ch) { return ch + '̅'; }).join('')); $('#segmenu').hidden = true; return; }
         if (b.hasAttribute('data-unsel')) { var p = b.getAttribute('data-unsel').split(':'), arr = self.item(p[0]).draft_sel[p[1]] || [], el = p[2] + ':' + p[3], i = arr.indexOf(el); if (i >= 0) arr.splice(i, 1); self.renderSelRow(p[0], p[1]); self.renderFigSel(); self.saveDraft(p[0]); return; }
         if (b.hasAttribute('data-openmat')) { self.openMaterial(+b.getAttribute('data-openmat')); return; }
+        if (b.getAttribute('data-act') === 'review-reflect') { self.submitReviewReflection(); return; }
         if (b.getAttribute('data-act') === 'submit') { self.submit(b.getAttribute('data-id')); return; }
         if (b.getAttribute('data-act') === 'help') { self.help(b.getAttribute('data-id')); return; }
       });
