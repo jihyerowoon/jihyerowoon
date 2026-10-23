@@ -377,6 +377,13 @@ tr:last-child td { border-bottom: 0; }
 .modal-card { background: var(--surface); border-radius: var(--r); padding: 18px; width: min(100%, 720px); display: grid; gap: 10px; }
 .modal-card textarea { font-family: var(--mono); font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.worksheet-panel{margin:15px 0;border:1px solid #b4c6db;border-radius:12px;background:#f9fbff;padding:12px}
+.worksheet-panel summary{font-weight:700;cursor:pointer}
+.worksheet-pages{display:flex;gap:10px;overflow-x:auto;padding:12px 0}
+.worksheet-pages figure{flex:0 0 min(82vw,520px);margin:0}
+.worksheet-pages img{display:block;width:100%;height:auto;border:1px solid #d3dce6;background:white;border-radius:8px}
+.worksheet-pages figcaption{font-size:12px;color:#5c6679;padding-top:5px}
+@media (max-width:700px){.worksheet-pages figure{flex-basis:96%}}
 </style>
 <style>
 /* MVP 추가: 로그인, 연구자 관리 화면 */
