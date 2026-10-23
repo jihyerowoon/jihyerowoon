@@ -860,11 +860,17 @@
         '<div id="sf-bank" class="bank"></div>' +
         '<input id="sf-custom" type="hidden" value="">' +
         '<p class="warnline" id="sf-warn" hidden></p><button class="btn primary" type="submit"' + ((!openReq.length || opt.preSubmitOnly) ? ' disabled' : '') + '>보내기</button>' +
-        '<span class="hint small">' + (openReq.length ? '요청에 답하는 지원으로 기록돼요' : '교사가 먼저 건네는 지원으로 기록돼요') + '</span></form>';
+        '<span class="hint small">' + (openReq.length ? '학생에게 텍스트 발송 · 교사 질문 선택이 기록됩니다. 소리 내어 말했는지는 기록되지 않습니다.' : '요청 전에는 발문을 보낼 수 없어요.') + '</span></form>';
       var renderBank = function () {
         var L = +$('#sf-level').value;
         var list = L === 0 ? [] : self.bank.bank.filter(function (b) { return b.item === self.selItem && b.level === 1 && !b.group; });
-        $('#sf-bank').innerHTML = list.map(function (b, i) { return '<label class="bankopt"><input type="radio" name="sf-b" value="' + esc(b.id) + '"' + (i === 0 ? ' checked' : '') + '><span>' + fmt(b.text) + '</span></label>'; }).join('');
+        var state = it && it.rec && it.rec.state || '*';
+        var priority = list.filter(function(b){return b.state === state || b.state === '*';});
+        var top = priority.slice(0,6), more = list.filter(function(b){return top.indexOf(b) < 0;});
+        var optionHTML=function(b,checked){return '<label class="bankopt"><input type="radio" name="sf-b" value="' + esc(b.id) + '"' + (checked?' checked':'') + '><span>' + fmt(b.text) + ' <small>(' + esc(b.state) + ')</small></span></label>';};
+        $('#sf-bank').innerHTML = '<p class="hint small">학생 응답 상태: ' + esc(state) + ' · 우선 추천 ' + top.length + '개 (교사는 내용 확인 후 선택)</p>' +
+          top.map(function(b,i){return optionHTML(b,i===0);}).join('') +
+          (more.length?'<details><summary>다른 승인된 메타인지 질문 ' + more.length + '개 보기</summary>' + more.map(function(b){return optionHTML(b,false);}).join('') + '</details>':'');
       };
       renderBank();
       // 단일 수준이므로 수준 변경 버튼은 제공하지 않는다.
@@ -1110,9 +1116,9 @@
       var byItem = {}; rows.forEach(function (b) { (byItem[b.item] = byItem[b.item] || []).push(b); });
       var cap = {}; A.caps.forEach(function (c) { cap[c.id] = c.cap; });
       $('#rbody').innerHTML = '<section class="rcard wide"><h2>발문 은행 <small>' + esc(A.versions.bank) + ' · ' + A.bank.length + '문장 + 공통 ' + Object.keys(A.common).length + ' · 연구자 승인 필요</small></h2>' +
-        '<p class="hint">이번 판(활동지 PPTX 반영)의 정답 기준과 발문은 Claude가 쓴 초안이라 연구자 검토가 필요해요. 출처 NEW는 새로 쓴 문장, STD는 행동규칙 표준 발문(이전 판에서 옮김)입니다. 상태가 * 이면 학생 상태와 관계없이 쓰여요. a는 처음, b는 같은 수준에서 다시 표현할 때 씁니다. 이 화면과 정답 기준은 연구자에게만 보여요.</p>' +
+        '<p class="hint">이번 판(활동지 PPTX 반영)의 정답 기준과 발문은 Claude가 쓴 초안이라 연구자 검토가 필요해요. 이 질문들은 2026년 10월 23일 새로 작성한 수학 개념 연계형 메타인지 질문 후보입니다. 모두 단일 강도 1수준이며 연구자 최종 검수가 필요합니다. 상태가 * 이면 모든 학생 상태에서 사용할 수 있으며, 반복 요청 시 미사용 질문을 우선합니다. 이 화면과 정답 기준은 연구자에게만 보여요.</p>' +
         Object.keys(C.lessons).map(function (ln) {
-          return '<h3>' + esc(lessonLabel(+ln)) + '</h3>' + C.items.filter(function (it) { return String(it.lesson) === ln; }).map(function (it) {
+          return '<h3>' + esc(lessonLabel(+ln)) + '</h3>' + C.items.filter(function (it) { return String(it.lesson) === ln && !it.archived; }).map(function (it) {
           var rbx = A.rubric[it.id], fxs = it.byGroup && it.byGroup.EXPERIMENT && it.byGroup.EXPERIMENT.fixedAI ? A.fixed_ai[it.byGroup.EXPERIMENT.fixedAI] : null;
           var vk = function (l) { return (l || []).map(function (v) { return ({ right: '옳다', partly: '일부만 옳다', wrong: '다 틀리다' })[v]; }).join('·') || '없음'; };
           return '<details class="bankitem"><summary><b>' + esc(it.short) + '</b> ' + esc(it.stage) + ' · 상한 ' + cap[it.stage] + ' · ' + (byItem[it.id] || []).length + '문장' + (rbx && rbx.draft ? ' <span class="pill warn">기준 초안</span>' : '') + '</summary>' +
