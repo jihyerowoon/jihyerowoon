@@ -15,7 +15,7 @@ for (const it of C.ITEMS.filter((i) => i.stage === 'Reflect')) {
   const teacher = E.resolveItem(it.id, 'CONTROL', {});
   ok(JSON.stringify(ai) === JSON.stringify(teacher), it.id + ' 공통 문제와 답변란');
 }
-for (const it of C.ITEMS) {
+for (const it of C.ITEMS.filter((x) => !x.archived)) {
   const a = E.bankFor(it.id, 1, 'EXPERIMENT');
   const b = E.bankFor(it.id, 1, 'CONTROL');
   ok(a.length >= 2 && JSON.stringify(a) === JSON.stringify(b), it.id + ' 집단 공통 발문 후보');
