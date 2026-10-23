@@ -225,7 +225,7 @@
       var hidden = opts.reciteHide && open === 4 && i < 4;
       var disabled = state === 'future' || hidden || opts.noNav;
       return '<button class="step ' + STAGE_KEYS[i] + ' ' + state + (i === view ? ' viewing' : '') + (hidden ? ' hidden-stage' : '') + '" data-step="' + i + '"' + (disabled ? ' disabled' : '') +
-        ' title="' + s.id + ' ' + s.ko + ' · ' + min + '분' + (hidden ? ' (Recite 동안 가림)' : '') + '"><span class="n">' + (i + 1) + '</span><span class="nm">' + s.id + '</span><span class="mn">' + min + '′</span></button>';
+        ' title="' + s.id + ' ' + s.ko + ' · ' + min + '분' + (hidden ? ' (Recite 동안 가림)' : '') + '"><span class="n">' + (i + 1) + '</span><span class="nm">' + ['미리보기','질문하기','개념 읽기','생각 점검','내 말로 설명','마무리'][i] + '</span><span class="mn">' + min + '분</span></button>';
     }).join('');
   }
   function timerText(sess) {
@@ -572,7 +572,7 @@
       if (sb) {
         sb.textContent = r.attempts ? '수정한 답 다시 제출하기' : '내 답 제출하기';
         sb.disabled = !!self.busy[id] || self.isEmpty(id) || r.status === 'incomplete' || !self.editable();
-        var hb = $('[data-act="help"][data-id="' + id + '"]'); if (hb) hb.disabled = !!self.busy[id] || r.status === 'incomplete' || !self.editable();
+        var hb = $('[data-act="help"][data-id="' + id + '"]'); if (hb) hb.disabled = !!self.busy[id] || !r.attempts || r.status === 'incomplete' || !self.editable();
       }
       var rv = $('[data-revise="' + id + '"]'); if (rv) rv.hidden = !(r.attempts > 0 && r.status !== 'incomplete');
       var bz = $('[data-busy="' + id + '"]'); if (bz) bz.hidden = !self.busy[id];
@@ -889,7 +889,7 @@
         var optionHTML=function(b,checked){return '<label class="bankopt"><input type="radio" name="sf-b" value="' + esc(b.id) + '"' + (checked?' checked':'') + '><span>' + fmt(b.text) + ' <small>(' + esc(b.state) + ')</small></span></label>';};
         $('#sf-bank').innerHTML = '<p class="hint small">학생 응답 상태: ' + esc(state) + ' · 우선 추천 ' + top.length + '개 (교사는 내용 확인 후 선택)</p>' +
           top.map(function(b,i){return optionHTML(b,i===0);}).join('') +
-          (more.length?'<details><summary>다른 승인된 메타인지 질문 ' + more.length + '개 보기</summary>' + more.map(function(b){return optionHTML(b,false);}).join('') + '</details>':'');
+          (more.length?'<details><summary>다른 발문 후보 ' + more.length + '개 보기</summary>' + more.map(function(b){return optionHTML(b,false);}).join('') + '</details>':'');
       };
       renderBank();
       $('input[name="sf-mode"]').forEach(function(radio){
@@ -1100,11 +1100,15 @@
       var self = this, sc = self.code || 'ALL';
       $('#rbody').innerHTML = '<p class="loading">계산하는 중…</p>';
       api('GET', 'admin/fidelity?session=' + encodeURIComponent(sc)).then(function (r) {
+        if (!r.supportCount.AI && !r.supportCount.TEACHER) {
+          $('#rbody').innerHTML = '<section class="rcard"><h2>아직 검증 전입니다</h2><p>AI 또는 교사가 실제로 보낸 발문이 없습니다. 기록 0건은 통과가 아닙니다.</p><p class="hint">지원이 필요하지 않은 학생도 있으므로, 지원 횟수 0회 자체가 문제라는 뜻은 아닙니다. 수업 참여 기록은 ‘기록 저장’에서 확인하세요.</p></section>';
+          return;
+        }
         function row(ok, label, val, note) { return '<li class="' + (ok ? 'pass' : 'fail') + '"><span class="mk">' + (ok ? '통과' : '확인') + '</span><span class="lb">' + label + '</span><span class="vl mono">' + val + '</span>' + (note ? '<small>' + note + '</small>' : '') + '</li>'; }
         var maxl = r.maxLevelByStudent, ks = Object.keys(maxl).sort();
         $('#rbody').innerHTML = '<div class="rgrid"><section class="rcard"><h2>처치충실도 <small>' + esc(sc) + ' · 기록에서 자동 계산</small></h2><ul class="fid">' +
           row(r.preSubmitMath === 0, '첫 제출 전 메타인지 지원 없음', r.preSubmitMath + '건') + row(r.leaks === 0, '지원 문장에 정답 노출 없음', r.leaks + '건') +
-          row(r.levelViolations === 0, '지원 강도 1수준만 사용', r.levelViolations + '건') + row(r.typeViolations === 0, '메타인지 발문 한 유형만 사용', r.typeViolations + '건') + row(r.unsolicited === 0, '학생 요청에 근거한 발문만 제공', r.unsolicited + '건') + row(r.unapprovedText === 0, '발문은행 외 질문 사용 없음', r.unapprovedText + '건') +
+          row(r.levelViolations === 0, '지원 강도 1수준만 사용', r.levelViolations + '건') + row(r.typeViolations === 0, '메타인지 발문 한 유형만 사용', r.typeViolations + '건') + row(r.unsolicited === 0, '학생 요청에 근거한 발문만 제공', r.unsolicited + '건') + row(r.unapprovedText === 0, '발문 ID 기록 확인 (승인 검증은 별도)', r.unapprovedText + '건') +
           row(r.reflectSignals === 0, 'Reflect에서 정오 신호 없음', r.reflectSignals + '건') + row(r.controlAI === 0, '통제집단 AI 지원 0건', r.controlAI + '건') +
           row(r.earlyReviewDisclosure === 0, 'Review 6분 이전 정답 공개 없음', r.earlyReviewDisclosure + '건') +
           row(true, '공개 전 답변 고정', r.reviewSnapshots + '명', '첫 해설 열람 시 원래 답변 보존') +
