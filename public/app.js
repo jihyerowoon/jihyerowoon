@@ -873,6 +873,7 @@
         '<div id="sf-bank" class="bank"></div>'+
         '<div id="sf-compose" hidden><label for="sf-custom"><b>학생 답변을 보고 직접 질문하세요.</b></label>'+
         '<textarea id="sf-custom" rows="3" maxlength="130" placeholder="예: 네가 그렇게 생각한 이유를 한 가지 말해볼래?"></textarea>'+
+        '<label for="sf-emergency-reason"><b>비상시 직접 입력 사유 (필수)</b></label><input id="sf-emergency-reason" maxlength="180" placeholder="예: 은행의 질문이 학생 상황과 맞지 않음">'+
         '<p class="hint small">정답, 공식, 계산방법을 알려주지 마세요. 학생에게는 작성한 질문이 텍스트로 전달됩니다. 직접 작성 질문은 연구자가 기록으로 검수합니다.</p></div>' +
         '<label style="display:block;margin:10px 0"><input type="checkbox" id="sf-private-oral"> 같은 질문을 해당 학생에게 개별적으로 말로도 전달함 (교사 자기보고)</label>'+
         '<p class="hint small">전체 Zoom 강의실에 개별 질문을 읽는 방식은 사용하지 마세요. 체크 여부와 실제 전달 원문을 로그에 보존하며 음성 전달 자체를 독립적으로 검증한 것은 아닙니다.</p>'+
@@ -903,7 +904,7 @@
         ev.preventDefault();
         var btn = $('#sendform button[type=submit]'); btn.disabled = true;
         var mode=($('input[name="sf-mode"]:checked')||{}).value==='custom'?'custom':'bank';
-        var body = { session: self.code, code: d.student.code, item_id: self.selItem, level: +$('#sf-level').value, mode:mode, bank_id: mode==='bank'?($('input[name="sf-b"]:checked')||{}).value:null, custom: mode==='custom'?$('#sf-custom').value.trim():'', private_oral: $('#sf-private-oral').checked };
+        var body = { session: self.code, code: d.student.code, item_id: self.selItem, level: +$('#sf-level').value, mode:mode, bank_id: mode==='bank'?($('input[name="sf-b"]:checked')||{}).value:null, custom: mode==='custom'?$('#sf-custom').value.trim():'', emergency_reason:mode==='custom'?$('#sf-emergency-reason').value.trim():'', private_oral: $('#sf-private-oral').checked };
         api('POST', 'staff/send', body).then(function (r) {
           if (r.warn) {
             self.confirmCustom = true;
