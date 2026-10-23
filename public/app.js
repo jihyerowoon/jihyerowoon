@@ -857,8 +857,13 @@
         (opt.preSubmitOnly ? '<p class="note">학생이 아직 제출하지 않았어요. 두 집단 공통 원칙에 따라 “먼저 생각 적기” 안내만 보낼 수 있어요.</p>' : '') +
         '<p class="hint small">메타인지적 점검 질문 · 단일 지원 수준</p><input id="sf-level" type="hidden" value="1">' +
         (!openReq.length ? '<p class="note">학생의 도움 요청이 오면 발문을 보낼 수 있습니다.</p>' : '') +
-        '<div id="sf-bank" class="bank"></div>' +
-        '<input id="sf-custom" type="hidden" value="">' +
+        '<fieldset class="panel"><legend>질문을 만드는 방법</legend>'+
+        '<label style="display:inline-block;margin-right:14px"><input type="radio" name="sf-mode" value="bank" checked> 미리 준비한 질문 선택</label>'+
+        '<label style="display:inline-block"><input type="radio" name="sf-mode" value="custom"> 교사가 직접 질문 쓰기</label></fieldset>'+
+        '<div id="sf-bank" class="bank"></div>'+
+        '<div id="sf-compose" hidden><label for="sf-custom"><b>학생 답변을 보고 직접 질문하세요.</b></label>'+
+        '<textarea id="sf-custom" rows="3" maxlength="130" placeholder="예: 네가 그렇게 생각한 이유를 한 가지 말해볼래?"></textarea>'+
+        '<p class="hint small">정답, 공식, 계산방법을 알려주지 마세요. 학생에게는 작성한 질문이 텍스트로 전달됩니다. 직접 작성 질문은 연구자가 기록으로 검수합니다.</p></div>' +
         '<p class="warnline" id="sf-warn" hidden></p><button class="btn primary" type="submit"' + ((!openReq.length || opt.preSubmitOnly) ? ' disabled' : '') + '>보내기</button>' +
         '<span class="hint small">' + (openReq.length ? '학생에게 텍스트 발송 · 교사 질문 선택이 기록됩니다. 소리 내어 말했는지는 기록되지 않습니다.' : '요청 전에는 발문을 보낼 수 없어요.') + '</span></form>';
       var renderBank = function () {
@@ -873,12 +878,20 @@
           (more.length?'<details><summary>다른 승인된 메타인지 질문 ' + more.length + '개 보기</summary>' + more.map(function(b){return optionHTML(b,false);}).join('') + '</details>':'');
       };
       renderBank();
-      // 단일 수준이므로 수준 변경 버튼은 제공하지 않는다.
-      // 직접 문장 입력은 연구 처치 기준을 위해 비활성화한다.
+      $('input[name="sf-mode"]').forEach(function(radio){
+        radio.onchange=function(){
+          var custom=($('input[name="sf-mode"]:checked')||{}).value==='custom';
+          $('#sf-bank').hidden=custom;
+          $('#sf-compose').hidden=!custom;
+        };
+      });
+      // 미리 승인된 질문 선택과 교사 직접 질문을 구분해 기록한다.
+      // 어떤 모드든 지원 수준 1, 최초 답변 뒤 학생 도움 요청을 유지한다.
       $('#sendform').onsubmit = function (ev) {
         ev.preventDefault();
         var btn = $('#sendform button[type=submit]'); btn.disabled = true;
-        var body = { session: self.code, code: d.student.code, item_id: self.selItem, level: +$('#sf-level').value, bank_id: ($('input[name="sf-b"]:checked') || {}).value, custom: $('#sf-custom').value.trim(), confirm: self.confirmCustom };
+        var mode=($('input[name="sf-mode"]:checked')||{}).value==='custom'?'custom':'bank';
+        var body = { session: self.code, code: d.student.code, item_id: self.selItem, level: +$('#sf-level').value, mode:mode, bank_id: mode==='bank'?($('input[name="sf-b"]:checked')||{}).value:null, custom: mode==='custom'?$('#sf-custom').value.trim():'' };
         api('POST', 'staff/send', body).then(function (r) {
           if (r.warn) {
             self.confirmCustom = true;
