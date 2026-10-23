@@ -252,7 +252,7 @@
     $('#app').innerHTML = '<main class="entry"><section class="entry-card">' +
       '<div class="brand"><svg viewBox="0 0 64 40" class="brand-mark" aria-hidden="true"><path d="M18 4 H60 L46 36 H4 Z"/><path d="M18 4 L46 36 M60 4 L4 36" class="d"/></svg>' +
       '<div><p class="eyebrow">연구용 MVP · ' + esc(C.versions.app) + '</p><h1>PQ4R 튜터</h1><p class="sub">' + Object.keys(C.lessons).map(function (k) { return esc(lessonLabel(+k)) + ' ' + C.lessons[k].total + '분'; }).join(' / ') + ' · 중학교 2학년</p></div></div>' +
-      '<p class="lead">학생이 먼저 생각하고 답을 제출한 뒤 필요할 때 같은 수준의 메타인지 점검 질문을 요청합니다. 반복 과정은 모두 기록됩니다.</p>' +
+      '<p class="lead">문제를 읽고 내 답을 제출하세요. 어려울 때는 <b>도움 요청</b>을 누르고, 질문을 받은 뒤 다시 생각해 보세요.</p>' +
       '<nav class="login-tabs" role="tablist">' + [['student', '학생'], ['teacher', '교사'], ['researcher', '연구자']].map(function (t) {
         return '<button class="login-tab' + (t[0] === tab ? ' on' : '') + '" role="tab" aria-selected="' + (t[0] === tab) + '" data-ltab="' + t[0] + '">' + t[1] + '</button>';
       }).join('') + '</nav><div id="loginbox"></div></section></main>';
@@ -490,6 +490,7 @@
       var h = '<div class="stagehead ' + key + '"><p class="stage-k"><span class="sdot"></span>' + (self.view + 1) + '. ' + st.id.toUpperCase() + '<span class="ko">' + st.ko + '</span><span class="min">' + stageMin(ln, self.view) + '분</span></p>' +
         '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (editable ? '' : '<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') +
         (editable && self.matVisible(st.id) && mats.length ? '<p class="row">' + mats.map(function (m, i) { return '<button type="button" class="btn sm' + (m.role === 'main' ? '' : ' ghost') + '" data-openmat="' + i + '">' + esc(m.title) + '</button>'; }).join('') + '</p>' : '') + '</div>';
+      if (editable && st.id !== 'Review') h += '<p class="student-simple-tip">① 답을 적고 <b>내 답 제출하기</b>를 누르세요. ② 어렵다면 제출 후 <b>질문으로 도움받기</b>를 누르세요.</p>';
       h += worksheetPane(ln,g,st.id);
       if (editable) h += self.toolbarHTML();
       items.forEach(function (it) { h += self.itemHTML(it, editable); });
@@ -548,7 +549,7 @@
       h += '</div>';
       if (editable) {
         h += '<div class="revise" data-revise="' + it.id + '" hidden><label for="rv-' + it.id + '">고친 이유 <small>(선택)</small></label><input id="rv-' + it.id + '" data-reason="' + it.id + '" maxlength="300" autocomplete="off" value="' + esc(rec.reason || '') + '" placeholder="무엇을 왜 고쳤는지 한 줄로"></div>' +
-          '<footer class="item-f"><button type="button" class="btn primary" data-act="submit" data-id="' + it.id + '">제출</button><button type="button" class="btn ghost" data-act="help" data-id="' + it.id + '">도움 요청</button><span class="busy" data-busy="' + it.id + '" hidden>점검 중…</span></footer>';
+          '<footer class="item-f"><button type="button" class="btn primary" data-act="submit" data-id="' + it.id + '">내 답 제출하기</button><button type="button" class="btn ghost" data-act="help" data-id="' + it.id + '">질문으로 도움받기</button><span class="busy" data-busy="' + it.id + '" hidden>점검 중…</span></footer>';
       }
       return h + '<div class="thread" data-thread="' + it.id + '"></div></article>';
     },
@@ -569,7 +570,7 @@
       var st = self.statusText(id); chip.textContent = st[0]; chip.className = 'chip-status ' + st[1];
       var sb = $('[data-act="submit"][data-id="' + id + '"]');
       if (sb) {
-        sb.textContent = r.attempts ? '다시 제출' : '제출';
+        sb.textContent = r.attempts ? '수정한 답 다시 제출하기' : '내 답 제출하기';
         sb.disabled = !!self.busy[id] || self.isEmpty(id) || r.status === 'incomplete' || !self.editable();
         var hb = $('[data-act="help"][data-id="' + id + '"]'); if (hb) hb.disabled = !!self.busy[id] || r.status === 'incomplete' || !self.editable();
       }
@@ -742,10 +743,10 @@
     shell: function () {
       var self = this;
       $('#app').innerHTML = topbar('교사 화면 · 수업 ' + esc(self.code), '<span class="stagectl"><button class="btn sm" id="t-prev">이전 단계</button><button class="btn sm primary" id="t-next">다음 단계 열기</button></span>' + (App.role === 'researcher' ? '<button class="btn sm ghost" id="t-back">연구자 화면</button>' : '<button class="btn sm ghost" id="t-switch">수업 바꾸기</button>')) +
-        '<div class="tlayout"><aside class="tleft"><h2>도움 요청 <small>통제집단</small></h2><div id="queue"><p class="empty">불러오는 중…</p></div><p class="hint small">실험집단은 AI 튜터가 지원해요. 교사는 시간·전환·기기 문제만 돕습니다.</p></aside>' +
-        '<section class="tmain"><div class="tmain-h"><h2>학생</h2><span id="t-count"></span></div><div class="tablewrap"><table class="roster" id="roster"></table></div>' +
+        '<p class="teacher-simple-tip">① 도움 요청 확인 → ② 학생 답 읽기 → ③ 질문 골라 보내기</p><div class="tlayout"><aside class="tleft"><h2>도움 요청 <small>통제집단</small></h2><div id="queue"><p class="empty">불러오는 중…</p></div><p class="hint small">실험집단은 AI 튜터가 지원해요. 교사는 시간·전환·기기 문제만 돕습니다.</p></aside>' +
+        '<section class="tmain"><details class="teacher-roster-more"><summary>전체 학생 현황 보기 (필요할 때만) <span id="t-count"></span></summary><div class="tablewrap"><table class="roster" id="roster"></table></div>' +
         '<div class="legend"><span><span class="cell none">·</span>아직 안 씀</span><span><span class="cell draft">…</span>작성 중</span><span><span class="cell sent">1</span>제출 횟수</span><span><span class="cell mid">?</span>숫자 확인 필요</span><span><span class="cell ok2">✓</span>숫자 맞음</span><span><span class="cell inc">–</span>빈칸·막힘</span><span><span class="cell inc">미</span>미제출</span></div>' +
-        '<div class="legend"><b>실험집단</b><span><span class="cell mid">L1</span>진행 중 지원 수준</span><span><span class="cell ok">✓</span>해결</span><span><span class="cell bad">!</span>미해결</span><span>숫자 표시는 규칙 판정이며, 통제집단에는 AI 판정을 쓰지 않아요.</span></div></section>' +
+        '<div class="legend"><b>실험집단</b><span><span class="cell mid">L1</span>진행 중 지원 수준</span><span><span class="cell ok">✓</span>해결</span><span><span class="cell bad">!</span>미해결</span><span>숫자 표시는 규칙 판정이며, 통제집단에는 AI 판정을 쓰지 않아요.</span></div></details></section>' +
         '<aside class="tdetail" id="tdetail"><p class="empty">학생을 고르면 답과 지원 기록이 여기에 보여요.</p></aside></div>';
       bindExit();
       if ($('#t-back')) $('#t-back').onclick = function () { Researcher.start(); };
@@ -940,9 +941,11 @@
       document.body.className = 'is-researcher';
       self.code = store('pq4r:researcher-session') || null;
       $('#app').innerHTML = topbar('연구자 화면', '<span id="r-sess" class="pill"></span>') +
-        '<nav class="rtabs" id="rtabs">' + [['sess', '수업·설정'], ['roster', '명단'], ['log', '기록'], ['fid', '처치충실도'], ['rev', '사람 검토'], ['bank', '발문 은행'], ['worksheet', '활동지 점검'], ['mat', '개념 자료'], ['status', '운영 점검']].map(function (t) {
+        '<nav class="rtabs" id="rtabs" aria-label="연구자 메뉴">' + [['sess','1. 수업 준비'],['roster','2. 학생 명단'],['log','3. 기록 저장']].map(function (t) {
           return '<button class="rtab" data-tab="' + t[0] + '">' + t[1] + '</button>';
-        }).join('') + '</nav><section class="rbody" id="rbody"></section>';
+        }).join('') + '<details class="r-advanced"><summary>기타 기능</summary><div class="r-advanced-list">' + [['status','연결 확인'],['fid','처치충실도'],['rev','사람 검토'],['bank','발문 은행'],['worksheet','활동지 점검'],['mat','개념 자료']].map(function (t) {
+          return '<button class="rtab" data-tab="' + t[0] + '">' + t[1] + '</button>';
+        }).join('') + '</div></details></nav><p class="simple-help">처음 사용한다면 <b>1. 수업 준비 → 2. 학생 명단 → 3. 기록 저장</b> 순서로 진행하세요. 세부 점검 기능은 기타 기능에 있습니다.</p><section class="rbody" id="rbody"></section>';
       bindExit();
       $('#rtabs').addEventListener('click', function (ev) { var b = ev.target.closest('[data-tab]'); if (!b) return; self.tab = b.getAttribute('data-tab'); self.render(); });
       App.timers.push(setInterval(function () { var t = $('#timer'), s = self.cur(); if (t && s) t.innerHTML = timerText(s); }, 1000));
@@ -992,13 +995,13 @@
           '<div class="row"><button class="btn sm" id="r-prev"' + (s.stage === 0 || s.status !== 'open' ? ' disabled' : '') + '>이전 단계</button><button class="btn sm primary" id="r-next"' + (s.stage === 5 || s.status !== 'open' ? ' disabled' : '') + '>다음 단계 열기</button><button class="btn sm" id="r-teacher">교사 화면으로</button>' +
           '<button class="btn sm ghost" id="r-close">' + (s.status === 'open' ? '수업 끝내기' : '다시 열기') + '</button></div>' +
           '<p class="hint">단계를 열면 이전 단계는 학생 화면에서 보기 전용이 되고, 제출하지 않은 답은 미완료로 기록돼요. Recite 동안은 앞 단계가 가려집니다.</p>' +
-          '<h3>이 수업 설정 <small>바꾸면 기록에 남아요</small></h3>' +
+          '<details class="r-settings-more"><summary>연구 설정 보기 (실험 중 변경하지 마세요)</summary><h3>이 수업 설정 <small>바꾸면 기록에 남아요</small></h3>' +
           tog('aiJudge', 'AI 판정 사용', '서술형 답을 학생 상태 9가지 중 하나로 분류해요(실험집단만). API 키가 없으면 규칙 판정만 써요.') +
           tog('aiJudgeTwice', 'AI 판정 두 번 확인', '같은 판정을 두 번 돌려 다르면 보류하고 뜻 확인 질문을 보내요(사람 검토 대상).') +
           '<p class="hint small">연구용 발문은 공통 1수준 은행의 원문만 제공합니다. AI 문장 재작성 기능은 비활성화되어 있습니다.</p>' +
           tog('fadingPairs', '짝 문항으로 지원 감소 관찰', '1차시 RD02(개념확인)↔RF01(합동조건), 2차시 RD02(대각선 증명)↔RF02(대각선 길이).') +
           tog('materialsInReflect', 'Reflect에서도 개념 정리 열람 허용', '기본은 Read에서만 보여요.') +
-          tog('demoControls', '학생 화면에 시연 제어 표시', '실제 수업에서는 끄세요.') + '</section>' : '') + '</div>';
+          tog('demoControls', '학생 화면에 시연 제어 표시', '실제 수업에서는 끄세요.') + '</details></section>' : '') + '</div>';
       $$('[data-sess]').forEach(function (b) { b.onclick = function () { self.code = b.getAttribute('data-sess'); store('pq4r:researcher-session', self.code); self.render(); }; });
       $('#newsess').onsubmit = function (ev) {
         ev.preventDefault();
@@ -1075,7 +1078,7 @@
       $('#rbody').innerHTML = '<div class="logbar"><span><b>' + evs.length + '</b>건 · ' + esc(sc) + ' · 06 사전 30개 항목 + 추가 11개</span>' +
         '<select id="lf-s" aria-label="학생 거르기"><option value="">모든 학생</option>' + students.map(function (s) { return '<option>' + esc(s) + '</option>'; }).join('') + '</select>' +
         '<select id="lf-t" aria-label="이벤트 유형 거르기"><option value="">모든 이벤트</option>' + types.map(function (s) { return '<option>' + esc(s) + '</option>'; }).join('') + '</select>' +
-        '<button class="btn sm" id="lf-r">새로고침</button><button class="btn sm primary" id="lf-csv">CSV 내려받기</button><button class="btn sm" id="lf-json">JSON</button><button class="btn sm" id="lf-all">전체 수업 CSV</button><button class="btn sm ghost" id="lf-bak">전체 백업</button></div>' +
+        '<button class="btn sm primary" id="lf-csv">현재 수업 기록 저장 (CSV)</button><button class="btn sm" id="lf-bak">전체 백업 저장</button><details class="log-more"><summary>다른 저장 옵션</summary><button class="btn sm" id="lf-r">새로고침</button><button class="btn sm" id="lf-json">JSON</button><button class="btn sm" id="lf-all">전체 수업 CSV</button></details></div>' +
         '<div class="tablewrap"><table class="logt" id="logt"></table></div><p class="hint small">화면에는 최근 400건만 보여요. 내려받은 파일에는 모두 들어 있어요. 시각은 한국 시간으로 보이고 파일에는 UTC로 저장돼요.</p>';
       var draw = function () {
         var fs = $('#lf-s').value, ft = $('#lf-t').value;
