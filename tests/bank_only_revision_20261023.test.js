@@ -20,7 +20,7 @@ for(const e of C.BANK) {
 for(const e of C.BANK.filter(e=>e.src==='EASY_DRAFT_20261023')) {
   assert.ok(e.text.length<=78 && e.text.endsWith('?'));
   assert.equal(e.review_status,'RESEARCHER_REVIEW_REQUIRED');
-  assert.ok(!/\\d/.test(e.text));
+  assert.ok(!/[0-9]/.test(e.text));
 }
 const st=fs.readFileSync(require.resolve('../lib/student'),'utf8');
 assert.ok(!st.includes('ai.generateSupport('),'학생 지원 경로에서 실시간 생성 금지');
