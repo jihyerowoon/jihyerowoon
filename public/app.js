@@ -914,7 +914,7 @@
       document.body.className = 'is-researcher';
       self.code = store('pq4r:researcher-session') || null;
       $('#app').innerHTML = topbar('연구자 화면', '<span id="r-sess" class="pill"></span>') +
-        '<nav class="rtabs" id="rtabs">' + [['sess', '수업·설정'], ['roster', '명단'], ['log', '기록'], ['fid', '처치충실도'], ['rev', '사람 검토'], ['bank', '발문 은행'], ['mat', '개념 자료'], ['status', '운영 점검']].map(function (t) {
+        '<nav class="rtabs" id="rtabs">' + [['sess', '수업·설정'], ['roster', '명단'], ['log', '기록'], ['fid', '처치충실도'], ['rev', '사람 검토'], ['bank', '발문 은행'], ['worksheet', '활동지 점검'], ['mat', '개념 자료'], ['status', '운영 점검']].map(function (t) {
           return '<button class="rtab" data-tab="' + t[0] + '">' + t[1] + '</button>';
         }).join('') + '</nav><section class="rbody" id="rbody"></section>';
       bindExit();
@@ -945,6 +945,7 @@
       if (t === 'roster') return self.renderRoster();
       if (t === 'bank') return self.withAdmin(function () { self.renderBank(); });
       if (t === 'mat') return self.withAdmin(function () { self.renderMat(); });
+      if (t === 'worksheet') return self.renderWorksheet();
       if (t === 'status') return self.renderStatus();
       if (t === 'fid') return self.renderFid();
       $('#rbody').innerHTML = '<p class="loading">기록을 불러오는 중…</p>';
@@ -1131,6 +1132,46 @@
         }).join('') +
         '<h3>공통 응답</h3><table class="banktab"><tbody>' + Object.keys(A.common).map(function (k) { var c = A.common[k]; return '<tr><td class="mono small">' + k + '</td><td>' + fmt(c.text) + '</td></tr>'; }).join('') + '</tbody></table>' +
         (A.excluded.length ? '<h3>은행에서 뺀 문장</h3><table class="banktab"><tbody>' + A.excluded.map(function (x) { return '<tr><td class="mono">' + esc(x.item) + ' L' + x.level + '</td><td>' + esc(x.text) + '</td><td class="muted">' + esc(x.reason) + '</td></tr>'; }).join('') + '</tbody></table>' : '') + '</section>';
+    },
+    renderWorksheet: function () {
+      var s = this.cur();
+      var stages=['Preview','Question','Read','Reflect','Recite','Review'];
+      var slides={1:{Preview:'1',Question:'1',Read:'2~3',Reflect:'4~6',Recite:'7',Review:'8'},
+                  2:{Preview:'1',Question:'1',Read:'2~4',Reflect:'5~7',Recite:'8',Review:'9'}};
+      var labels={Preview:'미리보기',Question:'질문 만들기',Read:'개념 읽기와 개념 확인',
+                  Reflect:'제시된 설명 검토',Recite:'스스로 설명',Review:'스스로 다시 풀기'};
+      var html='<section class="rcard wide"><h2>활동지 점검 <small>현재 웹앱의 실제 문항과 답변란</small></h2>'+
+        '<p class="hint">최종 PPTX 7개와 비교한 웹 구현 목록입니다. <b>PPTX 원본 파일 자체를 이 서버에 업로드한 것은 아닙니다.</b> 아래 문제와 도형이 학생 화면에 연결된 내용을 확인하세요.</p>'+
+        '<p class="hint small">1차시 AI·교사 활동지 각 8쪽, 2차시 AI·교사 활동지 각 9쪽. 정답지는 각 5쪽, 공통 성찰지 1쪽. 두 집단에 같은 수학문항과 동일한 Reflect 검토 설명을 제공해야 합니다.</p>';
+      Object.keys(C.lessons).forEach(function(ln) {
+        var L=Number(ln),list=C.items.filter(function(it){return it.lesson===L&&!it.archived;});
+        html+='<h3>'+esc(lessonLabel(L))+' · 활동 문항 '+list.length+'개</h3>'+
+          '<p class="small">차시 시간 60분 · Preview 2, Question 2, Read 16, Reflect 19, Recite 9, Review 12분</p>';
+        stages.forEach(function(stage){
+          var subset=list.filter(function(it){return it.stage===stage;});
+          if(!subset.length)return;
+          html+='<details class="bankitem"><summary><b>'+stage+'</b> '+esc(labels[stage])+
+            ' · 활동지 '+slides[L][stage]+'쪽 · 문항 '+subset.length+'개</summary>';
+          subset.forEach(function(it){
+            var ai=resolveItem(it.id,'EXPERIMENT',{}),tc=resolveItem(it.id,'CONTROL',{});
+            var same=JSON.stringify(ai)===JSON.stringify(tc);
+            var prob=L&&C.lessons[L]&&C.lessons[L].stageProblem&&C.lessons[L].stageProblem[stage];
+            var shared=prob&&C.problems[prob];
+            html+='<article class="panel"><h4>'+esc(it.id)+' '+fmt(ai.title)+'</h4>'+
+              (ai.sub?'<p class="small">'+fmt(ai.sub)+'</p>':'')+
+              (shared?'<p class="small"><b>공통 문제:</b> '+fmt(shared.text)+'</p>'+figHTML(C.figs[shared.fig]):'')+
+              (ai.fig?figHTML(ai.fig):'')+choicesHTML(ai.choices)+
+              (ai.fixedAI?'<p class="small"><b>두 집단 공통 검토 설명:</b> '+fmt(ai.fixedAI.text)+'</p>':'')+
+              '<p class="small"><b>입력란:</b> '+ai.fields.map(function(f){return esc(f.label)+(f.kind==='choice'?' (선택형)':'');}).join(' / ')+'</p>'+
+              '<p class="small">'+(same?'집단별 화면 콘텐츠 일치':'집단별 안내 또는 입력란 차이 존재 · 원본 대조 필요')+'</p></article>';
+          });
+          html+='</details>';
+        });
+      });
+      html+='<section class="panel"><h3>공통 Review 운영 확인</h3>'+
+        '<p>첫 6분: 풀이와 정답 공개 전 확신 정도 기록. 6~10분: 두 집단에 같은 서버 정답 및 풀이 공개. 10~12분: 이해도 선택과 짧은 성찰 저장.</p>'+
+        '<p class="hint">정답 본문은 이 학생용 공개 API에 포함되지 않습니다. 연구자 발문 은행에서는 정답키 초안을 볼 수 있습니다. 실제 학생 화면에서 6분 차단 여부는 별도 시연으로 검증해야 합니다.</p></section></section>';
+      $('#rbody').innerHTML=html;
     },
     renderMat: function () {
       var notes = this.admin.material_notes || [];
