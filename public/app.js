@@ -1,7 +1,7 @@
 /* PQ4R 튜터 MVP(1차시 삼각형의 합동 · 2차시 평행사변형의 성질) — 화면. 판정·발문 선택·기록은 모두 서버(/api/v1)가 한다. */
 (function () {
   'use strict';
-  var C = null, ITEM = {};
+  var C = null, ITEM = {}, WORKSHEETS = null;
   var STAGE_KEYS = ['preview', 'question', 'read', 'reflect', 'recite', 'review'];
 
   /* ---------- 공통 도구 ---------- */
@@ -80,11 +80,11 @@
 
   /* ---------- 문항 내용(공개분) ---------- */
   function resolveItem(itemId, group, settings) {
-    var it = ITEM[itemId], g = (it.byGroup && it.byGroup[group]) || {};
+    var it = ITEM[itemId], g = (it.stage === 'Reflect' && it.byGroup && it.byGroup.EXPERIMENT) || (it.byGroup && it.byGroup[group]) || {};
     return { id: it.id, lesson: it.lesson, stage: it.stage, mark: it.mark, short: it.short || it.id, recall: it.recall || null, title: g.title || it.title, sub: g.sub || it.sub || null, hint: g.hint || it.hint || null,
       fig: it.fig ? C.figs[it.fig] : null, choices: it.choices || null, fixedAI: g.fixedAI ? C.fixed_ai[g.fixedAI] : null, fields: g.fields || it.fields };
   }
-  function itemsForStage(stageId, group, settings, lesson) { return C.items.filter(function (it) { return it.stage === stageId && it.lesson === (lesson || 1); }).map(function (it) { return resolveItem(it.id, group, settings); }); }
+  function itemsForStage(stageId, group, settings, lesson) { return C.items.filter(function (it) { return !it.archived && it.stage === stageId && it.lesson === (lesson || 1); }).map(function (it) { return resolveItem(it.id, group, settings); }); }
   function stageIdxOf(id) { for (var i = 0; i < C.stages.length; i++) if (C.stages[i].id === id) return i; return -1; }
   /* 차시 */
   function lessonOf(n) { return C.lessons[n] || C.lessons[1]; }
@@ -96,6 +96,15 @@
   function figHTML(f, cls) {
     if (!f) return '';
     return '<figure class="probfig' + (cls ? ' ' + cls : '') + '"><img src="' + esc(f.file) + '" width="' + f.w + '" height="' + f.h + '" alt="' + esc(plain(f.desc)) + '" loading="lazy"></figure>';
+  }
+  function worksheetPane(lesson,group,stage) {
+    var pages=WORKSHEETS&&WORKSHEETS.lessons&&WORKSHEETS.lessons[String(lesson)]&&WORKSHEETS.lessons[String(lesson)][group]&&WORKSHEETS.lessons[String(lesson)][group][stage];
+    if(!Array.isArray(pages)||!pages.length)return '';
+    return '<section class="worksheet-panel" aria-label="원본 활동지"><details open><summary>원본 PPT 활동지 '+pages.length+'쪽 · 그림을 보고 아래 답변칸에 입력하세요</summary>'+
+      '<div class="worksheet-pages">'+pages.map(function(url,i){
+        if(typeof url!=='string'||url.indexOf('/worksheets/L')!==0||url.indexOf('..')>=0||!url.endsWith('.png'))return '';
+        return '<figure><img src="'+esc(url)+'" alt="'+esc(stage)+' 활동지 '+(i+1)+'쪽" loading="lazy"><figcaption>수학문제와 도형: PPT 원본 이미지</figcaption></figure>';
+      }).join('')+'</div></details></section>';
   }
   function choicesHTML(list) {
     if (!list || !list.length) return '';
@@ -216,7 +225,7 @@
       var hidden = opts.reciteHide && open === 4 && i < 4;
       var disabled = state === 'future' || hidden || opts.noNav;
       return '<button class="step ' + STAGE_KEYS[i] + ' ' + state + (i === view ? ' viewing' : '') + (hidden ? ' hidden-stage' : '') + '" data-step="' + i + '"' + (disabled ? ' disabled' : '') +
-        ' title="' + s.id + ' ' + s.ko + ' · ' + min + '분' + (hidden ? ' (Recite 동안 가림)' : '') + '"><span class="n">' + (i + 1) + '</span><span class="nm">' + s.id + '</span><span class="mn">' + min + '′</span></button>';
+        ' title="' + s.id + ' ' + s.ko + ' · ' + min + '분' + (hidden ? ' (Recite 동안 가림)' : '') + '"><span class="n">' + (i + 1) + '</span><span class="nm">' + ['미리보기','질문하기','개념 읽기','생각 점검','내 말로 설명','마무리'][i] + '</span><span class="mn">' + min + '분</span></button>';
     }).join('');
   }
   function timerText(sess) {
@@ -243,7 +252,7 @@
     $('#app').innerHTML = '<main class="entry"><section class="entry-card">' +
       '<div class="brand"><svg viewBox="0 0 64 40" class="brand-mark" aria-hidden="true"><path d="M18 4 H60 L46 36 H4 Z"/><path d="M18 4 L46 36 M60 4 L4 36" class="d"/></svg>' +
       '<div><p class="eyebrow">연구용 MVP · ' + esc(C.versions.app) + '</p><h1>PQ4R 튜터</h1><p class="sub">' + Object.keys(C.lessons).map(function (k) { return esc(lessonLabel(+k)) + ' ' + C.lessons[k].total + '분'; }).join(' / ') + ' · 중학교 2학년</p></div></div>' +
-      '<p class="lead">학생이 먼저 풀고, 필요한 만큼만 0~4단계로 돕고, 모든 과정을 지우지 않고 기록합니다.</p>' +
+      '<p class="lead">문제를 읽고 내 답을 제출하세요. 어려울 때는 <b>도움 요청</b>을 누르고, 질문을 받은 뒤 다시 생각해 보세요.</p>' +
       '<nav class="login-tabs" role="tablist">' + [['student', '학생'], ['teacher', '교사'], ['researcher', '연구자']].map(function (t) {
         return '<button class="login-tab' + (t[0] === tab ? ' on' : '') + '" role="tab" aria-selected="' + (t[0] === tab) + '" data-ltab="' + t[0] + '">' + t[1] + '</button>';
       }).join('') + '</nav><div id="loginbox"></div></section></main>';
@@ -287,18 +296,19 @@
    * 학생
    * ===================================================================== */
   var Student = {
-    me: null, view: 0, focus: null, busy: {}, saveTimers: {}, pending: {},
+    me: null, view: 0, focus: null, busy: {}, saveTimers: {}, pending: {}, reviewFeedback: null, reviewLoading: false, lastReviewFetch: 0, reviewReflectionShown: false,
     start: function (me) {
       cleanup(); App.screen = 'student';
       var self = this;
-      self.me = me; self.view = me.session.stage; self.focus = null; self.busy = {}; self.pending = store(self.pendKey()) || {};
+      self.me = me; self.view = me.session.stage; self.focus = null; self.busy = {}; self.pending = store(self.pendKey()) || {}; self.reviewFeedback = null; self.reviewLoading = false; self.lastReviewFetch = 0; self.reviewReflectionShown = false;
       document.body.className = 'is-student g-' + me.student.group.toLowerCase();
       Object.keys(self.pending).forEach(function (id) { var p = self.pending[id]; var it = self.item(id); it.draft = p.draft; it.draft_sel = p.draft_sel; it.reason = p.reason; self.flushDraft(id); });
       self.shell();
       every(4000, function () { return self.poll(); }, 15000);
       App.timers.push(setInterval(function () {
         var t = $('#timer'); if (t) t.innerHTML = timerText(self.me.session);
-        $$('.waiting[data-at]').forEach(function (n) { n.textContent = '도움 요청 보냄 · ' + mmss((nowMs() - Date.parse(n.getAttribute('data-at'))) / 1000) + ' 기다리는 중'; });
+        if (self.view === 5 && self.stageIdx() === 5) { var due = self.me.review && self.me.review.release_at; var reflectAt = self.me.review && self.me.review.reflection_at; var count = $('#review-release-count'); if (count && due) count.textContent = '해설까지 ' + mmss((Date.parse(due)-nowMs())/1000); if (due && nowMs() >= Date.parse(due)) self.loadReviewFeedback(); var rc = $('#review-reflect-count'); if (rc && reflectAt) rc.textContent = '성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000); if (reflectAt && nowMs() >= Date.parse(reflectAt) && self.reviewFeedback && !self.reviewReflectionShown) { self.reviewReflectionShown = true; self.renderStage(); } }
+        $('.waiting[data-at]').forEach(function (n) { n.textContent = '도움 요청 보냄 · ' + mmss((nowMs() - Date.parse(n.getAttribute('data-at'))) / 1000) + ' 기다리는 중'; });
       }, 1000));
     },
     pendKey: function () { return 'pq4r:pending:' + this.me.session.code + ':' + this.me.student.code; },
@@ -321,11 +331,13 @@
         var stageChanged = r.stage_rev !== self.me.session.stage_rev;
         if (r.messages.length) { self.me.messages = self.me.messages.concat(r.messages); self.me.msgSeq = r.messages[r.messages.length - 1].seq; }
         if (self.group() === 'CONTROL') self.me.requests = r.requests;
+        if (r.review) self.me.review = r.review;
         if (stageChanged) {
           var prev = self.me.session.stage;
           return self.reload().then(function () { self.onStageChange(prev, self.me.session.stage); });
         }
         if (r.messages.length || self.group() === 'CONTROL') self.refreshThreads();
+        if (r.review && r.review.unlocked && self.view === 5 && self.stageIdx() === 5) self.loadReviewFeedback();
       });
     },
     onStageChange: function (prev, cur) {
@@ -410,7 +422,64 @@
         else { var it = resolveItem(f.item, this.group(), this.settings()), fd = it.fields.filter(function (x) { return x.key === f.field; })[0]; t.innerHTML = '선택 대상: <b>' + esc(shortOf(f.item)) + '</b> ' + fmt(fd ? fd.label : f.field); }
       }
     },
-    editable: function () { return this.view === this.stageIdx() && this.me.session.status === 'open'; },
+    editable: function () {
+      var due = this.me.review && this.me.review.release_at;
+      return this.view === this.stageIdx() && this.me.session.status === 'open' &&
+        !(this.stageIdx() === 5 && due && nowMs() >= Date.parse(due));
+    },
+    reviewPanel: function () {
+      var due = this.me.review && this.me.review.release_at, data = this.reviewFeedback, self = this;
+      if (!due) return '';
+      if (nowMs() < Date.parse(due)) return '<section class="panel"><h3>Review 첫 6분 · 문제 풀이</h3><p>정답 없이 문제를 풀고 풀이 근거를 작성해 제출해 주세요.</p><p id="review-release-count" class="hint small">정답 공개까지 ' + mmss((Date.parse(due)-nowMs())/1000) + '</p><p class="small">6분 뒤 두 집단에 정답과 풀이를 동시에 공개합니다. 작성한 답변은 보존됩니다.</p></section>';
+      if (!data) return '<section class="panel"><h3>해설 공개 시간</h3><p>나의 답변을 보존하고 정답과 해설을 불러오는 중입니다.</p></section>';
+      var confidence = {explain:'다른 사람에게 설명할 수 있다',partial:'일부는 이해했지만 아직 어렵다',uncertain:'아직 이해하지 못했다'};
+      var solutionName = function(x) { var id=x.item_id||''; return id.indexOf('RV')>=0?'Review 다시 풀기':id.indexOf('RD')>=0?'Read 개념확인':'Reflect 문제 '+id.slice(-1); };
+      var cards = (data.solutions || []).map(function (sol,i) {
+        var p = sol.problem || {}, a = (data.answers || []).filter(function (v) {return v.item_id === sol.item_id;})[0] || {}, ans = a.pre_response || {};
+        var own = Object.keys(ans).filter(function(k) {return String(ans[k]||'').trim();}).map(function (k) {return '<p><b>' + esc(k) + ':</b> ' + fmt(String(ans[k])) + '</p>';}).join('') || '<p class="muted">작성된 답안이 없습니다.</p>';
+        return '<details class="review-solution"' + (i === 0 ? ' open' : '') + '><summary><b>' + (i+1) + '. ' + solutionName(sol) + '</b> · ' + esc(sol.answer) + '</summary>' +
+          '<div style="padding:12px 0"><h4>문제와 그림</h4><p>' + fmt(p.title || '') + '</p>' + figHTML(p.fig) + choicesHTML(p.choices) +
+          '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:14px 0">' +
+          '<div class="panel"><h4>나의 공개 전 답변</h4>' + own + (a.source==='saved_draft_only'?'<p class="hint">제출 전 임시저장본입니다.</p>':'') + '</div>' +
+          '<div class="panel"><h4>정답과 검증용 풀이 초안</h4><p><b>' + esc(sol.answer) + '</b></p><ol>' + (sol.steps||[]).map(function (line){return '<li>' + fmt(line) + '</li>';}).join('') + '</ol></div></div></div></details>';
+      }).join('');
+      var ref = data.reflection;
+      var reflectAt = this.me.review && this.me.review.reflection_at;
+      var canReflect = reflectAt && nowMs() >= Date.parse(reflectAt);
+      var completed = ref ? '<section class="panel"><h3>해설 후 성찰 저장 완료</h3><p><b>중심 문제:</b> ' + esc(ref.focus_item || '') + '</p><p><b>이해 정도:</b> ' + esc(confidence[ref.understanding]||'') + '</p><p><b>내 풀이와 비교:</b> ' + esc(ref.comparison) + '</p></section>' :
+        '<section class="panel"><h3>해설을 본 뒤 나의 이해 정도 성찰</h3><p class="hint small">5문항의 해설을 확인하고 어려웠던 문제 한 개를 골라 깊이 비교해 보세요. 이해하지 못한 점도 그대로 기록하면 됩니다.</p>' +
+        '<label style="display:block;margin:10px 0">성찰할 문제<select id="post-focus-item"><option value="">문제를 선택하세요</option>' +
+        (data.solutions||[]).map(function(x,i){return '<option value="'+esc(x.item_id)+'">'+solutionName(x)+'</option>';}).join('') + '</select></label>' +
+        '<fieldset><legend>지금 이 문제의 풀이를 다른 사람에게 설명할 수 있나요?</legend>' +
+        Object.keys(confidence).map(function(k){return '<label style="display:block;margin:8px 0"><input type="radio" name="post-understanding" value="'+k+'"> '+esc(confidence[k])+'</label>';}).join('') + '</fieldset>' +
+        '<label style="display:block;margin:10px 0">해설을 보고 새롭게 확인한 점 또는 아직 어려운 점 한 가지<textarea id="post-comparison" rows="2" maxlength="350" placeholder="한두 문장으로 적어 보세요."></textarea></label>' +
+        '<button type="button" class="btn primary" data-act="review-reflect">해설 후 성찰 저장</button></section>';
+      var reflectUI = ref || canReflect ? completed : '<section class="panel"><h3>6~10분: 정답과 내 풀이 비교</h3><p>풀이에서 무엇이 같고 다른지 확인하세요. 마지막 2분에 짧은 이해도 성찰이 열립니다.</p><p id="review-reflect-count" class="hint small">성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000) + '</p></section>';
+      return '<section class="panel"><h2>Review 정답과 풀이 · 6분 후 공개</h2><p>첫 6분의 자기 풀이를 보존했습니다. 다음 4분은 정답 비교, 마지막 2분은 성찰입니다.</p><p class="hint small">두 집단에 동일하게 제공하는 검증용 해설 초안입니다.</p>' + cards + '</section>' + reflectUI;
+    },
+    loadReviewFeedback: function () {
+      var self=this, due=self.me.review && self.me.review.release_at;
+      if (!due || self.stageIdx()!==5 || self.view!==5 || self.reviewFeedback || self.reviewLoading || nowMs()<Date.parse(due)) return;
+      if (Date.now()-self.lastReviewFetch<3500) return;
+      self.lastReviewFetch=Date.now(); self.reviewLoading=true;
+      api('GET','me/review-feedback').then(function(r){
+        self.reviewFeedback=r;
+        if(self.me.review) self.me.review.reflection=r.reflection;
+        Object.keys(self.pending).forEach(function(id){if (ITEM[id] && ITEM[id].stage === 'Review') delete self.pending[id];});
+        store(self.pendKey(),self.pending);
+        self.renderStage(); self.renderLeftStage();
+      }).catch(function(e){ if(e.code!=='review_locked') toast('해설을 불러오지 못했어요: '+e.message,'warn'); })
+        .then(function(){self.reviewLoading=false;});
+    },
+    submitReviewReflection: function(){
+      var self=this, checked=$('input[name="post-understanding"]:checked');
+      var body={focus_item:($('#post-focus-item')||{}).value||'',understanding:checked?checked.value:'',comparison:($('#post-comparison')||{}).value||'',next_step:''};
+      var btn=$('[data-act="review-reflect"]'); if(btn) btn.disabled=true;
+      api('POST','me/review-reflection',body).then(function(r){
+        if(self.reviewFeedback) self.reviewFeedback.reflection=r.saved;
+        self.renderStage(); toast('해설 후 성찰이 저장됐어요.');
+      }).catch(function(e){toast(e.message,'warn'); if(btn)btn.disabled=false;});
+    },
     visibleStage: function (i) { var open = this.stageIdx(); if (i > open) return false; if (open === 4 && i < 4) return false; return true; },
     renderStage: function () {
       var self = this;
@@ -421,8 +490,11 @@
       var h = '<div class="stagehead ' + key + '"><p class="stage-k"><span class="sdot"></span>' + (self.view + 1) + '. ' + st.id.toUpperCase() + '<span class="ko">' + st.ko + '</span><span class="min">' + stageMin(ln, self.view) + '분</span></p>' +
         '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (editable ? '' : '<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') +
         (editable && self.matVisible(st.id) && mats.length ? '<p class="row">' + mats.map(function (m, i) { return '<button type="button" class="btn sm' + (m.role === 'main' ? '' : ' ghost') + '" data-openmat="' + i + '">' + esc(m.title) + '</button>'; }).join('') + '</p>' : '') + '</div>';
+      if (editable && st.id !== 'Review') h += '<p class="student-simple-tip">① 답을 적고 <b>내 답 제출하기</b>를 누르세요. ② 어렵다면 제출 후 <b>질문으로 도움받기</b>를 누르세요.</p>';
+      h += worksheetPane(ln,g,st.id);
       if (editable) h += self.toolbarHTML();
       items.forEach(function (it) { h += self.itemHTML(it, editable); });
+      if (self.view === 5 && self.stageIdx() === 5) h += self.reviewPanel();
       h += '<p class="savestate" id="savestate"></p>';
       $('#right').innerHTML = h;
       items.forEach(function (it) { self.refreshItem(it.id); });
@@ -448,7 +520,7 @@
       var h = '<article class="item" data-item="' + it.id + '"><header class="item-h"><div class="item-t">' + (it.mark ? '<span class="mark">' + esc(it.mark) + '</span>' : '') +
         '<h3>' + fmt(it.title) + '</h3></div><span class="chip-status" data-status="' + it.id + '"></span></header>';
       if (it.fig || it.choices) h += '<div class="probblock">' + figHTML(it.fig) + choicesHTML(it.choices) + '</div>';
-      if (it.fixedAI) h += '<div class="aiout"><p class="aiout-k">AI의 설명 <small>검토할 자료</small></p><p>' + fmt(it.fixedAI.text) + '</p></div>';
+      if (it.fixedAI) h += '<div class="aiout"><p class="aiout-k">검토할 풀이 설명 <small>두 집단 공통 검토자료</small></p><p>' + fmt(it.fixedAI.text) + '</p></div>';
       if (it.sub) h += '<p class="item-sub">' + fmt(it.sub) + '</p>';
       if (it.hint) h += '<p class="item-hint">' + fmt(it.hint) + '</p>';
       if (it.recall) {
@@ -477,7 +549,7 @@
       h += '</div>';
       if (editable) {
         h += '<div class="revise" data-revise="' + it.id + '" hidden><label for="rv-' + it.id + '">고친 이유 <small>(선택)</small></label><input id="rv-' + it.id + '" data-reason="' + it.id + '" maxlength="300" autocomplete="off" value="' + esc(rec.reason || '') + '" placeholder="무엇을 왜 고쳤는지 한 줄로"></div>' +
-          '<footer class="item-f"><button type="button" class="btn primary" data-act="submit" data-id="' + it.id + '">제출</button><button type="button" class="btn ghost" data-act="help" data-id="' + it.id + '">도움 요청</button><span class="busy" data-busy="' + it.id + '" hidden>점검 중…</span></footer>';
+          '<footer class="item-f"><button type="button" class="btn primary" data-act="submit" data-id="' + it.id + '">내 답 제출하기</button><button type="button" class="btn ghost" data-act="help" data-id="' + it.id + '">질문으로 도움받기</button><span class="busy" data-busy="' + it.id + '" hidden>점검 중…</span></footer>';
       }
       return h + '<div class="thread" data-thread="' + it.id + '"></div></article>';
     },
@@ -498,9 +570,9 @@
       var st = self.statusText(id); chip.textContent = st[0]; chip.className = 'chip-status ' + st[1];
       var sb = $('[data-act="submit"][data-id="' + id + '"]');
       if (sb) {
-        sb.textContent = r.attempts ? '다시 제출' : '제출';
-        sb.disabled = !!self.busy[id] || self.isEmpty(id) || r.status === 'incomplete';
-        var hb = $('[data-act="help"][data-id="' + id + '"]'); if (hb) hb.disabled = !!self.busy[id] || r.status === 'incomplete';
+        sb.textContent = r.attempts ? '수정한 답 다시 제출하기' : '내 답 제출하기';
+        sb.disabled = !!self.busy[id] || self.isEmpty(id) || r.status === 'incomplete' || !self.editable();
+        var hb = $('[data-act="help"][data-id="' + id + '"]'); if (hb) hb.disabled = !!self.busy[id] || !r.attempts || r.status === 'incomplete' || !self.editable();
       }
       var rv = $('[data-revise="' + id + '"]'); if (rv) rv.hidden = !(r.attempts > 0 && r.status !== 'incomplete');
       var bz = $('[data-busy="' + id + '"]'); if (bz) bz.hidden = !self.busy[id];
@@ -510,7 +582,7 @@
     refreshItemLight: function (id) {
       var r = this.item(id), chip = $('[data-status="' + id + '"]');
       if (chip) { var st = this.statusText(id); chip.textContent = st[0]; chip.className = 'chip-status ' + st[1]; }
-      var sb = $('[data-act="submit"][data-id="' + id + '"]'); if (sb) sb.disabled = !!this.busy[id] || this.isEmpty(id) || r.status === 'incomplete';
+      var sb = $('[data-act="submit"][data-id="' + id + '"]'); if (sb) sb.disabled = !!this.busy[id] || this.isEmpty(id) || r.status === 'incomplete' || !this.editable();
     },
     renderSelRow: function (id, field) {
       var n = $('[data-selrow="' + id + ':' + field + '"]'); if (!n) return;
@@ -591,6 +663,7 @@
         if (b.hasAttribute('data-segins')) { insertAt(lastInput, b.getAttribute('data-segins').split('').map(function (ch) { return ch + '̅'; }).join('')); $('#segmenu').hidden = true; return; }
         if (b.hasAttribute('data-unsel')) { var p = b.getAttribute('data-unsel').split(':'), arr = self.item(p[0]).draft_sel[p[1]] || [], el = p[2] + ':' + p[3], i = arr.indexOf(el); if (i >= 0) arr.splice(i, 1); self.renderSelRow(p[0], p[1]); self.renderFigSel(); self.saveDraft(p[0]); return; }
         if (b.hasAttribute('data-openmat')) { self.openMaterial(+b.getAttribute('data-openmat')); return; }
+        if (b.getAttribute('data-act') === 'review-reflect') { self.submitReviewReflection(); return; }
         if (b.getAttribute('data-act') === 'submit') { self.submit(b.getAttribute('data-id')); return; }
         if (b.getAttribute('data-act') === 'help') { self.help(b.getAttribute('data-id')); return; }
       });
@@ -670,10 +743,10 @@
     shell: function () {
       var self = this;
       $('#app').innerHTML = topbar('교사 화면 · 수업 ' + esc(self.code), '<span class="stagectl"><button class="btn sm" id="t-prev">이전 단계</button><button class="btn sm primary" id="t-next">다음 단계 열기</button></span>' + (App.role === 'researcher' ? '<button class="btn sm ghost" id="t-back">연구자 화면</button>' : '<button class="btn sm ghost" id="t-switch">수업 바꾸기</button>')) +
-        '<div class="tlayout"><aside class="tleft"><h2>도움 요청 <small>통제집단</small></h2><div id="queue"><p class="empty">불러오는 중…</p></div><p class="hint small">실험집단은 AI 튜터가 지원해요. 교사는 시간·전환·기기 문제만 돕습니다.</p></aside>' +
-        '<section class="tmain"><div class="tmain-h"><h2>학생</h2><span id="t-count"></span></div><div class="tablewrap"><table class="roster" id="roster"></table></div>' +
+        '<p class="teacher-simple-tip">① 도움 요청 확인 → ② 학생 답 읽기 → ③ 질문 골라 보내기</p><div class="tlayout"><aside class="tleft"><h2>도움 요청 <small>통제집단</small></h2><div id="queue"><p class="empty">불러오는 중…</p></div><p class="hint small">실험집단은 AI 튜터가 지원해요. 교사는 시간·전환·기기 문제만 돕습니다.</p></aside>' +
+        '<section class="tmain"><details class="teacher-roster-more"><summary>전체 학생 현황 보기 (필요할 때만) <span id="t-count"></span></summary><div class="tablewrap"><table class="roster" id="roster"></table></div>' +
         '<div class="legend"><span><span class="cell none">·</span>아직 안 씀</span><span><span class="cell draft">…</span>작성 중</span><span><span class="cell sent">1</span>제출 횟수</span><span><span class="cell mid">?</span>숫자 확인 필요</span><span><span class="cell ok2">✓</span>숫자 맞음</span><span><span class="cell inc">–</span>빈칸·막힘</span><span><span class="cell inc">미</span>미제출</span></div>' +
-        '<div class="legend"><b>실험집단</b><span><span class="cell mid">L1</span>진행 중 지원 수준</span><span><span class="cell ok">✓</span>해결</span><span><span class="cell bad">!</span>미해결</span><span>숫자 표시는 규칙 판정이며, 통제집단에는 AI 판정을 쓰지 않아요.</span></div></section>' +
+        '<div class="legend"><b>실험집단</b><span><span class="cell mid">L1</span>진행 중 지원 수준</span><span><span class="cell ok">✓</span>해결</span><span><span class="cell bad">!</span>미해결</span><span>숫자 표시는 규칙 판정이며, 통제집단에는 AI 판정을 쓰지 않아요.</span></div></details></section>' +
         '<aside class="tdetail" id="tdetail"><p class="empty">학생을 고르면 답과 지원 기록이 여기에 보여요.</p></aside></div>';
       bindExit();
       if ($('#t-back')) $('#t-back').onclick = function () { Researcher.start(); };
@@ -793,23 +866,46 @@
       var openReq = d.requests.filter(function (r) { return r.item_id === self.selItem && !r.answered_at; });
       n.innerHTML = '<form class="sendform" id="sendform"><h3>지원 보내기 <small>' + esc(shortOf(self.selItem)) + '</small></h3>' +
         (opt.preSubmitOnly ? '<p class="note">학생이 아직 제출하지 않았어요. 두 집단 공통 원칙에 따라 “먼저 생각 적기” 안내만 보낼 수 있어요.</p>' : '') +
-        '<label>지원 수준<select id="sf-level">' + opt.levels.map(function (l) { return '<option value="' + l + '"' + (l === opt.suggested ? ' selected' : '') + '>수준 ' + l + (l === opt.suggested && !opt.preSubmitOnly ? ' (권장: 한 단계 위)' : '') + '</option>'; }).join('') + '</select></label>' +
-        '<p class="hint small">이 단계 상한 ' + opt.cap + ' · 현재 ' + ((it && it.rec.level) || 0) + '</p><div id="sf-bank" class="bank"></div>' +
-        '<label class="custom">직접 쓰기 <small>(표준 발문 대신 쓸 때만, 기록에 표시돼요)</small><textarea id="sf-custom" rows="2" maxlength="500"></textarea></label>' +
-        '<p class="warnline" id="sf-warn" hidden></p><button class="btn primary" type="submit">보내기</button>' +
-        '<span class="hint small">' + (openReq.length ? '요청에 답하는 지원으로 기록돼요' : '교사가 먼저 건네는 지원으로 기록돼요') + '</span></form>';
+        '<p class="hint small">메타인지적 점검 질문 · 단일 지원 수준</p><input id="sf-level" type="hidden" value="1">' +
+        (!openReq.length ? '<p class="note">학생의 도움 요청이 오면 발문을 보낼 수 있습니다.</p>' : '') +
+        '<fieldset class="panel"><legend>질문을 만드는 방법</legend>'+
+        '<label style="display:inline-block;margin-right:14px"><input type="radio" name="sf-mode" value="bank" checked> 미리 준비한 질문 선택</label>'+
+        '<label style="display:inline-block"><input type="radio" name="sf-mode" value="custom"> 교사가 직접 질문 쓰기</label></fieldset>'+
+        '<div id="sf-bank" class="bank"></div>'+
+        '<div id="sf-compose" hidden><label for="sf-custom"><b>학생 답변을 보고 직접 질문하세요.</b></label>'+
+        '<textarea id="sf-custom" rows="3" maxlength="130" placeholder="예: 네가 그렇게 생각한 이유를 한 가지 말해볼래?"></textarea>'+
+        '<label for="sf-emergency-reason"><b>비상시 직접 입력 사유 (필수)</b></label><input id="sf-emergency-reason" maxlength="180" placeholder="예: 은행의 질문이 학생 상황과 맞지 않음">'+
+        '<p class="hint small">정답, 공식, 계산방법을 알려주지 마세요. 학생에게는 작성한 질문이 텍스트로 전달됩니다. 직접 작성 질문은 연구자가 기록으로 검수합니다.</p></div>' +
+        '<label style="display:block;margin:10px 0"><input type="checkbox" id="sf-private-oral"> 같은 질문을 해당 학생에게 개별적으로 말로도 전달함 (교사 자기보고)</label>'+
+        '<p class="hint small">전체 Zoom 강의실에 개별 질문을 읽는 방식은 사용하지 마세요. 체크 여부와 실제 전달 원문을 로그에 보존하며 음성 전달 자체를 독립적으로 검증한 것은 아닙니다.</p>'+
+        '<p class="warnline" id="sf-warn" hidden></p><button class="btn primary" type="submit"' + ((!openReq.length || opt.preSubmitOnly) ? ' disabled' : '') + '>보내기</button>' +
+        '<span class="hint small">' + (openReq.length ? '학생에게 텍스트 발송 · 교사 질문 선택이 기록됩니다. 소리 내어 말했는지는 기록되지 않습니다.' : '요청 전에는 발문을 보낼 수 없어요.') + '</span></form>';
       var renderBank = function () {
         var L = +$('#sf-level').value;
-        var list = L === 0 ? [self.bank.pre_submit] : self.bank.bank.filter(function (b) { return b.item === self.selItem && b.level === L; });
-        $('#sf-bank').innerHTML = list.map(function (b, i) { return '<label class="bankopt"><input type="radio" name="sf-b" value="' + esc(b.id) + '"' + (i === 0 ? ' checked' : '') + '><span>' + fmt(b.text) + '</span></label>'; }).join('');
+        var list = L === 0 ? [] : self.bank.bank.filter(function (b) { return b.item === self.selItem && b.level === 1 && !b.group; });
+        var state = it && it.rec && it.rec.state || '*';
+        var priority = list.filter(function(b){return b.state === state || b.state === '*';});
+        var top = priority.slice(0,6), more = list.filter(function(b){return top.indexOf(b) < 0;});
+        var optionHTML=function(b,checked){return '<label class="bankopt"><input type="radio" name="sf-b" value="' + esc(b.id) + '"' + (checked?' checked':'') + '><span>' + fmt(b.text) + ' <small>(' + esc(b.state) + ')</small></span></label>';};
+        $('#sf-bank').innerHTML = '<p class="hint small">학생 응답 상태: ' + esc(state) + ' · 우선 추천 ' + top.length + '개 (교사는 내용 확인 후 선택)</p>' +
+          top.map(function(b,i){return optionHTML(b,i===0);}).join('') +
+          (more.length?'<details><summary>다른 발문 후보 ' + more.length + '개 보기</summary>' + more.map(function(b){return optionHTML(b,false);}).join('') + '</details>':'');
       };
       renderBank();
-      $('#sf-level').onchange = renderBank;
-      $('#sf-custom').oninput = function () { self.confirmCustom = false; $('#sf-warn').hidden = true; };
+      $('input[name="sf-mode"]').forEach(function(radio){
+        radio.onchange=function(){
+          var custom=($('input[name="sf-mode"]:checked')||{}).value==='custom';
+          $('#sf-bank').hidden=custom;
+          $('#sf-compose').hidden=!custom;
+        };
+      });
+      // 미리 승인된 질문 선택과 교사 직접 질문을 구분해 기록한다.
+      // 어떤 모드든 지원 수준 1, 최초 답변 뒤 학생 도움 요청을 유지한다.
       $('#sendform').onsubmit = function (ev) {
         ev.preventDefault();
         var btn = $('#sendform button[type=submit]'); btn.disabled = true;
-        var body = { session: self.code, code: d.student.code, item_id: self.selItem, level: +$('#sf-level').value, bank_id: ($('input[name="sf-b"]:checked') || {}).value, custom: $('#sf-custom').value.trim(), confirm: self.confirmCustom };
+        var mode=($('input[name="sf-mode"]:checked')||{}).value==='custom'?'custom':'bank';
+        var body = { session: self.code, code: d.student.code, item_id: self.selItem, level: +$('#sf-level').value, mode:mode, bank_id: mode==='bank'?($('input[name="sf-b"]:checked')||{}).value:null, custom: mode==='custom'?$('#sf-custom').value.trim():'', emergency_reason:mode==='custom'?$('#sf-emergency-reason').value.trim():'', private_oral: $('#sf-private-oral').checked };
         api('POST', 'staff/send', body).then(function (r) {
           if (r.warn) {
             self.confirmCustom = true;
@@ -845,9 +941,11 @@
       document.body.className = 'is-researcher';
       self.code = store('pq4r:researcher-session') || null;
       $('#app').innerHTML = topbar('연구자 화면', '<span id="r-sess" class="pill"></span>') +
-        '<nav class="rtabs" id="rtabs">' + [['sess', '수업·설정'], ['roster', '명단'], ['log', '기록'], ['fid', '처치충실도'], ['rev', '사람 검토'], ['bank', '발문 은행'], ['mat', '개념 자료'], ['status', '운영 점검']].map(function (t) {
+        '<nav class="rtabs" id="rtabs" aria-label="연구자 메뉴">' + [['sess','1. 수업 준비'],['roster','2. 학생 명단'],['log','3. 기록 저장']].map(function (t) {
           return '<button class="rtab" data-tab="' + t[0] + '">' + t[1] + '</button>';
-        }).join('') + '</nav><section class="rbody" id="rbody"></section>';
+        }).join('') + '<details class="r-advanced"><summary>기타 기능</summary><div class="r-advanced-list">' + [['status','연결 확인'],['fid','처치충실도'],['rev','사람 검토'],['bank','발문 은행'],['worksheet','활동지 점검'],['mat','개념 자료']].map(function (t) {
+          return '<button class="rtab" data-tab="' + t[0] + '">' + t[1] + '</button>';
+        }).join('') + '</div></details></nav><p class="simple-help">처음 사용한다면 <b>1. 수업 준비 → 2. 학생 명단 → 3. 기록 저장</b> 순서로 진행하세요. 세부 점검 기능은 기타 기능에 있습니다.</p><section class="rbody" id="rbody"></section>';
       bindExit();
       $('#rtabs').addEventListener('click', function (ev) { var b = ev.target.closest('[data-tab]'); if (!b) return; self.tab = b.getAttribute('data-tab'); self.render(); });
       App.timers.push(setInterval(function () { var t = $('#timer'), s = self.cur(); if (t && s) t.innerHTML = timerText(s); }, 1000));
@@ -876,6 +974,7 @@
       if (t === 'roster') return self.renderRoster();
       if (t === 'bank') return self.withAdmin(function () { self.renderBank(); });
       if (t === 'mat') return self.withAdmin(function () { self.renderMat(); });
+      if (t === 'worksheet') return self.renderWorksheet();
       if (t === 'status') return self.renderStatus();
       if (t === 'fid') return self.renderFid();
       $('#rbody').innerHTML = '<p class="loading">기록을 불러오는 중…</p>';
@@ -896,13 +995,13 @@
           '<div class="row"><button class="btn sm" id="r-prev"' + (s.stage === 0 || s.status !== 'open' ? ' disabled' : '') + '>이전 단계</button><button class="btn sm primary" id="r-next"' + (s.stage === 5 || s.status !== 'open' ? ' disabled' : '') + '>다음 단계 열기</button><button class="btn sm" id="r-teacher">교사 화면으로</button>' +
           '<button class="btn sm ghost" id="r-close">' + (s.status === 'open' ? '수업 끝내기' : '다시 열기') + '</button></div>' +
           '<p class="hint">단계를 열면 이전 단계는 학생 화면에서 보기 전용이 되고, 제출하지 않은 답은 미완료로 기록돼요. Recite 동안은 앞 단계가 가려집니다.</p>' +
-          '<h3>이 수업 설정 <small>바꾸면 기록에 남아요</small></h3>' +
+          '<details class="r-settings-more"><summary>연구 설정 보기 (실험 중 변경하지 마세요)</summary><h3>이 수업 설정 <small>바꾸면 기록에 남아요</small></h3>' +
           tog('aiJudge', 'AI 판정 사용', '서술형 답을 학생 상태 9가지 중 하나로 분류해요(실험집단만). API 키가 없으면 규칙 판정만 써요.') +
           tog('aiJudgeTwice', 'AI 판정 두 번 확인', '같은 판정을 두 번 돌려 다르면 보류하고 뜻 확인 질문을 보내요(사람 검토 대상).') +
-          tog('aiPhrase', 'AI 문장 다듬기', '은행 문장을 뼈대로 학생 표현만 인용해 넣어요. 새 수학 내용·숫자·정오 표현이 있으면 버리고 원래 문장을 보내요.') +
+          '<p class="hint small">연구용 발문은 공통 1수준 은행의 원문만 제공합니다. AI 문장 재작성 기능은 비활성화되어 있습니다.</p>' +
           tog('fadingPairs', '짝 문항으로 지원 감소 관찰', '1차시 RD02(개념확인)↔RF01(합동조건), 2차시 RD02(대각선 증명)↔RF02(대각선 길이).') +
           tog('materialsInReflect', 'Reflect에서도 개념 정리 열람 허용', '기본은 Read에서만 보여요.') +
-          tog('demoControls', '학생 화면에 시연 제어 표시', '실제 수업에서는 끄세요.') + '</section>' : '') + '</div>';
+          tog('demoControls', '학생 화면에 시연 제어 표시', '실제 수업에서는 끄세요.') + '</details></section>' : '') + '</div>';
       $$('[data-sess]').forEach(function (b) { b.onclick = function () { self.code = b.getAttribute('data-sess'); store('pq4r:researcher-session', self.code); self.render(); }; });
       $('#newsess').onsubmit = function (ev) {
         ev.preventDefault();
@@ -979,7 +1078,7 @@
       $('#rbody').innerHTML = '<div class="logbar"><span><b>' + evs.length + '</b>건 · ' + esc(sc) + ' · 06 사전 30개 항목 + 추가 11개</span>' +
         '<select id="lf-s" aria-label="학생 거르기"><option value="">모든 학생</option>' + students.map(function (s) { return '<option>' + esc(s) + '</option>'; }).join('') + '</select>' +
         '<select id="lf-t" aria-label="이벤트 유형 거르기"><option value="">모든 이벤트</option>' + types.map(function (s) { return '<option>' + esc(s) + '</option>'; }).join('') + '</select>' +
-        '<button class="btn sm" id="lf-r">새로고침</button><button class="btn sm primary" id="lf-csv">CSV 내려받기</button><button class="btn sm" id="lf-json">JSON</button><button class="btn sm" id="lf-all">전체 수업 CSV</button><button class="btn sm ghost" id="lf-bak">전체 백업</button></div>' +
+        '<button class="btn sm primary" id="lf-csv">현재 수업 기록 저장 (CSV)</button><button class="btn sm" id="lf-bak">전체 백업 저장</button><details class="log-more"><summary>다른 저장 옵션</summary><button class="btn sm" id="lf-r">새로고침</button><button class="btn sm" id="lf-json">JSON</button><button class="btn sm" id="lf-all">전체 수업 CSV</button></details></div>' +
         '<div class="tablewrap"><table class="logt" id="logt"></table></div><p class="hint small">화면에는 최근 400건만 보여요. 내려받은 파일에는 모두 들어 있어요. 시각은 한국 시간으로 보이고 파일에는 UTC로 저장돼요.</p>';
       var draw = function () {
         var fs = $('#lf-s').value, ft = $('#lf-t').value;
@@ -1001,12 +1100,20 @@
       var self = this, sc = self.code || 'ALL';
       $('#rbody').innerHTML = '<p class="loading">계산하는 중…</p>';
       api('GET', 'admin/fidelity?session=' + encodeURIComponent(sc)).then(function (r) {
+        if (!r.supportCount.AI && !r.supportCount.TEACHER) {
+          $('#rbody').innerHTML = '<section class="rcard"><h2>아직 검증 전입니다</h2><p>AI 또는 교사가 실제로 보낸 발문이 없습니다. 기록 0건은 통과가 아닙니다.</p><p class="hint">지원이 필요하지 않은 학생도 있으므로, 지원 횟수 0회 자체가 문제라는 뜻은 아닙니다. 수업 참여 기록은 ‘기록 저장’에서 확인하세요.</p></section>';
+          return;
+        }
         function row(ok, label, val, note) { return '<li class="' + (ok ? 'pass' : 'fail') + '"><span class="mk">' + (ok ? '통과' : '확인') + '</span><span class="lb">' + label + '</span><span class="vl mono">' + val + '</span>' + (note ? '<small>' + note + '</small>' : '') + '</li>'; }
         var maxl = r.maxLevelByStudent, ks = Object.keys(maxl).sort();
         $('#rbody').innerHTML = '<div class="rgrid"><section class="rcard"><h2>처치충실도 <small>' + esc(sc) + ' · 기록에서 자동 계산</small></h2><ul class="fid">' +
-          row(r.preSubmitMath === 0, '첫 제출 전 수학 지원 없음', r.preSubmitMath + '건') + row(r.leaks === 0, '지원 문장에 정답 노출 없음', r.leaks + '건') +
-          row(r.capViolations === 0, '단계별 지원 상한 지킴', r.capViolations + '건') + row(r.jumps === 0, '한 번에 한 단계씩만 상승', r.jumps + '건', '교사가 건너뛴 경우 포함') +
+          row(r.preSubmitMath === 0, '첫 제출 전 메타인지 지원 없음', r.preSubmitMath + '건') + row(r.leaks === 0, '지원 문장에 정답 노출 없음', r.leaks + '건') +
+          row(r.levelViolations === 0, '지원 강도 1수준만 사용', r.levelViolations + '건') + row(r.typeViolations === 0, '메타인지 발문 한 유형만 사용', r.typeViolations + '건') + row(r.unsolicited === 0, '학생 요청에 근거한 발문만 제공', r.unsolicited + '건') + row(r.unapprovedText === 0, '발문 ID 기록 확인 (승인 검증은 별도)', r.unapprovedText + '건') +
           row(r.reflectSignals === 0, 'Reflect에서 정오 신호 없음', r.reflectSignals + '건') + row(r.controlAI === 0, '통제집단 AI 지원 0건', r.controlAI + '건') +
+          row(r.earlyReviewDisclosure === 0, 'Review 6분 이전 정답 공개 없음', r.earlyReviewDisclosure + '건') +
+          row(true, '공개 전 답변 고정', r.reviewSnapshots + '명', '첫 해설 열람 시 원래 답변 보존') +
+          row(true, '해설 공개 학생', r.reviewFeedbackOpens + '명') +
+          row(true, '해설 후 이해도 성찰 제출', r.reviewPostReflections + '명') +
           row(r.reciteBeforeStudent === 0, 'Recite에서 학생 설명이 먼저', r.reciteBeforeStudent + '건') + row(true, 'AI 문장 차단(대체됨)', r.blocked + '건', '차단되면 원래 은행 문장이 나가요') +
           row(r.needsReview === 0, '사람 검토가 필요한 판정', r.needsReview + '건', '사람 검토 탭에서 코딩') +
           row(true, '미완료(시간 종료)', r.timeouts + '건', r.lateJoin ? '늦게 들어와 이미 닫힌 단계 문항 ' + r.lateJoin + '건은 따로 셈' : '') +
@@ -1014,7 +1121,7 @@
           '</ul></section><section class="rcard"><h2>지원 분량</h2><p>AI 수학 지원 <b class="mono">' + r.supportCount.AI + '</b>회 · 교사 수학 지원 <b class="mono">' + r.supportCount.TEACHER + '</b>회</p>' +
           '<p>교재 열람: 실험 <b class="mono">' + r.materialOpens.EXPERIMENT + '</b>회 · 통제 <b class="mono">' + r.materialOpens.CONTROL + '</b>회</p>' +
           '<p>교사 응답 대기: ' + (r.teacherWait.n ? '중앙값 <b class="mono">' + mmss(r.teacherWait.median) + '</b> · 최대 <b class="mono">' + mmss(r.teacherWait.max) + '</b> (' + r.teacherWait.n + '건)' : '기록 없음') + '</p>' +
-          '<h3>학생별 최고 지원 수준</h3>' + (ks.length ? '<div class="lvls">' + ks.map(function (k) { return '<span class="lv"><b>' + esc(k) + '</b> L' + maxl[k] + '</span>'; }).join('') + '</div>' : '<p class="muted">아직 지원 기록이 없어요.</p>') + '</section></div>';
+          '<h3>학생별 적용된 지원 수준</h3>' + (ks.length ? '<div class="lvls">' + ks.map(function (k) { return '<span class="lv"><b>' + esc(k) + '</b> L' + maxl[k] + '</span>'; }).join('') + '</div>' : '<p class="muted">아직 지원 기록이 없어요.</p>') + '</section></div>';
       }).catch(function (e) { $('#rbody').innerHTML = '<p class="empty">' + esc(e.message) + '</p>'; });
     },
     renderRev: function () {
@@ -1043,21 +1150,61 @@
       var byItem = {}; rows.forEach(function (b) { (byItem[b.item] = byItem[b.item] || []).push(b); });
       var cap = {}; A.caps.forEach(function (c) { cap[c.id] = c.cap; });
       $('#rbody').innerHTML = '<section class="rcard wide"><h2>발문 은행 <small>' + esc(A.versions.bank) + ' · ' + A.bank.length + '문장 + 공통 ' + Object.keys(A.common).length + ' · 연구자 승인 필요</small></h2>' +
-        '<p class="hint">이번 판(활동지 PPTX 반영)의 정답 기준과 발문은 Claude가 쓴 초안이라 연구자 검토가 필요해요. 출처 NEW는 새로 쓴 문장, STD는 행동규칙 표준 발문(이전 판에서 옮김)입니다. 상태가 * 이면 학생 상태와 관계없이 쓰여요. a는 처음, b는 같은 수준에서 다시 표현할 때 씁니다. 이 화면과 정답 기준은 연구자에게만 보여요.</p>' +
+        '<p class="hint">이번 판(활동지 PPTX 반영)의 정답 기준과 발문은 Claude가 쓴 초안이라 연구자 검토가 필요해요. 이 질문들은 2026년 10월 23일 새로 작성한 수학 개념 연계형 메타인지 질문 후보입니다. 모두 단일 강도 1수준이며 연구자 최종 검수가 필요합니다. 상태가 * 이면 모든 학생 상태에서 사용할 수 있으며, 반복 요청 시 미사용 질문을 우선합니다. 이 화면과 정답 기준은 연구자에게만 보여요.</p>' +
         Object.keys(C.lessons).map(function (ln) {
-          return '<h3>' + esc(lessonLabel(+ln)) + '</h3>' + C.items.filter(function (it) { return String(it.lesson) === ln; }).map(function (it) {
+          return '<h3>' + esc(lessonLabel(+ln)) + '</h3>' + C.items.filter(function (it) { return String(it.lesson) === ln && !it.archived; }).map(function (it) {
           var rbx = A.rubric[it.id], fxs = it.byGroup && it.byGroup.EXPERIMENT && it.byGroup.EXPERIMENT.fixedAI ? A.fixed_ai[it.byGroup.EXPERIMENT.fixedAI] : null;
           var vk = function (l) { return (l || []).map(function (v) { return ({ right: '옳다', partly: '일부만 옳다', wrong: '다 틀리다' })[v]; }).join('·') || '없음'; };
           return '<details class="bankitem"><summary><b>' + esc(it.short) + '</b> ' + esc(it.stage) + ' · 상한 ' + cap[it.stage] + ' · ' + (byItem[it.id] || []).length + '문장' + (rbx && rbx.draft ? ' <span class="pill warn">기준 초안</span>' : '') + '</summary>' +
             '<p class="small muted">' + fmt(it.title) + '</p>' +
             (rbx ? '<p class="small"><b>정답 기준' + (rbx.draft ? '(초안 · 연구자 검토 필요)' : '') + '</b> 기대: ' + fmt(rbx.expected) + ' / 인정: ' + fmt(rbx.accepted) + ' / 오개념: ' + fmt(rbx.misconceptions) + (rbx.add ? '<br><b>추가 기준</b> ' + fmt(rbx.add) : '') + '</p>' : '') +
-            (fxs ? '<p class="small"><b>실험집단 AI의 설명</b> “' + fmt(fxs.text) + '” · 실제 성격 <span class="mono">' + esc(fxs.type) + '</span> · 충족으로 보는 판단: ' + vk(fxs.ok) + (fxs.near && fxs.near.length ? ' · 일부 충족: ' + vk(fxs.near) : '') + '</p>' : '') +
+            (fxs ? '<p class="small"><b>두 집단 공통 검토 설명</b> “' + fmt(fxs.text) + '” · 실제 성격 <span class="mono">' + esc(fxs.type) + '</span> · 충족으로 보는 판단: ' + vk(fxs.ok) + (fxs.near && fxs.near.length ? ' · 일부 충족: ' + vk(fxs.near) : '') + '</p>' : '') +
             '<table class="banktab"><thead><tr><th>수준</th><th>상태</th><th>변형</th><th>집단</th><th>출처</th><th>문장</th></tr></thead><tbody>' +
             (byItem[it.id] || []).map(function (b) { return '<tr><td class="mono">L' + b.level + '</td><td class="mono small">' + esc(b.state) + '</td><td>' + esc(b.variant) + '</td><td>' + (b.group ? groupKo(b.group).replace('집단', '') : '공통') + '</td><td>' + esc(b.src) + '</td><td>' + fmt(b.text) + '</td></tr>'; }).join('') + '</tbody></table></details>';
           }).join('');
         }).join('') +
         '<h3>공통 응답</h3><table class="banktab"><tbody>' + Object.keys(A.common).map(function (k) { var c = A.common[k]; return '<tr><td class="mono small">' + k + '</td><td>' + fmt(c.text) + '</td></tr>'; }).join('') + '</tbody></table>' +
         (A.excluded.length ? '<h3>은행에서 뺀 문장</h3><table class="banktab"><tbody>' + A.excluded.map(function (x) { return '<tr><td class="mono">' + esc(x.item) + ' L' + x.level + '</td><td>' + esc(x.text) + '</td><td class="muted">' + esc(x.reason) + '</td></tr>'; }).join('') + '</tbody></table>' : '') + '</section>';
+    },
+    renderWorksheet: function () {
+      var s = this.cur();
+      var stages=['Preview','Question','Read','Reflect','Recite','Review'];
+      var slides={1:{Preview:'1',Question:'1',Read:'2~3',Reflect:'4~6',Recite:'7',Review:'8'},
+                  2:{Preview:'1',Question:'1',Read:'2~4',Reflect:'5~7',Recite:'8',Review:'9'}};
+      var labels={Preview:'미리보기',Question:'질문 만들기',Read:'개념 읽기와 개념 확인',
+                  Reflect:'제시된 설명 검토',Recite:'스스로 설명',Review:'스스로 다시 풀기'};
+      var html='<section class="rcard wide"><h2>활동지 점검 <small>현재 웹앱의 실제 문항과 답변란</small></h2>'+
+        '<p class="hint">최종 PPTX 7개와 비교한 웹 구현 목록입니다. <b>PPTX 원본 파일 자체를 이 서버에 업로드한 것은 아닙니다.</b> 아래 문제와 도형이 학생 화면에 연결된 내용을 확인하세요.</p>'+
+        '<p class="hint small">1차시 AI·교사 활동지 각 8쪽, 2차시 AI·교사 활동지 각 9쪽. 정답지는 각 5쪽, 공통 성찰지 1쪽. 두 집단에 같은 수학문항과 동일한 Reflect 검토 설명을 제공해야 합니다.</p>';
+      Object.keys(C.lessons).forEach(function(ln) {
+        var L=Number(ln),list=C.items.filter(function(it){return it.lesson===L&&!it.archived;});
+        html+='<h3>'+esc(lessonLabel(L))+' · 활동 문항 '+list.length+'개</h3>'+
+          '<p class="small">차시 시간 60분 · Preview 2, Question 2, Read 16, Reflect 19, Recite 9, Review 12분</p>';
+        stages.forEach(function(stage){
+          var subset=list.filter(function(it){return it.stage===stage;});
+          if(!subset.length)return;
+          html+='<details class="bankitem"><summary><b>'+stage+'</b> '+esc(labels[stage])+
+            ' · 활동지 '+slides[L][stage]+'쪽 · 문항 '+subset.length+'개</summary>';
+          subset.forEach(function(it){
+            var ai=resolveItem(it.id,'EXPERIMENT',{}),tc=resolveItem(it.id,'CONTROL',{});
+            var same=JSON.stringify(ai)===JSON.stringify(tc);
+            var prob=L&&C.lessons[L]&&C.lessons[L].stageProblem&&C.lessons[L].stageProblem[stage];
+            var shared=prob&&C.problems[prob];
+            html+='<article class="panel"><h4>'+esc(it.id)+' '+fmt(ai.title)+'</h4>'+
+              (ai.sub?'<p class="small">'+fmt(ai.sub)+'</p>':'')+
+              (shared?'<p class="small"><b>공통 문제:</b> '+fmt(shared.text)+'</p>'+figHTML(C.figs[shared.fig]):'')+
+              (ai.fig?figHTML(ai.fig):'')+choicesHTML(ai.choices)+
+              (ai.fixedAI?'<p class="small"><b>두 집단 공통 검토 설명:</b> '+fmt(ai.fixedAI.text)+'</p>':'')+
+              '<p class="small"><b>입력란:</b> '+ai.fields.map(function(f){return esc(f.label)+(f.kind==='choice'?' (선택형)':'');}).join(' / ')+'</p>'+
+              '<p class="small">'+(same?'집단별 화면 콘텐츠 일치':'집단별 안내 또는 입력란 차이 존재 · 원본 대조 필요')+'</p></article>';
+          });
+          html+='</details>';
+        });
+      });
+      html+='<section class="panel"><h3>공통 Review 운영 확인</h3>'+
+        '<p>첫 6분: 풀이와 정답 공개 전 확신 정도 기록. 6~10분: 두 집단에 같은 서버 정답 및 풀이 공개. 10~12분: 이해도 선택과 짧은 성찰 저장.</p>'+
+        '<p class="hint">정답 본문은 이 학생용 공개 API에 포함되지 않습니다. 연구자 발문 은행에서는 정답키 초안을 볼 수 있습니다. 실제 학생 화면에서 6분 차단 여부는 별도 시연으로 검증해야 합니다.</p></section></section>';
+      $('#rbody').innerHTML=html;
     },
     renderMat: function () {
       var notes = this.admin.material_notes || [];
@@ -1108,6 +1255,11 @@
   function boot() {
     fetch('/api/v1/content', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(); return r.json(); }).then(function (c) {
       C = c; C.items.forEach(function (it) { ITEM[it.id] = it; });
+      fetch('/worksheets/manifest.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(json){
+        if(!json || !json.lessons)return;
+        WORKSHEETS=json;
+        if(App.role==='student' && Student.me) Student.renderStage();
+      }).catch(function(){ /* PPT 이미지 미설치 시 기존 웹 문제와 입력란 유지 */ });
       var a = /^#login/.test(location.hash) ? null : loadAuth();
       if (!a) return renderEntry();
       App.tok = a.token; App.role = a.role; App.tid = a.tid || null;

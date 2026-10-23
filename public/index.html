@@ -377,6 +377,13 @@ tr:last-child td { border-bottom: 0; }
 .modal-card { background: var(--surface); border-radius: var(--r); padding: 18px; width: min(100%, 720px); display: grid; gap: 10px; }
 .modal-card textarea { font-family: var(--mono); font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.worksheet-panel{margin:15px 0;border:1px solid #b4c6db;border-radius:12px;background:#f9fbff;padding:12px}
+.worksheet-panel summary{font-weight:700;cursor:pointer}
+.worksheet-pages{display:flex;gap:10px;overflow-x:auto;padding:12px 0}
+.worksheet-pages figure{flex:0 0 min(82vw,520px);margin:0}
+.worksheet-pages img{display:block;width:100%;height:auto;border:1px solid #d3dce6;background:white;border-radius:8px}
+.worksheet-pages figcaption{font-size:12px;color:#5c6679;padding-top:5px}
+@media (max-width:700px){.worksheet-pages figure{flex-basis:96%}}
 </style>
 <style>
 /* MVP 추가: 로그인, 연구자 관리 화면 */
@@ -406,6 +413,34 @@ tr:last-child td { border-bottom: 0; }
 .checklist li small { grid-column: 2; color: var(--muted); }
 .roster-in { font-family: var(--mono); font-size: 13px; }
 .empty-pad { padding: 24px; }
+
+/* 쉬운 사용 화면: 고급 기능과 전체 학생 현황은 사용자가 펼칠 때 표시 */
+.simple-help,.student-simple-tip,.teacher-simple-tip{margin:12px auto 0;max-width:1230px;padding:12px 16px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2);font-size:14px;line-height:1.6}
+.student-simple-tip{margin:0 0 12px}
+.teacher-simple-tip{margin:14px 16px 0}
+.rtabs{align-items:center;flex-wrap:wrap;overflow:visible;padding-block:6px}
+.rtabs>.rtab{font-size:15px;padding:12px 18px}
+.r-advanced{margin-left:auto;max-width:100%;position:relative}
+.r-advanced summary,.r-settings-more summary,.teacher-roster-more summary,.log-more summary{cursor:pointer;font-weight:600;color:var(--ink);padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
+.r-advanced[open]{width:100%}
+.r-advanced-list{display:flex;flex-wrap:wrap;gap:8px;padding:10px 0}
+.r-advanced-list .rtab{border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px}
+.r-settings-more,.teacher-roster-more{display:block;width:100%}
+.r-settings-more[open],.teacher-roster-more[open]{border-top:1px solid var(--line);padding-top:8px}
+.r-settings-more h3,.r-settings-more .tog,.teacher-roster-more .tablewrap,.teacher-roster-more .legend{margin-top:10px}
+.log-more{display:inline-block}.log-more[open]{width:100%}.log-more .btn{margin:8px 6px 4px 0}
+.is-teacher .tlayout{grid-template-columns:minmax(230px,320px) minmax(0,1fr)}
+.is-teacher .tleft{grid-column:1;grid-row:1}
+.is-teacher .tdetail{grid-column:2;grid-row:1;min-height:170px}
+.is-teacher .tmain{grid-column:1/-1;grid-row:2}
+@media(max-width:900px){
+.is-teacher .tlayout{grid-template-columns:minmax(0,1fr)}
+.is-teacher .tleft{grid-column:1;grid-row:1}
+.is-teacher .tdetail{grid-column:1;grid-row:2}
+.is-teacher .tmain{grid-column:1;grid-row:3}
+.rtabs>.rtab{font-size:13px;padding:10px}
+.simple-help,.student-simple-tip,.teacher-simple-tip{font-size:13px}
+}
 </style>
 </head>
 <body>
