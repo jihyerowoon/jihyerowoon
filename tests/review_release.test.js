@@ -13,6 +13,10 @@ for(const lesson of [1,2]){
   ok(C.LESSONS[lesson].min[5]===12,lesson+'차시 Review 12분');
   ok(JSON.stringify(C.LESSONS[lesson].min)===JSON.stringify([2,2,16,19,9,12]),lesson+'차시 원래 60분 시간표 유지');
   ok(E.itemsForStage('Review','EXPERIMENT',{},lesson).length===1,lesson+'차시 Review 풀이 1문항만 노출');
+  const rv=E.resolveItem('L'+lesson+'RV01','EXPERIMENT',{});
+  const rvTeacher=E.resolveItem('L'+lesson+'RV01','CONTROL',{});
+  ok(rv.fields.some(f=>f.key==='pre_confidence'&&f.kind==='choice'&&f.options.length===3),lesson+'차시 정답 공개 전 확신도 3가지');
+  ok(JSON.stringify(rv.fields)===JSON.stringify(rvTeacher.fields),lesson+'차시 두 집단 동일 자기확신도 문항');
 }
 const t=Date.parse('2026-10-23T00:00:00.000Z');
 const sess={stage:5,status:'open',stage_opened:{5:new Date(t).toISOString()}};
