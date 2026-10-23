@@ -29,4 +29,18 @@ r = E.onSubmit(first.rec, {state:'PARTIAL',misc:null,missing:[]}, {stage:'Reflec
 const next = E.onHelp(r.rec, {stage:'Reflect',itemId:'L1RF01',group:'EXPERIMENT'});
 ok(next.rec.level === 1 && next.rec.supportCount === 2, '재응답 후 2차 지원도 같은 1수준');
 ok(E.onHelp(r.rec, {stage:'Reflect',itemId:'L1RF01',group:'CONTROL'}).out.some(x=>x.kind==='request'), '통제집단 교사 도움 요청 대기열 생성');
+ok(C.BANK.length === 396, '새 메타인지 발문은행 396개');
+ok(new Set(C.BANK.map(b => b.id)).size === 396, '발문 ID 중복 없음');
+ok(C.BANK.every(b => b.level === 1 && b.type === '메타인지' && !b.group), '발문 한 유형 한 수준 두 집단 공통');
+ok(C.BANK.every(b => !E.leakCheck(b.item, b.text)), '기존 자동 누출 탐지 규칙에 걸린 발문 없음');
+const active = C.ITEMS.filter(it => !it.archived);
+ok(active.length === 24 && active.every(it => C.BANK.filter(b => b.item === it.id).length >= 16), '활성 24문항에 16개 이상 후보');
+let nextRec = E.onSubmit(null,{state:'PARTIAL',misc:null,missing:[]},{stage:'Reflect',itemId:'L2RF03',group:'EXPERIMENT'}).rec;
+const history = [];
+for(let i=0;i<16;i++){
+  const x=E.onHelp(nextRec,{stage:'Reflect',itemId:'L2RF03',group:'EXPERIMENT'});
+  history.push(x.out[0].entryId);
+  nextRec=E.onSubmit(x.rec,{state:'PARTIAL',misc:null,missing:[]},{stage:'Reflect',itemId:'L2RF03',group:'EXPERIMENT'}).rec;
+}
+ok(new Set(history).size===16,'반복 질문 16회 서로 다른 발문 선택');
 console.log('PASS ' + passes + ': 연구설계 회귀검사(프로토타입 논리 수준, 실제 DB 및 화면 부하시험 별도 필요)');
