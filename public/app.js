@@ -1,7 +1,7 @@
 /* PQ4R 튜터 MVP(1차시 삼각형의 합동 · 2차시 평행사변형의 성질) — 화면. 판정·발문 선택·기록은 모두 서버(/api/v1)가 한다. */
 (function () {
   'use strict';
-  var C = null, ITEM = {};
+  var C = null, ITEM = {}, WORKSHEETS = null;
   var STAGE_KEYS = ['preview', 'question', 'read', 'reflect', 'recite', 'review'];
 
   /* ---------- 공통 도구 ---------- */
@@ -96,6 +96,15 @@
   function figHTML(f, cls) {
     if (!f) return '';
     return '<figure class="probfig' + (cls ? ' ' + cls : '') + '"><img src="' + esc(f.file) + '" width="' + f.w + '" height="' + f.h + '" alt="' + esc(plain(f.desc)) + '" loading="lazy"></figure>';
+  }
+  function worksheetPane(lesson,group,stage) {
+    var pages=WORKSHEETS&&WORKSHEETS.lessons&&WORKSHEETS.lessons[String(lesson)]&&WORKSHEETS.lessons[String(lesson)][group]&&WORKSHEETS.lessons[String(lesson)][group][stage];
+    if(!Array.isArray(pages)||!pages.length)return '';
+    return '<section class="worksheet-panel" aria-label="원본 활동지"><details open><summary>원본 PPT 활동지 '+pages.length+'쪽 · 그림을 보고 아래 답변칸에 입력하세요</summary>'+
+      '<div class="worksheet-pages">'+pages.map(function(url,i){
+        if(typeof url!=='string'||url.indexOf('/worksheets/L')!==0||url.indexOf('..')>=0||!url.endsWith('.png'))return '';
+        return '<figure><img src="'+esc(url)+'" alt="'+esc(stage)+' 활동지 '+(i+1)+'쪽" loading="lazy"><figcaption>수학문제와 도형: PPT 원본 이미지</figcaption></figure>';
+      }).join('')+'</div></details></section>';
   }
   function choicesHTML(list) {
     if (!list || !list.length) return '';
@@ -481,6 +490,7 @@
       var h = '<div class="stagehead ' + key + '"><p class="stage-k"><span class="sdot"></span>' + (self.view + 1) + '. ' + st.id.toUpperCase() + '<span class="ko">' + st.ko + '</span><span class="min">' + stageMin(ln, self.view) + '분</span></p>' +
         '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (editable ? '' : '<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') +
         (editable && self.matVisible(st.id) && mats.length ? '<p class="row">' + mats.map(function (m, i) { return '<button type="button" class="btn sm' + (m.role === 'main' ? '' : ' ghost') + '" data-openmat="' + i + '">' + esc(m.title) + '</button>'; }).join('') + '</p>' : '') + '</div>';
+      h += worksheetPane(ln,g,st.id);
       if (editable) h += self.toolbarHTML();
       items.forEach(function (it) { h += self.itemHTML(it, editable); });
       if (self.view === 5 && self.stageIdx() === 5) h += self.reviewPanel();
@@ -1237,6 +1247,11 @@
   function boot() {
     fetch('/api/v1/content', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(); return r.json(); }).then(function (c) {
       C = c; C.items.forEach(function (it) { ITEM[it.id] = it; });
+      fetch('/worksheets/manifest.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(json){
+        if(!json || !json.lessons)return;
+        WORKSHEETS=json;
+        if(App.role==='student' && Student.me) Student.renderStage();
+      }).catch(function(){ /* PPT 이미지 미설치 시 기존 웹 문제와 입력란 유지 */ });
       var a = /^#login/.test(location.hash) ? null : loadAuth();
       if (!a) return renderEntry();
       App.tok = a.token; App.role = a.role; App.tid = a.tid || null;
