@@ -31,7 +31,7 @@ module.exports=async function run(browser){
  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'tests/shots/teacher-mobile.png',fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'모바일 가로 넘침 없음');
  // 별도 학생 창에서 실제 PIN 1111 로그인
  const sc=await browser.newContext({viewport:{width:1280,height:900}}),sp=await sc.newPage();sp.on('pageerror',e=>errors.push(e.message));
- await sp.goto(BASE+'/?session=TESTUI-L1#login-student');await sp.locator('#l-code').fill('UIS003');await sp.locator('#l-pin').fill('1111');await sp.locator('#lf button').click();await sp.locator('#right textarea').first().waitFor();await sp.locator('#right textarea').first().fill('자동저장 검증 원문');
+ await sp.goto(BASE+'/?class=TESTUI#login-student');await sp.locator('#l-code').fill('UIS003');await sp.locator('#l-pin').fill('1111');await sp.locator('#lf button').click();await sp.locator('#right textarea').first().waitFor();await sp.locator('#right textarea').first().fill('자동저장 검증 원문');
  await sp.waitForFunction(()=>document.querySelector('#savestate').textContent.includes('임시저장'));
  await sql`update sessions set clock=jsonb_build_object('mode','running','deadline',${new Date(Date.now()-121000).toISOString()}::text) where id=${se.id}`;
  await sp.locator('#video-dialog').waitFor({timeout:30000});assert.ok(await sp.locator('#video-play').isVisible(),'Read 자동 팝업');

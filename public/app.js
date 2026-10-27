@@ -260,11 +260,11 @@
     var box = $('#loginbox');
     if (tab === 'student') {
       box.innerHTML = '<form class="login-form" id="lf" autocomplete="off">' +
-        '<label>수업 코드<input id="l-sess" required maxlength="24" value="' + esc(new URLSearchParams(location.search).get('session') || last.session || '') + '" autocapitalize="characters" spellcheck="false"></label>' +
+        '<label>반 코드<input id="l-sess" required maxlength="24" value="' + esc(new URLSearchParams(location.search).get('class') || last.classCode || '') + '" autocapitalize="characters" spellcheck="false"></label>' +
         '<label>학생 코드<input id="l-code" required maxlength="20" value="' + esc(last.code || '') + '" autocapitalize="characters" spellcheck="false"></label>' +
         '<label>PIN<input id="l-pin" required inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" type="password" autocomplete="off"></label>' +
         '<button class="btn primary" type="submit">입장</button><p class="err" id="l-err" role="alert"></p>' +
-        '<p class="hint">선생님이 알려 준 수업 코드와 내 학생 코드, PIN을 넣으세요. 실험·통제 집단은 명단에 이미 정해져 있어요.</p></form>';
+        '<p class="hint">반 코드와 본인 학생 코드, PIN을 입력하세요. 차시는 입력하지 않습니다. 선생님이 시작한 수업으로 자동 연결됩니다.</p></form>';
     } else {
       box.innerHTML = '<form class="login-form staff" id="lf">' +
         (tab === 'teacher' ? '<label>교사 ID<input id="l-tid" maxlength="20" value="' + esc(last.tid || 'T1') + '"></label>' : '') +
@@ -273,13 +273,13 @@
         '<p class="hint">' + (tab === 'teacher' ? '수업 진행과 통제집단 지원 화면이에요. 교사 ID는 기록의 teacher_id에 남아요.' : '수업 만들기, 명단, 기록·내보내기, 처치충실도 화면이에요.') + '</p></form>';
     }
     $('#lf').addEventListener('submit', function (ev) {
-      ev.preventDefault();
+      ev.preventDefault();clearTimeout(App.loginRetry);
       var btn = $('#lf button[type=submit]'), err = $('#l-err'); err.textContent = ''; btn.disabled = true;
       var p;
       if (tab === 'student') {
         var sc = $('#l-sess').value.trim().toUpperCase(), code = $('#l-code').value.trim().toUpperCase();
-        store('pq4r:last', Object.assign({}, last, { tab: 'student', session: sc, code: code }));
-        p = api('POST', 'login/student', { session_code: sc, student_code: code, pin: $('#l-pin').value.trim(), ua: navigator.userAgent.slice(0, 160) })
+        store('pq4r:last', Object.assign({}, last, { tab: 'student', classCode: sc, code: code }));
+        p = api('POST', 'login/student', { class_code: sc, student_code: code, pin: $('#l-pin').value.trim(), ua: navigator.userAgent.slice(0, 160) })
           .then(function (r) { App.tok = r.token; App.role = 'student'; saveAuth({ token: r.token, role: 'student' }); Student.start(r.me); });
       } else {
         var tid = tab === 'teacher' ? $('#l-tid').value.trim().toUpperCase() : null;
@@ -287,7 +287,9 @@
         p = api('POST', 'login/staff', { role: tab, password: $('#l-pw').value, teacher_id: tid })
           .then(function (r) { App.tok = r.token; App.role = r.role; App.tid = r.tid; saveAuth({ token: r.token, role: r.role, tid: r.tid }); if (r.role === 'teacher') Teacher.start(); else Researcher.start(); });
       }
-      p.catch(function (e) { err.textContent = e.message; }).then(function () { btn.disabled = false; });
+      p.catch(function (e) { err.textContent = e.message;
+        if(e.code==='class_waiting'){clearTimeout(App.loginRetry);var form=$('#lf'),waitingPin=$('#l-pin').value;App.timers.push(App.loginRetry=setTimeout(function(){if(App.screen==='entry'&&$('#lf')===form&&$('#l-sess').value.trim().toUpperCase()===sc&&$('#l-code').value.trim().toUpperCase()===code&&$('#l-pin').value===waitingPin)form.requestSubmit();},4000));}
+      }).then(function () { btn.disabled = false; });
     });
     var f = $('#l-pin') && !$('#l-sess').value ? $('#l-sess') : ($('#l-pin') || $('#l-pw')); if (f) f.focus();
   }
@@ -1299,7 +1301,7 @@
         var ready=current?(clockMode(current)==='waiting'?api('POST','admin/session/update',{session:current.code,key:'videoUrl',value:video}):Promise.resolve({session:current})):api('POST','admin/session',{code:self.sessions.some(function(s){return s.code===cls.code+'-L'+lesson;})?cls.code.slice(0,16)+'-L'+lesson+'-'+Date.now().toString(36).slice(-3).toUpperCase():cls.code+'-L'+lesson,class_name:cls.code,lesson:lesson,settings:{autoTimer:true,videoUrl:video}});
         ready.then(function(r){return self.loadSessions().then(function(){Teacher.start(r.session.code);});}).catch(function(e){toast(e.message,'warn');btn.disabled=false;});};
       $$('[data-cl-open]').forEach(function(b){b.onclick=function(){Teacher.start(b.getAttribute('data-cl-open'));};});
-      $$('[data-cl-test]').forEach(function(b){b.onclick=function(){window.open('/?session='+encodeURIComponent(b.getAttribute('data-cl-test'))+'#login-student','_blank','noopener');toast('별ウィンドウで学生コードとPINを入力して確認してください。'.replace('別ウィンドウで','새 창에서 ').replace('学生コードとPINを入力して確認してください。','학생 코드와 PIN으로 입장해 확인하세요.'));};});
+      $$('[data-cl-test]').forEach(function(b){b.onclick=function(){window.open('/?class='+encodeURIComponent(cls.code)+'#login-student','_blank','noopener');toast('별ウィンドウで学生コードとPINを入力して確認してください。'.replace('別ウィンドウで','새 창에서 ').replace('学生コードとPINを入力して確認してください。','학생 코드와 PIN으로 입장해 확인하세요.'));};});
     }).catch(function(e){toast(e.message,'warn');});
   };
   function clockLabel(s){return ({waiting:'시작 대기',running:'진행 중',paused:'일시정지',catchup:'보완 시간',finished:'완료'})[clockMode(s)]||'수동 진행';}
