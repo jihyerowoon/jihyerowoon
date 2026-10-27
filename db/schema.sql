@@ -151,3 +151,23 @@ alter table events enable row level security;
 alter table auth_failures enable row level security;
 alter table heartbeat enable row level security;
 alter table schema_meta enable row level security;
+
+-- 2026-10-27 연구자 승인: 명시적인 반 및 교사 배정. 기존 기록과 표는 보존.
+create table if not exists classes (
+  code text primary key check (code ~ '^[A-Z0-9_-]{2,20}$'),
+  grp text not null check (grp in ('EXPERIMENT','CONTROL')),
+  teacher_code text not null check (teacher_code ~ '^[A-Z0-9_-]{2,20}$'),
+  created_at timestamptz not null default now()
+);
+alter table classes enable row level security;
+alter table sessions add column if not exists clock jsonb not null default '{}'::jsonb;
+-- 보완본은 시간 내 답안(item_states)과 분리. 수정 이력은 events에 추가만 한다.
+create table if not exists supplements (
+  session_id uuid not null references sessions(id) on delete restrict,
+  student_id uuid not null references students(id) on delete restrict,
+  item_id text not null,
+  fields jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  primary key(session_id,student_id,item_id)
+);
+alter table supplements enable row level security;

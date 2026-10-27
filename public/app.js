@@ -26,7 +26,7 @@
   function store(k, v) { try { if (v === undefined) { var x = localStorage.getItem(k); return x ? JSON.parse(x) : null; } if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } return null; }
 
   var App = { role: null, tok: null, tid: null, skew: 0, timers: [], screen: null };
-  function cleanup() { App.timers.forEach(function (t) { clearInterval(t); clearTimeout(t); }); App.timers = []; MatViewer.close('SCREEN'); }
+  function cleanup() { var d=document.getElementById('video-dialog');if(d)d.remove(); App.timers.forEach(function (t) { clearInterval(t); clearTimeout(t); }); App.timers = []; MatViewer.close('SCREEN'); }
 
   /* ---------- 서버 통신 ---------- */
   var Net = {
@@ -248,10 +248,10 @@
     cleanup(); App.screen = 'entry';
     document.body.className = 'is-entry';
     var last = store('pq4r:last') || {};
-    tab = tab || last.tab || 'student';
+    tab = tab || (location.hash==='#login-student'?'student':null) || last.tab || 'student';
     $('#app').innerHTML = '<main class="entry"><section class="entry-card">' +
       '<div class="brand"><svg viewBox="0 0 64 40" class="brand-mark" aria-hidden="true"><path d="M18 4 H60 L46 36 H4 Z"/><path d="M18 4 L46 36 M60 4 L4 36" class="d"/></svg>' +
-      '<div><p class="eyebrow">연구용 MVP · ' + esc(C.versions.app) + '</p><h1>PQ4R 튜터</h1><p class="sub">' + Object.keys(C.lessons).map(function (k) { return esc(lessonLabel(+k)) + ' ' + C.lessons[k].total + '분'; }).join(' / ') + ' · 중학교 2학년</p></div></div>' +
+      '<div><p class="eyebrow">연구용 MVP · ' + esc(C.versions.app) + '</p><h1>PQ4R 튜터</h1><p class="sub">' + Object.keys(C.lessons).map(function (k) { return esc(lessonLabel(+k)) + ' ' + C.lessons[k].total + '분 + 보완 5분'; }).join(' / ') + ' · 중학교 2학년</p></div></div>' +
       '<p class="lead">문제를 읽고 내 답을 제출하세요. 어려울 때는 <b>도움 요청</b>을 누르고, 질문을 받은 뒤 다시 생각해 보세요.</p>' +
       '<nav class="login-tabs" role="tablist">' + [['student', '학생'], ['teacher', '교사'], ['researcher', '연구자']].map(function (t) {
         return '<button class="login-tab' + (t[0] === tab ? ' on' : '') + '" role="tab" aria-selected="' + (t[0] === tab) + '" data-ltab="' + t[0] + '">' + t[1] + '</button>';
@@ -260,14 +260,14 @@
     var box = $('#loginbox');
     if (tab === 'student') {
       box.innerHTML = '<form class="login-form" id="lf" autocomplete="off">' +
-        '<label>수업 코드<input id="l-sess" required maxlength="24" value="' + esc(last.session || '') + '" autocapitalize="characters" spellcheck="false"></label>' +
+        '<label>수업 코드<input id="l-sess" required maxlength="24" value="' + esc(new URLSearchParams(location.search).get('session') || last.session || '') + '" autocapitalize="characters" spellcheck="false"></label>' +
         '<label>학생 코드<input id="l-code" required maxlength="20" value="' + esc(last.code || '') + '" autocapitalize="characters" spellcheck="false"></label>' +
         '<label>PIN<input id="l-pin" required inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" type="password" autocomplete="off"></label>' +
         '<button class="btn primary" type="submit">입장</button><p class="err" id="l-err" role="alert"></p>' +
         '<p class="hint">선생님이 알려 준 수업 코드와 내 학생 코드, PIN을 넣으세요. 실험·통제 집단은 명단에 이미 정해져 있어요.</p></form>';
     } else {
       box.innerHTML = '<form class="login-form staff" id="lf">' +
-        (tab === 'teacher' ? '<label>교사 ID<input id="l-tid" maxlength="20" value="' + esc(last.tid || 'T01') + '"></label>' : '') +
+        (tab === 'teacher' ? '<label>교사 ID<input id="l-tid" maxlength="20" value="' + esc(last.tid || 'T1') + '"></label>' : '') +
         '<label>' + (tab === 'teacher' ? '교사' : '연구자') + ' 비밀번호<input id="l-pw" type="password" required autocomplete="current-password"></label>' +
         '<button class="btn primary" type="submit">입장</button><p class="err" id="l-err" role="alert"></p>' +
         '<p class="hint">' + (tab === 'teacher' ? '수업 진행과 통제집단 지원 화면이에요. 교사 ID는 기록의 teacher_id에 남아요.' : '수업 만들기, 명단, 기록·내보내기, 처치충실도 화면이에요.') + '</p></form>';
@@ -308,7 +308,7 @@
       App.timers.push(setInterval(function () {
         var t = $('#timer'); if (t) t.innerHTML = timerText(self.me.session);
         if (self.view === 5 && self.stageIdx() === 5) { var due = self.me.review && self.me.review.release_at; var reflectAt = self.me.review && self.me.review.reflection_at; var count = $('#review-release-count'); if (count && due) count.textContent = '해설까지 ' + mmss((Date.parse(due)-nowMs())/1000); if (due && nowMs() >= Date.parse(due)) self.loadReviewFeedback(); var rc = $('#review-reflect-count'); if (rc && reflectAt) rc.textContent = '성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000); if (reflectAt && nowMs() >= Date.parse(reflectAt) && self.reviewFeedback && !self.reviewReflectionShown) { self.reviewReflectionShown = true; self.renderStage(); } }
-        $('.waiting[data-at]').forEach(function (n) { n.textContent = '도움 요청 보냄 · ' + mmss((nowMs() - Date.parse(n.getAttribute('data-at'))) / 1000) + ' 기다리는 중'; });
+        $$('.waiting[data-at]').forEach(function (n) { n.textContent = '도움 요청 보냄 · ' + mmss((nowMs() - Date.parse(n.getAttribute('data-at'))) / 1000) + ' 기다리는 중'; });
       }, 1000));
     },
     pendKey: function () { return 'pq4r:pending:' + this.me.session.code + ':' + this.me.student.code; },
@@ -331,6 +331,8 @@
         var stageChanged = r.stage_rev !== self.me.session.stage_rev;
         if (r.messages.length) { self.me.messages = self.me.messages.concat(r.messages); self.me.msgSeq = r.messages[r.messages.length - 1].seq; }
         if (self.group() === 'CONTROL') self.me.requests = r.requests;
+        if(r.clock) self.me.session.clock=r.clock;
+        if(r.notice) self.me.notice=r.notice;
         if (r.review) self.me.review = r.review;
         if (stageChanged) {
           var prev = self.me.session.stage;
@@ -342,6 +344,7 @@
     },
     onStageChange: function (prev, cur) {
       MatViewer.close('STAGE_CHANGED');
+      var video=$('#video-dialog');if(video)video.remove();
       if (this.me.session.status !== 'open') { $('#app').innerHTML = '<main class="loading">수업이 끝났어요. 수고했어요!</main>'; cleanup(); return; }
       this.view = cur; this.renderStepper(); this.renderDemo(); this.renderStage();
       if (cur !== prev) toast(C.stages[cur].id + ' ' + C.stages[cur].ko + ' 단계가 열렸어요.');
@@ -434,27 +437,25 @@
       if (!data) return '<section class="panel"><h3>해설 공개 시간</h3><p>나의 답변을 보존하고 정답과 해설을 불러오는 중입니다.</p></section>';
       var confidence = {explain:'다른 사람에게 설명할 수 있다',partial:'일부는 이해했지만 아직 어렵다',uncertain:'아직 이해하지 못했다'};
       var solutionName = function(x) { var id=x.item_id||''; return id.indexOf('RV')>=0?'Review 다시 풀기':id.indexOf('RD')>=0?'Read 개념확인':'Reflect 문제 '+id.slice(-1); };
+      var reflectAt=this.me.review&&this.me.review.reflection_at, canReflect=reflectAt&&nowMs()>=Date.parse(reflectAt);
       var cards = (data.solutions || []).map(function (sol,i) {
         var p = sol.problem || {}, a = (data.answers || []).filter(function (v) {return v.item_id === sol.item_id;})[0] || {}, ans = a.pre_response || {};
         var own = Object.keys(ans).filter(function(k) {return String(ans[k]||'').trim();}).map(function (k) {return '<p><b>' + esc(k) + ':</b> ' + fmt(String(ans[k])) + '</p>';}).join('') || '<p class="muted">작성된 답안이 없습니다.</p>';
-        return '<details class="review-solution"' + (i === 0 ? ' open' : '') + '><summary><b>' + (i+1) + '. ' + solutionName(sol) + '</b> · ' + esc(sol.answer) + '</summary>' +
+        return '<details class="review-solution"' + (i === 0 && !canReflect ? ' open' : '') + '><summary><b>' + (i+1) + '. ' + solutionName(sol) + '</b> · ' + esc(sol.answer) + '</summary>' +
           '<div style="padding:12px 0"><h4>문제와 그림</h4><p>' + fmt(p.title || '') + '</p>' + figHTML(p.fig) + choicesHTML(p.choices) +
           '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:14px 0">' +
           '<div class="panel"><h4>나의 공개 전 답변</h4>' + own + (a.source==='saved_draft_only'?'<p class="hint">제출 전 임시저장본입니다.</p>':'') + '</div>' +
           '<div class="panel"><h4>정답과 검증용 풀이 초안</h4><p><b>' + esc(sol.answer) + '</b></p><ol>' + (sol.steps||[]).map(function (line){return '<li>' + fmt(line) + '</li>';}).join('') + '</ol></div></div></div></details>';
       }).join('');
       var ref = data.reflection;
-      var reflectAt = this.me.review && this.me.review.reflection_at;
-      var canReflect = reflectAt && nowMs() >= Date.parse(reflectAt);
-      var completed = ref ? '<section class="panel"><h3>해설 후 성찰 저장 완료</h3><p><b>중심 문제:</b> ' + esc(ref.focus_item || '') + '</p><p><b>이해 정도:</b> ' + esc(confidence[ref.understanding]||'') + '</p><p><b>내 풀이와 비교:</b> ' + esc(ref.comparison) + '</p></section>' :
-        '<section class="panel"><h3>해설을 본 뒤 나의 이해 정도 성찰</h3><p class="hint small">5문항의 해설을 확인하고 어려웠던 문제 한 개를 골라 깊이 비교해 보세요. 이해하지 못한 점도 그대로 기록하면 됩니다.</p>' +
-        '<label style="display:block;margin:10px 0">성찰할 문제<select id="post-focus-item"><option value="">문제를 선택하세요</option>' +
-        (data.solutions||[]).map(function(x,i){return '<option value="'+esc(x.item_id)+'">'+solutionName(x)+'</option>';}).join('') + '</select></label>' +
-        '<fieldset><legend>지금 이 문제의 풀이를 다른 사람에게 설명할 수 있나요?</legend>' +
-        Object.keys(confidence).map(function(k){return '<label style="display:block;margin:8px 0"><input type="radio" name="post-understanding" value="'+k+'"> '+esc(confidence[k])+'</label>';}).join('') + '</fieldset>' +
+      var completed = ref ? '<section class="panel"><h3>해설 후 성찰 저장 완료</h3><p><b>이해 정도:</b> ' + esc(confidence[ref.understanding]||'') + '</p><p><b>내 풀이와 비교:</b> ' + esc(ref.comparison) + '</p></section>' :
+        '<section class="panel"><h3>오늘 수업을 돌아보기</h3><p class="hint small">이해 정도를 선택하고 새롭게 알게 된 점이나 아직 어려운 점을 한 문장으로 적으세요.</p>' +
+        '<fieldset><legend>오늘 배운 내용을 다른 사람에게 설명할 수 있나요?</legend>' +
+        Object.keys(confidence).map(function(k){return '<label class="choice-line"><input type="radio" name="post-understanding" value="'+k+'"><span>'+esc(confidence[k])+'</span></label>';}).join('') + '</fieldset>' +
         '<label style="display:block;margin:10px 0">해설을 보고 새롭게 확인한 점 또는 아직 어려운 점 한 가지<textarea id="post-comparison" rows="2" maxlength="350" placeholder="한두 문장으로 적어 보세요."></textarea></label>' +
         '<button type="button" class="btn primary" data-act="review-reflect">해설 후 성찰 저장</button></section>';
       var reflectUI = ref || canReflect ? completed : '<section class="panel"><h3>6~10분: 정답과 내 풀이 비교</h3><p>풀이에서 무엇이 같고 다른지 확인하세요. 마지막 2분에 짧은 이해도 성찰이 열립니다.</p><p id="review-reflect-count" class="hint small">성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000) + '</p></section>';
+      if(canReflect)return reflectUI+'<details class="panel"><summary>정답과 풀이 다시 보기</summary>'+cards+'</details>';
       return '<section class="panel"><h2>Review 정답과 풀이 · 6분 후 공개</h2><p>첫 6분의 자기 풀이를 보존했습니다. 다음 4분은 정답 비교, 마지막 2분은 성찰입니다.</p><p class="hint small">두 집단에 동일하게 제공하는 검증용 해설 초안입니다.</p>' + cards + '</section>' + reflectUI;
     },
     loadReviewFeedback: function () {
@@ -465,15 +466,14 @@
       api('GET','me/review-feedback').then(function(r){
         self.reviewFeedback=r;
         if(self.me.review) self.me.review.reflection=r.reflection;
-        Object.keys(self.pending).forEach(function(id){if (ITEM[id] && ITEM[id].stage === 'Review') delete self.pending[id];});
-        store(self.pendKey(),self.pending);
+        // 미저장 입력은 보완을 위해 기기에 보관하며 시간 내 답안은 덮어쓰지 않는다.
         self.renderStage(); self.renderLeftStage();
       }).catch(function(e){ if(e.code!=='review_locked') toast('해설을 불러오지 못했어요: '+e.message,'warn'); })
         .then(function(){self.reviewLoading=false;});
     },
     submitReviewReflection: function(){
       var self=this, checked=$('input[name="post-understanding"]:checked');
-      var body={focus_item:($('#post-focus-item')||{}).value||'',understanding:checked?checked.value:'',comparison:($('#post-comparison')||{}).value||'',next_step:''};
+      var body={focus_item:'',understanding:checked?checked.value:'',comparison:($('#post-comparison')||{}).value||'',next_step:''};
       var btn=$('[data-act="review-reflect"]'); if(btn) btn.disabled=true;
       api('POST','me/review-reflection',body).then(function(r){
         if(self.reviewFeedback) self.reviewFeedback.reflection=r.saved;
@@ -488,12 +488,12 @@
       var items = itemsForStage(st.id, g, self.settings(), ln), editable = self.editable();
       var mats = lessonMaterials(ln);
       var h = '<div class="stagehead ' + key + '"><p class="stage-k"><span class="sdot"></span>' + (self.view + 1) + '. ' + st.id.toUpperCase() + '<span class="ko">' + st.ko + '</span><span class="min">' + stageMin(ln, self.view) + '분</span></p>' +
-        '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (editable ? '' : '<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') +
+        '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (editable ? '' : self.view===5&&self.me.review&&self.me.review.unlocked?'<p class="closed-note">문제 풀이 작성 시간은 끝났습니다. 해설을 확인하고 아래에서 성찰을 작성하세요.</p>':'<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') +
         (editable && self.matVisible(st.id) && mats.length ? '<p class="row">' + mats.map(function (m, i) { return '<button type="button" class="btn sm' + (m.role === 'main' ? '' : ' ghost') + '" data-openmat="' + i + '">' + esc(m.title) + '</button>'; }).join('') + '</p>' : '') + '</div>';
       if (editable && st.id !== 'Review') h += '<p class="student-simple-tip">① 답을 적고 <b>내 답 제출하기</b>를 누르세요. ② 어렵다면 제출 후 <b>질문으로 도움받기</b>를 누르세요.</p>';
       h += worksheetPane(ln,g,st.id);
       if (editable) h += self.toolbarHTML();
-      items.forEach(function (it) { h += self.itemHTML(it, editable); });
+      if(!(self.view===5 && self.reviewFeedback))items.forEach(function (it) { h += self.itemHTML(it, editable); });
       if (self.view === 5 && self.stageIdx() === 5) h += self.reviewPanel();
       h += '<p class="savestate" id="savestate"></p>';
       $('#right').innerHTML = h;
@@ -618,18 +618,19 @@
       self.pending[id] = { draft: clone(r.draft), draft_sel: clone(r.draft_sel), reason: r.reason || '', t: Date.now() };
       store(self.pendKey(), self.pending);
       clearTimeout(self.saveTimers[id]);
-      self.saveTimers[id] = setTimeout(function () { self.flushDraft(id); }, 1000);
+      self.saveTimers[id] = setTimeout(function () { self.flushDraft(id); }, 300);
     },
     flushDraft: function (id) {
-      var self = this, p = self.pending[id]; if (!p) return Promise.resolve();
-      return api('POST', 'me/draft', { item_id: id, draft: p.draft, draft_sel: p.draft_sel, reason: p.reason }).then(function (r) {
-        if (self.pending[id] === p) { delete self.pending[id]; store(self.pendKey(), self.pending); }
-        var n = $('#savestate'); if (n && r.saved) n.textContent = '임시저장 ' + kst(r.at);
-      }).catch(function () {
-        var n = $('#savestate'); if (n) n.textContent = '임시저장 실패 · 이 기기에 보관하고 다시 보낼게요';
-        clearTimeout(self.saveTimers[id]); self.saveTimers[id] = setTimeout(function () { self.flushDraft(id); }, 5000);
-      });
+      var self=this,p=self.pending[id];if(!p)return Promise.resolve();
+      self.draftFlights=self.draftFlights||{};
+      if(self.draftFlights[id])return self.draftFlights[id].then(function(){if(self.pending[id]&&self.pending[id]!==p)return self.flushDraft(id);});
+      var flight=api('POST','me/draft',{item_id:id,draft:p.draft,draft_sel:p.draft_sel,reason:p.reason}).then(function(r){
+        if(r.saved&&self.pending[id]===p){delete self.pending[id];store(self.pendKey(),self.pending);}
+        var n=$('#savestate');if(n)n.textContent=r.saved?'임시저장 '+kst(r.at):'시간 종료로 원본에 저장되지 않았습니다. 입력은 이 기기에 보관되어 보완 때 확인할 수 있습니다.';
+      }).catch(function(){var n=$('#savestate');if(n)n.textContent='임시저장 실패 · 이 기기에 보관하고 다시 보낼게요';clearTimeout(self.saveTimers[id]);self.saveTimers[id]=setTimeout(function(){self.flushDraft(id);},5000);}).then(function(){delete self.draftFlights[id];if(self.pending[id]&&self.pending[id]!==p)return self.flushDraft(id);});
+      self.draftFlights[id]=flight;return flight;
     },
+
     bindRight: function () {
       var self = this, right = $('#right'), lastInput = null;
       right.addEventListener('focusin', function (ev) {
@@ -725,6 +726,7 @@
       document.body.className = 'is-teacher';
       var last = store('pq4r:teacher-session');
       self.code = sessionCode || last || null;
+      tabStore('pq4r:staff-screen',{screen:'teacher',session:self.code});
       var bankP = self.bank ? Promise.resolve() : api('GET', 'staff/content').then(function (r) { self.bank = r; });
       bankP.then(function () { return api('GET', 'staff/sessions'); }).then(function (r) {
         var open = r.sessions.filter(function (s) { return s.status === 'open'; });
@@ -737,7 +739,7 @@
       $('#app').innerHTML = '<main class="entry"><section class="entry-card"><h1>수업 고르기</h1><p class="lead">진행할 수업을 고르세요. 수업은 연구자 화면에서 만듭니다.</p><div class="sesslist">' +
         (list.length ? list.map(function (s) { return '<button class="sessrow" data-pick="' + esc(s.code) + '"><span><b>' + esc(s.code) + '</b> · ' + esc(lessonLabel(s.lesson)) + (s.class_name ? ' · ' + esc(s.class_name) + '반' : '') + '</span><span class="pill">' + s.joined + '명 · ' + C.stages[s.stage].id + '</span></button>'; }).join('') : '<p class="empty">열린 수업이 없어요.</p>') +
         '</div><p><button class="btn" id="pick-out">나가기</button></p></section></main>';
-      $$('[data-pick]').forEach(function (b) { b.onclick = function () { self.code = b.getAttribute('data-pick'); store('pq4r:teacher-session', self.code); self.shell(); }; });
+      $$('[data-pick]').forEach(function (b) { b.onclick = function () { self.code = b.getAttribute('data-pick'); store('pq4r:teacher-session', self.code);tabStore('pq4r:staff-screen',{screen:'teacher',session:self.code}); self.shell(); }; });
       $('#pick-out').onclick = function () { logout(); };
     },
     shell: function () {
@@ -892,7 +894,7 @@
           (more.length?'<details><summary>다른 발문 후보 ' + more.length + '개 보기</summary>' + more.map(function(b){return optionHTML(b,false);}).join('') + '</details>':'');
       };
       renderBank();
-      $('input[name="sf-mode"]').forEach(function(radio){
+      $$('input[name="sf-mode"]').forEach(function(radio){
         radio.onchange=function(){
           var custom=($('input[name="sf-mode"]:checked')||{}).value==='custom';
           $('#sf-bank').hidden=custom;
@@ -936,16 +938,16 @@
   var Researcher = {
     tab: 'sess', code: null, sessions: [], events: [], admin: null,
     start: function () {
-      cleanup(); App.screen = 'researcher';
+      cleanup(); App.screen = 'researcher';tabStore('pq4r:staff-screen',{screen:'researcher'});
       var self = this;
       document.body.className = 'is-researcher';
       self.code = store('pq4r:researcher-session') || null;
       $('#app').innerHTML = topbar('연구자 화면', '<span id="r-sess" class="pill"></span>') +
-        '<nav class="rtabs" id="rtabs" aria-label="연구자 메뉴">' + [['sess','1. 수업 준비'],['roster','2. 학생 명단'],['log','3. 기록 저장']].map(function (t) {
+        '<nav class="rtabs" id="rtabs" aria-label="연구자 메뉴">' + [['classes','반과 학생 등록'],['sess','기존 수업 관리'],['log','기록 저장']].map(function (t) {
           return '<button class="rtab" data-tab="' + t[0] + '">' + t[1] + '</button>';
-        }).join('') + '<details class="r-advanced"><summary>기타 기능</summary><div class="r-advanced-list">' + [['status','연결 확인'],['fid','처치충실도'],['rev','사람 검토'],['bank','발문 은행'],['worksheet','활동지 점검'],['mat','개념 자료']].map(function (t) {
+        }).join('') + '<details class="r-advanced"><summary>기타 기능</summary><div class="r-advanced-list">' + [['roster','기존 전체 명단'],['status','연결 확인'],['fid','처치충실도'],['rev','사람 검토'],['bank','발문 은행'],['worksheet','활동지 점검'],['mat','개념 자료']].map(function (t) {
           return '<button class="rtab" data-tab="' + t[0] + '">' + t[1] + '</button>';
-        }).join('') + '</div></details></nav><p class="simple-help">처음 사용한다면 <b>1. 수업 준비 → 2. 학생 명단 → 3. 기록 저장</b> 순서로 진행하세요. 세부 점검 기능은 기타 기능에 있습니다.</p><section class="rbody" id="rbody"></section>';
+        }).join('') + '</div></details></nav><p class="simple-help">반과 학생 등록에서 준비를 마친 뒤 수업 운영을 누르세요. 기존 명단은 기존 수업 관리와 기타 기능에서 확인할 수 있습니다.</p><section class="rbody" id="rbody"></section>';
       bindExit();
       $('#rtabs').addEventListener('click', function (ev) { var b = ev.target.closest('[data-tab]'); if (!b) return; self.tab = b.getAttribute('data-tab'); self.render(); });
       App.timers.push(setInterval(function () { var t = $('#timer'), s = self.cur(); if (t && s) t.innerHTML = timerText(s); }, 1000));
@@ -1251,6 +1253,162 @@
     document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
   }
 
+  /* 연구자 승인 2026-10-27: 한 화면 등록, 30명 대시보드, 자동 진행 */
+  function clockMode(s) { return s && s.clock && s.clock.mode || (s && s.settings && s.settings.autoTimer ? 'waiting' : 'legacy'); }
+  var oldTimerText=timerText;
+  timerText=function(s){
+    var m=clockMode(s),c=s&&s.clock||{};
+    if(m==='legacy')return oldTimerText(s);
+    if(m==='waiting')return '수업 시작 대기';
+    if(m==='finished')return '수업 완료';
+    var left=m==='paused'?c.remaining_ms/1000:(Date.parse(c.deadline)-nowMs())/1000;
+    return '<span class="tm-k">'+(m==='paused'?'일시정지':m==='catchup'?'보완 시간':C.stages[s.stage].id)+'</span> <strong class="clock-digits'+(left<=60?' clock-urgent':'')+'">'+mmss(Math.max(0,left))+'</strong>';
+  };
+  var oldResearchRender=Researcher.render;
+  Researcher.tab='classes';
+  Researcher.render=function(){if(this.tab==='classes')return this.renderClasses();return oldResearchRender.call(this);};
+  Researcher.renderClasses=function(){
+    var self=this;
+    $('#rbody').innerHTML='<p class="loading">반과 학생 명단을 불러오는 중…</p>';
+    Promise.all([api('GET','admin/classes'),api('GET','admin/students')]).then(function(all){
+      if(self.tab!=='classes'||App.screen!=='researcher')return;
+      var list=all[0].classes,students=all[1].students;
+      var cls=list.filter(function(c){return c.code===self.classCode;})[0]||list[0]||null;
+      if(self.newClass)cls=null;
+      if(cls)self.classCode=cls.code;
+      var members=cls?students.filter(function(s){return s.class_name===cls.code;}):[];
+      $('#rbody').innerHTML='<h1>반과 학생 등록</h1><p class="hint">반을 한 번 저장하면 학생의 반과 집단이 자동으로 연결됩니다. 이름 대신 코드만 사용하세요.</p><div class="class-layout"><aside class="rcard"><h2>반 목록 <button class="btn sm primary" id="cl-new">+ 새 반</button></h2><div class="sesslist">'+list.map(function(c){return '<button class="sessrow'+(cls&&c.code===cls.code?' on':'')+'" data-class="'+esc(c.code)+'"><span><b>'+esc(c.code)+'</b><small>'+groupKo(c.grp)+' · 교사 '+esc(c.teacher_code)+'</small></span><span>'+c.count+'명</span></button>';}).join('')+(!list.length?'<p class="hint">오른쪽에서 첫 반을 만드세요.</p>':'')+'</div></aside><div class="class-main"><section class="rcard"><h2>반 정보</h2><form id="cl-form" class="formrow"><label>반 코드<input id="cl-code" value="'+esc(cls?cls.code:'')+'" maxlength="20" required pattern="(?:[A-Za-z0-9_]|-){2,20}" '+(cls?'readonly':'placeholder="예: A01"')+'></label><label>집단<select id="cl-group"'+(cls?' disabled':'')+'><option value="EXPERIMENT">실험집단</option><option value="CONTROL"'+(cls&&cls.grp==='CONTROL'?' selected':'')+'>통제집단</option></select></label><label>교사 코드<input id="cl-teacher" required maxlength="20" value="'+esc(cls?cls.teacher_code:'T1')+'" pattern="(?:[A-Za-z0-9_]|-){2,20}"></label><button class="btn primary" type="submit">반 저장</button></form><p class="hint small">교사는 이 코드와 교사 비밀번호로 입장합니다.</p></section>'+
+      (cls?'<section class="rcard"><h2>학생 등록 <small>'+esc(cls.code)+'에 자동 등록</small></h2><form id="cl-add" class="formrow"><label>학생 코드<input id="cl-student" required maxlength="20" pattern="(?:[A-Za-z0-9_]|-){2,20}" placeholder="예: S001"></label><label>PIN<input id="cl-pin" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" placeholder="비우면 자동 발급"></label><button class="btn primary" type="submit">+ 개별 추가</button></form><div class="upload-inline"><label>명단 파일 등록<input id="cl-file" type="file" accept=".csv,.txt,text/csv"></label><button class="btn sm" id="cl-template">양식 받기</button><span class="hint small">학생 코드와 PIN 두 열만 준비하세요.</span></div><div id="cl-preview" hidden><textarea id="cl-csv" rows="4" aria-label="등록할 명단 미리보기"></textarea><button class="btn primary" id="cl-upload">명단 등록</button></div><div id="cl-result" role="status"></div></section><section class="rcard"><h2>'+esc(cls.code)+' 학생 명단 <small>'+members.length+'명</small></h2><div class="row"><button class="btn sm" id="cl-mask">'+(self.showPins?'PIN 가리기':'PIN 보기')+'</button><button class="btn sm" id="cl-export">입장 명단 내려받기</button></div><div class="tablewrap"><table class="roster"><thead><tr><th>학생 코드</th><th>PIN</th><th>상태</th><th>관리</th></tr></thead><tbody>'+members.map(function(s){return '<tr><td>'+esc(s.code)+'</td><td>'+esc(self.showPins?s.pin||'재발급 필요':'••••')+'</td><td>'+(s.active?(s.locked?'잠김':'사용'):'중지')+'</td><td><button class="btn sm" data-cl-edit="'+esc(s.code)+'">PIN 수정</button> <button class="btn sm" data-cl-reset="'+esc(s.code)+'">PIN 새로</button> <button class="btn sm" data-cl-active="'+esc(s.code)+'" data-active="'+(!s.active)+'">'+(s.active?'중지':'다시 사용')+'</button></td></tr>';}).join('')+'</tbody></table></div></section><section class="rcard"><h2>수업 준비</h2><div class="formrow"><label>차시<select id="cl-lesson">'+Object.keys(C.lessons).map(function(k){return '<option value="'+k+'">'+esc(lessonLabel(+k))+'</option>';}).join('')+'</select></label><label class="video-url">Read 개념영상 주소 (선택)<input id="cl-video" type="url" placeholder="https://..."></label><button class="btn primary" id="cl-prepare">수업 준비하기</button></div><p class="hint">60분 자동 진행 + 보완 5분. 수업을 만든 뒤 교사 화면에서 시작합니다.</p><div class="sesslist">'+self.sessions.filter(function(s){return s.class_name===cls.code;}).map(function(s){return '<div class="session-action"><span><b>'+esc(s.code)+'</b> · '+esc(lessonLabel(s.lesson))+' · '+(s.settings.autoTimer?clockLabel(s):'기존 수동 수업')+'</span><button class="btn sm" data-cl-open="'+esc(s.code)+'">수업 운영</button><button class="btn sm" data-cl-test="'+esc(s.code)+'">학생 입장 테스트</button></div>';}).join('')+'</div></section>':'<section class="rcard"><p>반을 저장한 뒤 바로 여기에서 학생을 추가할 수 있습니다.</p></section>')+'</div></div>';
+      $('#cl-new').onclick=function(){self.newClass=true;self.renderClasses();};
+      $$('[data-class]').forEach(function(b){b.onclick=function(){self.classCode=b.getAttribute('data-class');self.newClass=false;self.renderClasses();};});
+      $('#cl-form').onsubmit=function(ev){ev.preventDefault();var btn=this.querySelector('button');btn.disabled=true;api('POST','admin/class',{code:$('#cl-code').value,group:$('#cl-group').value,teacher_code:$('#cl-teacher').value}).then(function(){self.classCode=$('#cl-code').value.toUpperCase();self.newClass=false;self.renderClasses();}).catch(function(e){toast(e.message,'warn');btn.disabled=false;});};
+      if(!cls)return;
+      function upload(body,btn){btn.disabled=true;api('POST','admin/class-roster',Object.assign({class_code:cls.code},body)).then(function(r){self.classResult=r;self.renderClasses();}).catch(function(e){toast(e.message,'warn');btn.disabled=false;});}
+      $('#cl-add').onsubmit=function(ev){ev.preventDefault();upload({code:$('#cl-student').value,pin:$('#cl-pin').value},this.querySelector('button'));};
+      $('#cl-template').onclick=function(){saveText('학생등록양식.csv','\ufeffcode,pin\r\nS001,1111\r\nS002,2222');};
+      $('#cl-file').onchange=function(){var f=this.files[0];if(!f)return;if(f.size>500000){toast('파일은 500KB 이하로 준비해 주세요.','warn');return;}var rd=new FileReader();rd.onload=function(){$('#cl-preview').hidden=false;$('#cl-csv').value=rd.result;};rd.readAsText(f,'utf-8');};
+      $('#cl-upload').onclick=function(){upload({csv:$('#cl-csv').value},this);};
+      if(self.classResult){var r=self.classResult;$('#cl-result').innerHTML='<p>신규 '+r.created+'명 / 변경 '+r.updated+'명 / 유지 '+r.unchanged+'명</p>'+r.errors.map(function(e){return '<p class="warnline">'+e.line+'행 '+esc(e.code)+': '+esc(e.error)+'</p>';}).join('');self.classResult=null;}
+      $('#cl-mask').onclick=function(){self.showPins=!self.showPins;self.renderClasses();};
+      $('#cl-export').onclick=function(){saveText(cls.code+'_입장명단.csv','\ufeff학생코드,PIN,반,교사코드\r\n'+members.map(function(s){return [s.code,s.pin||'',cls.code,cls.teacher_code].join(',');}).join('\r\n'));};
+      $$('[data-cl-reset]').forEach(function(b){b.onclick=function(){if(!confirm('PIN을 새로 발급할까요? 기존 PIN은 사용할 수 없습니다.'))return;api('POST','admin/student',{code:b.getAttribute('data-cl-reset'),reset_pin:true}).then(function(){self.renderClasses();}).catch(function(e){toast(e.message,'warn');});};});
+      $$('[data-cl-active]').forEach(function(b){b.onclick=function(){api('POST','admin/student',{code:b.getAttribute('data-cl-active'),active:b.getAttribute('data-active')==='true'}).then(function(){self.renderClasses();}).catch(function(e){toast(e.message,'warn');});};});
+      $$('[data-cl-edit]').forEach(function(b){b.onclick=function(){var code=b.getAttribute('data-cl-edit');$('#cl-student').value=code;$('#cl-pin').value='';$('#cl-pin').focus();toast('새 PIN을 입력한 뒤 개별 추가를 누르면 이 학생의 PIN만 변경됩니다.');};});
+      $('#cl-lesson').onchange=function(){var lesson=+this.value,session=self.sessions.find(function(s){return s.class_name===cls.code&&s.lesson===lesson&&s.status==='open'&&clockMode(s)!=='finished';});$('#cl-video').value=session&&session.settings.videoUrl||'';};$('#cl-lesson').onchange();
+      $('#cl-prepare').onclick=function(){var btn=this,lesson=+$('#cl-lesson').value,video=$('#cl-video').value;btn.disabled=true;var current=self.sessions.filter(function(s){return s.class_name===cls.code&&s.lesson===lesson&&s.status==='open'&&s.settings.autoTimer&&clockMode(s)!=='finished';})[0];
+        var ready=current?(clockMode(current)==='waiting'?api('POST','admin/session/update',{session:current.code,key:'videoUrl',value:video}):Promise.resolve({session:current})):api('POST','admin/session',{code:self.sessions.some(function(s){return s.code===cls.code+'-L'+lesson;})?cls.code.slice(0,16)+'-L'+lesson+'-'+Date.now().toString(36).slice(-3).toUpperCase():cls.code+'-L'+lesson,class_name:cls.code,lesson:lesson,settings:{autoTimer:true,videoUrl:video}});
+        ready.then(function(r){return self.loadSessions().then(function(){Teacher.start(r.session.code);});}).catch(function(e){toast(e.message,'warn');btn.disabled=false;});};
+      $$('[data-cl-open]').forEach(function(b){b.onclick=function(){Teacher.start(b.getAttribute('data-cl-open'));};});
+      $$('[data-cl-test]').forEach(function(b){b.onclick=function(){window.open('/?session='+encodeURIComponent(b.getAttribute('data-cl-test'))+'#login-student','_blank','noopener');toast('별ウィンドウで学生コードとPINを入力して確認してください。'.replace('別ウィンドウで','새 창에서 ').replace('学生コードとPINを入力して確認してください。','학생 코드와 PIN으로 입장해 확인하세요.'));};});
+    }).catch(function(e){toast(e.message,'warn');});
+  };
+  function clockLabel(s){return ({waiting:'시작 대기',running:'진행 중',paused:'일시정지',catchup:'보완 시간',finished:'완료'})[clockMode(s)]||'수동 진행';}
+  Teacher.picked={};Teacher.filter='all';Teacher.reqItem='';Teacher.bankId='';
+  Teacher.shell=function(){
+    var self=this;self.picked={};self.bankId='';self.reqItem='';self.batchResults='';self.queueFingerprint=null;self.filter='all';
+    $('#app').innerHTML=topbar((App.role==='researcher'?'연구자 수업 운영':'교사 '+esc(App.tid||'T1'))+' · '+esc(self.code),'<button class="btn sm" id="t-switch">'+(App.role==='researcher'?'연구 준비':'수업 바꾸기')+'</button>')+
+      '<main class="teacher-console"><section class="console-header rcard"><div><h1 id="console-title">수업 운영</h1><p id="console-sub" class="hint"></p></div><div id="clock-actions" class="row"></div></section><div class="notice-bar">시간이 끝나면 자동으로 다음 단계로 이동합니다. 수업 마지막에 보완 5분을 제공합니다.</div><div class="console-stats" id="console-stats"></div><div class="console-grid"><section class="rcard"><h2>전체 학생 현황</h2><div class="row"><button class="btn sm" data-filter="all">전체</button><button class="btn sm" data-filter="help">도움 요청</button><button class="btn sm" data-filter="missing">미제출</button></div><div class="student-grid" id="student-grid"></div><div class="tablewrap"><table class="roster" id="roster" hidden></table></div></section><section class="rcard"><h2 id="request-title">도움 요청</h2><label>문항별 보기<select id="request-item"></select></label><p class="hint small">오래 기다린 순. 답안을 읽고 확인한 학생을 선택하세요.</p><div id="queue"></div></section><section class="rcard"><div id="batch-panel"></div><details id="detail-fold"><summary>학생 답안과 지원 기록</summary><div id="tdetail"><p class="hint">학생을 선택하면 자세한 답과 기록을 볼 수 있습니다.</p></div></details></section></div><div class="row" id="notice-actions"><b>전체 안내</b><button class="btn sm" data-notice="time">시간 확인</button><button class="btn sm" data-notice="save">제출 안내</button><button class="btn sm" data-notice="device">접속 문제 안내</button></div></main>';
+    bindExit();$('#t-switch').onclick=function(){if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{self.code=null;store('pq4r:teacher-session',null);Teacher.start();}};
+    $$('[data-filter]').forEach(function(b){b.onclick=function(){self.filter=b.getAttribute('data-filter');self.renderRoster();};});
+    $('#student-grid').onclick=function(ev){var b=ev.target.closest('[data-student]');if(b){$('#detail-fold').open=true;self.select(b.getAttribute('data-student'),null);}};
+    $('#request-item').onchange=function(){self.reqItem=this.value;self.picked={};self.bankId='';self.renderQueue();self.renderBatch();};
+    $('#queue').onclick=function(ev){var b=ev.target.closest('[data-request-detail]');if(b){var r=self.data.requests.find(function(x){return x.id===b.getAttribute('data-request-detail');});$('#detail-fold').open=true;self.select(r.code,r.item_id);}};
+    $('#queue').onchange=function(ev){var t=ev.target;if(!t.matches('[data-request-pick]'))return;var r=self.data.requests.find(function(x){return x.id===t.getAttribute('data-request-pick');});if(t.checked)self.picked[r.id]=r.attempt;else delete self.picked[r.id];self.renderBatch();};
+    $$('[data-notice]').forEach(function(b){b.onclick=function(){api('POST','staff/announce',{session:self.code,key:b.getAttribute('data-notice')}).then(function(){toast('전체 학생에게 안내를 보냈어요.');}).catch(function(e){toast(e.message,'warn');});};});
+    every(3000,function(){return self.refresh();},5000);
+    App.timers.push(setInterval(function(){if(self.data){var t=$('#timer');if(t)t.innerHTML=timerText(self.data.session);}},1000));
+    self.refresh();
+  };
+  Teacher.refresh=function(){var self=this;return api('GET','staff/overview?session='+encodeURIComponent(self.code)).then(function(r){if(App.screen!=='teacher')return;var prev=self.data;self.data=r;self.data.requests.forEach(function(q){if(self.picked[q.id]!==undefined&&self.picked[q.id]!==q.attempt)delete self.picked[q.id];});Object.keys(self.picked).forEach(function(id){if(!r.requests.some(function(q){return q.id===id;}))delete self.picked[id];});self.renderTop();self.renderRoster();var fingerprint=JSON.stringify(r.requests)+r.group+clockMode(r.session);if(fingerprint!==self.queueFingerprint){self.queueFingerprint=fingerprint;self.renderQueue();self.renderBatch();}if(self.sel&&(!prev||JSON.stringify(prev.students)!==JSON.stringify(r.students)))return self.loadDetail();}).catch(function(e){toast(e.message,'warn');});};
+  Teacher.renderTop=function(){
+    var self=this,s=self.data.session,m=clockMode(s),auto=!!s.settings.autoTimer;
+    $('#console-title').textContent=(s.class_name||s.code)+' · '+(self.data.group?groupKo(self.data.group):'수업 운영');
+    $('#console-sub').textContent=lessonLabel(s.lesson)+' · '+clockLabel(s)+' · '+(self.data.group==='EXPERIMENT'?'AI 튜터가 수학 발문을 제공합니다. 교사는 진행과 접속을 관리합니다.':'학생의 답안을 보고 준비된 발문을 개별 전달합니다.');
+    var t=$('#timer');if(t)t.innerHTML=timerText(s);var step=$('#stepper');if(step)step.innerHTML=stepperHTML(s.stage,s.stage,{noNav:true,lesson:s.lesson});
+    var actions=auto?(m==='waiting'?'<button class="btn primary" data-clock="start">수업 시작</button>':['running','catchup'].includes(m)?'<button class="btn" data-clock="pause">긴급 일시정지</button>':m==='paused'?'<button class="btn primary" data-clock="resume">이어서 진행</button>':'<span class="pill">수업 완료</span>'):'<button class="btn" id="t-prev">이전 단계</button><button class="btn primary" id="t-next">다음 단계</button>';
+    if($('#clock-actions').innerHTML!==actions){$('#clock-actions').innerHTML=actions;$$('[data-clock]').forEach(function(b){b.onclick=function(){b.disabled=true;api('POST','staff/clock',{session:self.code,action:b.getAttribute('data-clock')}).then(function(){self.queueFingerprint=null;return self.refresh();}).catch(function(e){toast(e.message,'warn');self.refresh();});};});if(!auto){$('#t-prev').onclick=function(){if(s.stage>0)self.setStage(-1);};$('#t-next').onclick=function(){if(s.stage<5)self.setStage(1);};}}
+    var people=self.data.students,online=people.filter(function(p){return p.last_seen&&nowMs()-Date.parse(p.last_seen)<90000;}).length;
+    $('#console-stats').innerHTML='<span>등록 <b>'+people.length+'</b></span><span>접속 <b>'+online+'</b></span><span>도움 요청 <b>'+self.data.requests.length+'</b></span><span>현재 단계 미제출 <b>'+people.filter(function(p){return self.stageItems().some(function(id){return !p.items[id]||!p.items[id].a;});}).length+'</b></span>';
+  };
+  Teacher.renderRoster=function(){var self=this;if(!self.data)return;var reqs=self.data.requests,ids=self.stageItems();$('#student-grid').innerHTML=self.data.students.filter(function(p){return self.filter==='help'?reqs.some(function(r){return r.code===p.code;}):self.filter==='missing'?ids.some(function(id){return !p.items[id]||!p.items[id].a;}):true;}).map(function(p){var help=reqs.some(function(r){return r.code===p.code;}),offline=!p.last_seen||nowMs()-Date.parse(p.last_seen)>90000,submitted=ids.filter(function(id){return p.items[id]&&p.items[id].a;}).length,draft=ids.some(function(id){return p.items[id]&&p.items[id].d;});return '<button class="student-tile '+(help?'need-help':offline?'offline':submitted===ids.length?'submitted':'writing')+'" data-student="'+esc(p.code)+'"><b>'+esc(p.code)+'</b><span>'+(offline?'미접속':help?'도움 요청':submitted===ids.length?'제출 완료':draft?'작성 중':'미제출')+'</span><small>'+submitted+'/'+ids.length+' 제출</small></button>';}).join('')||'<p class="hint">표시할 학생이 없습니다.</p>';};
+  Teacher.renderQueue=function(){var self=this,qs=self.data.requests;
+    var ids=Array.from(new Set(qs.map(function(r){return r.item_id;})));
+    if(!ids.includes(self.reqItem)){self.reqItem=ids[0]||'';self.picked={};self.bankId='';}
+    $('#request-item').innerHTML=ids.map(function(id){return '<option value="'+esc(id)+'"'+(id===self.reqItem?' selected':'')+'>'+esc(shortOf(id))+' ('+qs.filter(function(r){return r.item_id===id;}).length+'명)</option>';}).join('')||'<option value="">대기 요청 없음</option>';
+    $('#request-title').textContent=self.data.group==='EXPERIMENT'?'AI 지원 현황':'도움 요청';
+    $('#queue').innerHTML=self.data.group==='EXPERIMENT'?'<p class="hint">AI 발문과 학생 재응답은 왼쪽 학생을 눌러 확인하세요. 교사는 수학 발문을 따로 전송하지 않습니다.</p>':qs.filter(function(r){return r.item_id===self.reqItem;}).map(function(r){return '<article class="request-card"><div class="row"><b>'+esc(r.code)+'</b><small>대기 '+mmss((nowMs()-Date.parse(r.at))/1000)+'</small><button class="btn sm" data-request-detail="'+esc(r.id)+'">전체 답안</button></div>'+fieldsView(resolveItem(r.item_id,'CONTROL',self.data.session.settings),r.fields,{})+'<label class="choice-line"><input type="checkbox" data-request-pick="'+esc(r.id)+'"'+(self.picked[r.id]!==undefined?' checked':'')+'><span>답안 확인 후 선택</span></label></article>';}).join('')||'<p class="hint">기다리는 요청이 없습니다.</p>';
+  };
+  Teacher.renderBatch=function(){var self=this,n=$('#batch-panel'),count=Object.keys(self.picked).length;if(self.data.group==='EXPERIMENT'){n.innerHTML='<h2>실험집단 수업 관리</h2><p>자동 타이머로 모든 학생이 함께 이동합니다. 학생을 선택하면 답안과 AI 지원 기록을 확인할 수 있습니다.</p><p class="hint">접속 문제나 수업 진행만 안내해 주세요.</p>';return;}
+    var list=self.bank.bank.filter(function(b){return b.item===self.reqItem&&b.level===1;});list.sort(function(a,b){return (a.state==='*'?0:1)-(b.state==='*'?0:1);});
+    if(!list.some(function(b){return b.id===self.bankId;}))self.bankId='';
+    var options=function(bs){return bs.map(function(b){return '<label class="bankopt"><input type="radio" name="batch-bank" value="'+esc(b.id)+'"'+(b.id===self.bankId?' checked':'')+'><span>'+fmt(b.text)+'</span></label>';}).join('');};
+    n.innerHTML='<h2>발문 선택 후 전송</h2><p>선택한 학생 <b>'+count+'명</b> · '+esc(self.reqItem?shortOf(self.reqItem):'문항 선택 대기')+'</p>'+options(list.slice(0,4))+(list.length>4?'<details><summary>다른 발문 '+(list.length-4)+'개</summary>'+options(list.slice(4))+'</details>':'')+'<button class="btn primary batch-send" id="batch-send"'+(!count||!self.bankId||clockMode(self.data.session)==='paused'||['catchup','finished','waiting'].includes(clockMode(self.data.session))?' disabled':'')+'>선택한 '+count+'명에게 보내기</button><p class="hint small">각 학생에게만 개별 전달됩니다. 전송 직전 답안과 요청을 다시 확인합니다.</p><div id="batch-results" role="status">'+(self.batchResults||'')+'</div>';
+    $$('input[name="batch-bank"]',n).forEach(function(t){t.onchange=function(){self.bankId=t.value;self.renderBatch();};});
+    $('#batch-send').onclick=function(){var btn=this;btn.disabled=true;var targets=self.data.requests.filter(function(r){return self.picked[r.id]!==undefined&&r.item_id===self.reqItem;}).map(function(r){return {code:r.code,request_id:r.id,attempt:self.picked[r.id]};});api('POST','staff/send-batch',{session:self.code,item_id:self.reqItem,bank_id:self.bankId,targets:targets}).then(function(r){self.batchResults=r.results.map(function(x){return '<p class="'+(x.ok?'':'warnline')+'">'+esc(x.code)+': '+(x.ok?'전송 완료':esc(x.error))+'</p>';}).join('');self.picked={};self.queueFingerprint=null;return self.refresh();}).catch(function(e){toast(e.message,'warn');btn.disabled=false;});};
+  };
+  var originalStudentRender=Student.renderStage;
+  Student.renderStage=function(){
+    var m=clockMode(this.me.session);
+    if(['catchup','finished'].includes(m))return this.renderSupplements();
+    originalStudentRender.call(this);
+    var self=this;
+    if(self.view===5 && $('#post-comparison')){
+      var key='pq4r:reflection:'+self.me.session.code+':'+self.me.student.code,draft=store(key)||{};
+      if(draft.comparison)$('#post-comparison').value=draft.comparison;
+      var radio=$('input[name="post-understanding"][value="'+(draft.understanding||'none')+'"]');if(radio)radio.checked=true;
+      var autoReflection=function(){var checked=$('input[name="post-understanding"]:checked'),value={understanding:checked?checked.value:'',comparison:$('#post-comparison').value};store(key,value);clearTimeout(self.saveTimers.reflection);self.saveTimers.reflection=setTimeout(function(){api('POST','me/reflection-draft',value).catch(function(){/* 미저장 내용은 이 기기에 보관 */});},300);};
+      $('#post-comparison').oninput=autoReflection;$$('input[name="post-understanding"]').forEach(function(r){r.onchange=autoReflection;});
+    }
+    if(m==='waiting'||m==='paused'){$$('#right input, #right textarea, #right button').forEach(function(n){n.disabled=true;});$('#right').insertAdjacentHTML('afterbegin','<p class="notice-bar">'+(m==='waiting'?'선생님이 수업을 시작하면 작성할 수 있습니다.':'수업이 일시정지되었습니다. 다시 시작할 때까지 기다려 주세요.')+'</p>');}
+    if(self.view===2&&self.stageIdx()===2&&self.settings().videoUrl){$('#right').insertAdjacentHTML('afterbegin','<button class="btn primary" id="read-video">개념영상 보기</button>');$('#read-video').onclick=function(){self.openVideo();};var seen='pq4r:video:'+self.me.session.code+':'+self.me.student.code;if(m==='running'&&!store(seen)){store(seen,true);self.openVideo();}}
+    if(self.settings().autoTimer)$('#right').insertAdjacentHTML('afterbegin','<p class="notice-bar" role="note">다 쓰지 않아도 시간이 끝나면 자동 이동합니다. 작성 내용은 자동 저장되며, 마지막에 보완 5분을 제공합니다.</p>');
+  };
+  var originalEditable=Student.editable;
+  Student.editable=function(){var m=clockMode(this.me.session);return (m==='legacy'||m==='running')&&originalEditable.call(this);};
+  Student.openVideo=function(){
+    var self=this,url=self.settings().videoUrl;if(!url)return;
+    var prior=$('#video-dialog');if(prior)prior.remove();
+    var d=document.createElement('dialog');d.id='video-dialog';d.className='video-dialog';
+    d.innerHTML='<div class="row"><h2>Read 개념영상</h2><button class="btn sm" id="video-close">닫기</button></div><p>재생 버튼을 눌러 개념 강의를 시청하세요. Read 타이머는 계속 진행됩니다.</p><div id="video-player"><button class="btn primary" id="video-play">영상 재생하기</button></div><p><a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">영상이 안 보이면 새 창에서 열기</a></p>';
+    document.body.appendChild(d);d.showModal();self.logEvent('VIDEO_OPEN',null,{material:'READ_VIDEO'});
+    function close(){self.logEvent('VIDEO_CLOSE',null,{material:'READ_VIDEO'});d.close();d.remove();}
+    $('#video-close').onclick=close;d.addEventListener('cancel',function(ev){ev.preventDefault();close();});
+    $('#video-play').onclick=function(){var u=new URL(url),embed='';
+      if(['youtube.com','www.youtube.com','m.youtube.com','youtu.be','www.youtube-nocookie.com'].includes(u.hostname)) {var id=u.hostname==='youtu.be'?u.pathname.slice(1):u.searchParams.get('v')||u.pathname.split('/').filter(Boolean).pop();if(/^[\w-]{11}$/.test(id))embed='https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1';}
+      if(['vimeo.com','www.vimeo.com','player.vimeo.com'].includes(u.hostname)){var vid=u.pathname.split('/').filter(Boolean).pop();if(/^\d+$/.test(vid))embed='https://player.vimeo.com/video/'+vid+'?autoplay=1';}
+      var player=$('#video-player');if(embed)player.innerHTML='<iframe src="'+esc(embed)+'" title="개념 강의 영상" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+      else if(/\.(mp4|webm|ogv)$/i.test(u.pathname))player.innerHTML='<video src="'+esc(url)+'" controls autoplay playsinline></video>';
+      else player.innerHTML='<p>이 주소는 사이트 안 재생을 지원하지 않습니다. 아래 링크를 눌러 새 창에서 시청하세요.</p>';
+      self.logEvent('VIDEO_PLAY',null,{material:'READ_VIDEO'});
+    };
+  };
+  Student.renderSupplements=function(){
+    var self=this,mode=clockMode(self.me.session);var d=$('#video-dialog');if(d)d.remove();
+    $('#left').innerHTML='<section class="panel"><h2>보완 5분</h2><p>시간 안에 마치지 못한 문항을 보완하세요. 원래 답안은 그대로 보관됩니다.</p><p>이 시간에는 AI와 교사의 추가 발문이 제공되지 않습니다.</p></section>';$('#layout').classList.remove('noleft');
+    $('#right').innerHTML='<p class="loading">보완할 문항을 불러오는 중…</p>';
+    api('GET','me/supplements').then(function(r){if(App.screen!=='student'||!['catchup','finished'].includes(clockMode(self.me.session)))return;
+      var disabled=mode==='finished'?' disabled':'';self.supplementLocal=store('pq4r:supplement:'+self.me.session.code+':'+self.me.student.code)||{};
+      $('#right').innerHTML='<h1>'+(mode==='finished'?'수업 완료':'미완료 문항 보완')+'</h1><p class="notice-bar">'+(mode==='finished'?'보완 시간이 끝났습니다. 저장된 내용을 확인할 수 있습니다.':'5분이 끝나면 자동 종료됩니다. 보완 답안은 시간 내 답안과 별도 저장됩니다.')+'</p>'+r.items.map(function(x){var it=resolveItem(x.item_id,self.group(),self.settings()),original=x.original||{},values=self.supplementLocal[it.id]||x.saved&&x.saved.fields||self.pending[it.id]&&self.pending[it.id].draft||original.draft||{};return '<section class="panel supplement-item" data-supplement="'+it.id+'"><h2>'+esc(it.title)+'</h2>'+figHTML(it.fig)+choicesHTML(it.choices)+(it.fixedAI?'<p>'+fmt(it.fixedAI.text)+'</p>':'')+'<details><summary>시간 내 기록 보기</summary>'+fieldsView(it,original.draft||{},{})+'</details>'+it.fields.map(function(f){var v=values[f.key]||'';if(f.kind==='choice'||f.kind==='multi')return '<fieldset><legend>'+fmt(f.label)+'</legend>'+f.options.map(function(o){return '<label class="choice-line"><input data-sup-field="'+f.key+'" type="'+(f.kind==='multi'?'checkbox':'radio')+'" name="sup-'+it.id+'-'+f.key+'" value="'+esc(o.v)+'"'+((f.kind==='multi'?multiVals(v):[v]).includes(o.v)?' checked':'')+disabled+'><span>'+fmt(o.label)+'</span></label>';}).join('')+'</fieldset>';return '<label>'+fmt(f.label)+'<textarea data-sup-field="'+f.key+'" rows="2" maxlength="3000"'+disabled+'>'+esc(v)+'</textarea></label>';}).join('')+'<p class="hint small" data-sup-status="'+it.id+'">'+(x.saved?'서버에 저장된 보완본이 있습니다.':'')+'</p></section>';}).join('')+(!r.items.length?'<p>보완할 미완료 문항이 없습니다. 수고했어요.</p>':'');
+      $$('.supplement-item').forEach(function(panel){panel.oninput=function(){var id=panel.getAttribute('data-supplement'),fields={};$$('[data-sup-field]',panel).forEach(function(n){var k=n.getAttribute('data-sup-field');if(n.type==='radio'){if(n.checked)fields[k]=n.value;}else if(n.type==='checkbox'){if(n.checked)fields[k]=(fields[k]?fields[k]+',':'')+n.value;}else fields[k]=n.value;});self.supplementLocal[id]=fields;store('pq4r:supplement:'+self.me.session.code+':'+self.me.student.code,self.supplementLocal);var status=$('[data-sup-status="'+id+'"]');status.textContent='이 기기에 보관 중 · 서버 저장 대기';clearTimeout(self.saveTimers['sup:'+id]);self.saveTimers['sup:'+id]=setTimeout(function(){self.flushSupplement(id);},300);};});
+    }).catch(function(e){$('#right').innerHTML='<p class="warnline">'+esc(e.message)+'</p>';});
+  };
+  Student.flushSupplement=function(id){
+    var self=this;self.supplementFlights=self.supplementFlights||{};if(self.supplementFlights[id])return self.supplementFlights[id];
+    var fields=self.supplementLocal[id];if(!fields)return Promise.resolve();
+    var p=api('POST','me/supplement',{item_id:id,fields:fields}).then(function(x){var n=$('[data-sup-status="'+id+'"]');if(n)n.textContent='보완본 저장 '+kst(x.at);}).catch(function(e){var n=$('[data-sup-status="'+id+'"]');if(n)n.textContent='서버 저장 실패 · 이 기기에 보관됨: '+e.message;}).then(function(){delete self.supplementFlights[id];if(self.supplementLocal[id]!==fields)return self.flushSupplement(id);});self.supplementFlights[id]=p;return p;
+  };
+  var originalStudentPoll=Student.poll;
+  Student.poll=function(){var self=this;return originalStudentPoll.call(self).then(function(){self.showNotice(self.me.notice);});};
+  Student.showNotice=function(n){if(!n||n.id===this.noticeId)return;this.noticeId=n.id;toast(n.text,'warn');var box=$('#student-notice');if(!box){box=document.createElement('div');box.id='student-notice';box.className='notice-bar';box.setAttribute('role','status');$('#app').prepend(box);}box.textContent=n.text;};
+  var originalStudentStart=Student.start;
+  Student.start=function(me){var self=this;self.lastWarning='';self.nearEndFlush='';originalStudentStart.call(self,me);self.showNotice(me.notice);App.timers.push(setInterval(function(){
+    var s=self.me.session,c=s.clock||{},m=clockMode(s);if(m!=='running'&&m!=='catchup')return;var left=(Date.parse(c.deadline)-nowMs())/1000;
+    var phase=m+':'+s.stage+':'+c.deadline;
+    if(left<=60&&left>0){var warning=phase+(left<=10?':10':':60');if(self.lastWarning!==warning){self.lastWarning=warning;toast(left<=10?'10초 뒤 자동 이동합니다. 다 쓰지 않아도 페이지가 넘어갑니다.':'1분 남았습니다. 시간이 끝나면 자동 이동합니다.','warn');}}
+    if(left<=2&&self.nearEndFlush!==phase){self.nearEndFlush=phase;Object.keys(self.pending).forEach(function(id){self.flushDraft(id);});}
+    if(left<=0&&!self.clockPolling){self.clockPolling=true;self.poll().finally(function(){self.clockPolling=false;});}
+  },500));};
+
   /* ---------- 시작 ---------- */
   function boot() {
     fetch('/api/v1/content', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(); return r.json(); }).then(function (c) {
@@ -1265,6 +1423,8 @@
       App.tok = a.token; App.role = a.role; App.tid = a.tid || null;
       if (a.role === 'student') return api('GET', 'me').then(function (me) { Student.start(me); }).catch(function () { logout(); });
       if (a.role === 'teacher') return Teacher.start();
+      var screen=tabStore('pq4r:staff-screen');
+      if(screen&&screen.screen==='teacher'&&screen.session)return Teacher.start(screen.session);
       return Researcher.start();
     }).catch(function () {
       $('#app').innerHTML = '<main class="loading">서버에 연결하지 못했어요. 잠시 뒤 새로고침해 주세요.</main>';
