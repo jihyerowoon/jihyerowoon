@@ -20,6 +20,7 @@ function publicContent() {
 
 const STUDENT = ['student'], STAFF = ['teacher', 'researcher'], RESEARCHER = ['researcher'];
 const routes = {
+  'POST login/staff/refresh': { roles: STAFF, noDb: true, fn: async function(ctx){return T.refreshLogin(ctx.tok);} },
   'POST staff/new-demo': { roles: STAFF, body: true, fn: async function(ctx){return Room.newDemo(ctx.tok,ctx.body);} },
   'POST me/reflection-draft': { roles: STUDENT, body: true, fn: async function(ctx){return S.reflectionDraft(ctx.tok,ctx.body);} },
   'GET admin/classes': { roles: RESEARCHER, fn: async function(){return Room.classes();} },

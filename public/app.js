@@ -61,18 +61,22 @@
   }
 
   /* ---------- 로그인 정보 ---------- */
-  var AUTH_KEY = 'pq4r:auth';
+  var AUTH_KEY = 'pq4r:auth', STAFF_LAST='pq4r:staff-last', STAFF_PAUSED='pq4r:staff-paused';
+  function staffKey(role){return 'pq4r:remember:'+role;}
+  function rememberedStaff(role){return store(STAFF_PAUSED)?null:valid(store(staffKey(role)));}
   function tokenExp(tok) { try { var p = tok.split('.')[0].replace(/-/g, '+').replace(/_/g, '/'); while (p.length % 4) p += '='; return JSON.parse(decodeURIComponent(escape(atob(p)))).exp || 0; } catch (e) { return 0; } }
   /* 탭마다 따로(sessionStorage) 두고, 새로 연 탭은 마지막 로그인(localStorage)으로 이어 간다 */
   function tabStore(k, v) { try { if (v === undefined) { var x = sessionStorage.getItem(k); return x ? JSON.parse(x) : null; } if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } return null; }
   function valid(a) { return a && a.token && tokenExp(a.token) > Date.now() / 1000 + 60 ? a : null; }
   function saveAuth(a) {
     tabStore(AUTH_KEY, a); store(AUTH_KEY, a);
+    if(a&&['teacher','researcher'].includes(a.role)){store(staffKey(a.role),a);store(STAFF_LAST,a.role);store(STAFF_PAUSED,null);}
     if (/^#login/.test(location.hash)) try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* ignore */ }
   }
-  function loadAuth() { return valid(tabStore(AUTH_KEY)) || valid(store(AUTH_KEY)); }
+  function loadAuth() { return valid(tabStore(AUTH_KEY)) || rememberedStaff(store(STAFF_LAST)||'researcher') || rememberedStaff('researcher') || rememberedStaff('teacher') || valid(store(AUTH_KEY)); }
   function logout(msg) {
     var mine = App.tok, shared = store(AUTH_KEY);
+    if(['teacher','researcher'].includes(App.role)){store(staffKey(App.role),null);store(STAFF_PAUSED,true);}
     tabStore(AUTH_KEY, null); if (shared && shared.token === mine) store(AUTH_KEY, null);
     App.tok = null; App.role = null;
     cleanup(); renderEntry(); if (msg) toast(msg, 'warn');
@@ -256,7 +260,7 @@
       '<nav class="login-tabs" role="tablist">' + [['student', '학생'], ['teacher', '교사'], ['researcher', '연구자']].map(function (t) {
         return '<button class="login-tab' + (t[0] === tab ? ' on' : '') + '" role="tab" aria-selected="' + (t[0] === tab) + '" data-ltab="' + t[0] + '">' + t[1] + '</button>';
       }).join('') + '</nav><div id="loginbox"></div></section></main>';
-    $$('[data-ltab]').forEach(function (b) { b.onclick = function () { renderEntry(b.getAttribute('data-ltab')); }; });
+    $$('[data-ltab]').forEach(function (b) { b.onclick = function () { var role=b.getAttribute('data-ltab'),saved=rememberedStaff(role);if(saved)return restoreStaff(saved);renderEntry(role); }; });
     var box = $('#loginbox');
     if (tab === 'student') {
       box.innerHTML = '<form class="login-form" id="lf" autocomplete="off">' +
@@ -270,7 +274,7 @@
         (tab === 'teacher' ? '<label>교사 ID<input id="l-tid" maxlength="20" value="' + esc(last.tid || 'T1') + '"></label>' : '') +
         '<label>' + (tab === 'teacher' ? '교사' : '연구자') + ' 비밀번호<input id="l-pw" type="password" required autocomplete="current-password"></label>' +
         '<button class="btn primary" type="submit">입장</button><p class="err" id="l-err" role="alert"></p>' +
-        '<p class="hint">' + (tab === 'teacher' ? '수업 진행과 통제집단 지원 화면이에요. 교사 ID는 기록의 teacher_id에 남아요.' : '수업 만들기, 명단, 기록·내보내기, 처치충실도 화면이에요.') + '</p></form>';
+        '<p class="hint">이 브라우저에 로그인 상태를 자동으로 기억합니다. 비밀번호는 저장하지 않습니다.</p><p class="hint">' + (tab === 'teacher' ? '수업 진행과 통제집단 지원 화면이에요. 교사 ID는 기록의 teacher_id에 남아요.' : '수업 만들기, 명단, 기록·내보내기, 처치충실도 화면이에요.') + '</p></form>';
     }
     $('#lf').addEventListener('submit', function (ev) {
       ev.preventDefault();clearTimeout(App.loginRetry);
@@ -1415,6 +1419,16 @@
     if(left<=0&&!self.clockPolling){self.clockPolling=true;self.poll().finally(function(){self.clockPolling=false;});}
   },500));};
 
+  function restoreStaff(a){
+    App.tok=a.token;App.role=a.role;App.tid=a.tid||null;
+    $('#app').innerHTML='<main class="loading">저장된 '+(a.role==='teacher'?'교사':'연구자')+' 로그인으로 연결 중…</main>';
+    function enter(){if(a.role==='teacher')return Teacher.start();var screen=tabStore('pq4r:staff-screen');if(screen&&screen.screen==='teacher'&&screen.session)return Teacher.start(screen.session);return Researcher.start();}
+    return api('POST','login/staff/refresh').then(function(r){saveAuth({token:r.token,role:r.role,tid:r.tid});return enter();}).catch(function(e){
+      if(e.status===401||e.status===403){store(staffKey(a.role),null);return logout('저장된 로그인이 만료되거나 변경되었습니다. 한 번 다시 로그인해 주세요.');}
+      $('#app').innerHTML='<main class="loading"><p>저장된 로그인은 유지되어 있습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.</p><button class="btn primary" id="staff-retry">자동로그인 다시 시도</button><button class="btn" id="staff-manual">직접 로그인</button></main>';
+      $('#staff-retry').onclick=function(){restoreStaff(a);};$('#staff-manual').onclick=function(){renderEntry(a.role);};
+    });
+  }
   /* ---------- 시작 ---------- */
   function boot() {
     fetch('/api/v1/content', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(); return r.json(); }).then(function (c) {
@@ -1428,14 +1442,12 @@
       if (!a) return renderEntry();
       App.tok = a.token; App.role = a.role; App.tid = a.tid || null;
       if (a.role === 'student') return api('GET', 'me').then(function (me) { Student.start(me); }).catch(function () { logout(); });
-      if (a.role === 'teacher') return Teacher.start();
-      var screen=tabStore('pq4r:staff-screen');
-      if(screen&&screen.screen==='teacher'&&screen.session)return Teacher.start(screen.session);
-      return Researcher.start();
+      return restoreStaff(a);
     }).catch(function () {
       $('#app').innerHTML = '<main class="loading">서버에 연결하지 못했어요. 잠시 뒤 새로고침해 주세요.</main>';
     });
   }
+  window.addEventListener('hashchange',function(){if(C&&/^#login/.test(location.hash))renderEntry(location.hash==='#login-student'?'student':undefined);});
   window.PQ_APP = App;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
