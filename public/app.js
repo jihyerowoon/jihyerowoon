@@ -110,6 +110,16 @@
         return '<figure><img src="'+esc(url)+'" alt="'+esc(stage)+' 활동지 '+(i+1)+'쪽" loading="lazy"><figcaption>수학문제와 도형: PPT 원본 이미지</figcaption></figure>';
       }).join('')+'</div></details></section>';
   }
+  function paperAsset(it,group) {
+    if(group!=='CONTROL'||![1,2].includes(it.lesson))return null;
+    var suffix=it.id.slice(2),key=['PV01','QU01','RV01'].includes(suffix)?'shared':/^(RD02|RF0[123])$/.test(suffix)?suffix:null;
+    return key?'/worksheets/control/L'+it.lesson+'-'+key+'.webp':null;
+  }
+  function paperProblem(it,group) {
+    var url=paperAsset(it,group);if(!url)return '';
+    var shared=/-shared\.webp$/.test(url)?C.problems['L'+it.lesson+'P']:null;
+    return (it.fixedAI?'<p class="paper-caption">문제 · 검토할 설명</p>':'')+'<figure class="paper-problem"><img src="'+url+'" alt="'+esc(plain(shared?shared.text:it.title)+(it.fig?' '+plain(it.fig.desc):'')+(it.choices?' 보기: '+it.choices.map(function(c,i){return CIRC[i]+' '+plain(c);}).join(' '):'')+(it.fixedAI?' 검토할 설명: '+plain(it.fixedAI.text):''))+'" loading="lazy"></figure>';
+  }
   function choicesHTML(list) {
     if (!list || !list.length) return '';
     return '<ol class="choicelist">' + list.map(function (c, i) { return '<li><span class="cn">' + CIRC[i] + '</span> ' + fmt(c) + '</li>'; }).join('') + '</ol>';
@@ -167,7 +177,7 @@
   }
 
   /* ---------- 개념 자료 보기 ---------- */
-  function lessonMaterials(lesson) { return C.materials.filter(function (m) { return m.lesson === lesson; }); }
+  function lessonMaterials(lesson) { var id=lesson===1?'L0_triangle_congruence':lesson===2?'L1_parallelogram_properties':null;return C.materials.filter(function(m){return id?m.id===id:m.lesson===lesson;}); }
   var MatViewer = {
     el: null, list: [], idx: 0, openedAt: null, onClose: null, onSwitch: null, fit: true,
     open: function (list, idx, onOpen, onClose) {
@@ -387,11 +397,9 @@
       var n = $('#leftstage'); if (!n) return;
       var self = this, sid = C.stages[this.view].id, L = lessonOf(this.lesson()), h = '';
       var pk = L.stageProblem && L.stageProblem[sid], pb = pk ? C.problems[pk] : null;
-      if (pb) h += '<div class="panel problem"><p class="k">' + (sid === 'Preview' ? '문제' : sid === 'Question' ? '문제 다시 보기 (Preview)' : '처음 본 문제') + '</p><p>' + fmt(pb.text) + '</p>' + figHTML(C.figs[pb.fig]) + '</div>';
+      if (pb && self.group()!=='CONTROL') h += '<div class="panel problem"><p class="k">' + (sid === 'Preview' ? '문제' : sid === 'Question' ? '문제 다시 보기 (Preview)' : '처음 본 문제') + '</p><p>' + fmt(pb.text) + '</p>' + figHTML(C.figs[pb.fig]) + '</div>';
       if (this.matVisible(sid)) {
-        h += '<div class="panel material"><p class="k">개념 정리 · 교재</p><div class="mat-list">' + lessonMaterials(this.lesson()).map(function (m, i) {
-          return '<button type="button" class="mat ' + m.role + '" data-mat="' + i + '"><img src="' + esc(m.thumb) + '" alt="" loading="lazy"><span class="mat-t">' + esc(m.title) + '</span><span class="mat-s">' + esc(m.topic) + '</span></button>';
-        }).join('') + '</div><p class="hint small">눌러서 크게 보세요. Recite에서는 가려져요.</p></div>';
+        h += '<div class="panel material"><p class="k">개념 정리</p>'+lessonMaterials(this.lesson()).map(function(m,i){return '<button type="button" class="paper-material" data-mat="'+i+'" aria-label="'+esc(m.title)+' 크게 보기"><img src="'+esc(m.file)+'" alt="'+esc(m.title)+'" loading="lazy"><span>눌러서 크게 보기</span></button>';}).join('')+'</div>';
       }
       if (sid === 'Recite') h += '<div class="panel cover"><p class="k">가린 내용</p><p>Recite 동안은 앞 단계의 답과 개념 정리를 가려요. 먼저 내 말로 설명해 보세요.</p></div>';
       n.innerHTML = h;
@@ -497,10 +505,9 @@
       var items = itemsForStage(st.id, g, self.settings(), ln), editable = self.editable();
       var mats = lessonMaterials(ln);
       var h = '<div class="stagehead ' + key + '"><p class="stage-k"><span class="sdot"></span>' + (self.view + 1) + '. ' + st.id.toUpperCase() + '<span class="ko">' + st.ko + '</span><span class="min">' + stageMin(ln, self.view) + '분</span></p>' +
-        '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (editable ? '' : self.view===5&&self.me.review&&self.me.review.unlocked?'<p class="closed-note">문제 풀이 작성 시간은 끝났습니다. 해설을 확인하고 아래에서 성찰을 작성하세요.</p>':'<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') +
-        (editable && self.matVisible(st.id) && mats.length ? '<p class="row">' + mats.map(function (m, i) { return '<button type="button" class="btn sm' + (m.role === 'main' ? '' : ' ghost') + '" data-openmat="' + i + '">' + esc(m.title) + '</button>'; }).join('') + '</p>' : '') + '</div>';
+        '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (editable ? '' : self.view===5&&self.me.review&&self.me.review.unlocked?'<p class="closed-note">문제 풀이 작성 시간은 끝났습니다. 해설을 확인하고 아래에서 성찰을 작성하세요.</p>':'<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') + '</div>';
       if (editable && st.id !== 'Review') h += '<p class="student-simple-tip">① 답을 적고 <b>내 답 제출하기</b>를 누르세요. ② 어렵다면 제출 후 <b>질문으로 도움받기</b>를 누르세요.</p>';
-      h += worksheetPane(ln,g,st.id);
+      if(g!=='CONTROL')h += worksheetPane(ln,g,st.id);
       if (editable) h += self.toolbarHTML();
       if(!(self.view===5 && self.reviewFeedback))items.forEach(function (it) { h += self.itemHTML(it, editable); });
       if (self.view === 5 && self.stageIdx() === 5) h += self.reviewPanel();
@@ -524,13 +531,14 @@
         '<span class="symbar-hint">마지막으로 누른 칸에 들어가요</span></div>';
     },
     itemHTML: function (it, editable) {
-      var self = this, rec = self.item(it.id);
+      var self = this, rec = self.item(it.id), paper=self.group()==='CONTROL', source=paperAsset(it,self.group());
       var last = rec.versions.length ? rec.versions[rec.versions.length - 1].fields : {};
-      var h = '<article class="item" data-item="' + it.id + '"><header class="item-h"><div class="item-t">' + (it.mark ? '<span class="mark">' + esc(it.mark) + '</span>' : '') +
-        '<h3>' + fmt(it.title) + '</h3></div><span class="chip-status" data-status="' + it.id + '"></span></header>';
-      if (it.fig || it.choices) h += '<div class="probblock">' + figHTML(it.fig) + choicesHTML(it.choices) + '</div>';
-      if (it.fixedAI) h += '<div class="aiout"><p class="aiout-k">검토할 풀이 설명 <small>두 집단 공통 검토자료</small></p><p>' + fmt(it.fixedAI.text) + '</p></div>';
-      if (it.sub) h += '<p class="item-sub">' + fmt(it.sub) + '</p>';
+      var h = '<article class="item'+(paper?' paper-item':'')+'" data-item="' + it.id + '"><header class="item-h"><div class="item-t">' + (it.mark ? '<span class="mark">' + esc(it.mark) + '</span>' : '') +
+        '<h3'+(source?' class="paper-sr"':'')+'>' + fmt(it.title) + '</h3></div><span class="chip-status" data-status="' + it.id + '"></span></header>';
+      if(source)h+=paperProblem(it,self.group());
+      if (!source && (it.fig || it.choices)) h += '<div class="probblock">' + figHTML(it.fig) + choicesHTML(it.choices) + '</div>';
+      if (it.fixedAI && !source) h += '<div class="aiout"><p class="aiout-k">검토할 풀이 설명 <small>두 집단 공통 검토자료</small></p><p>' + fmt(it.fixedAI.text) + '</p></div>';
+      if (it.sub && !source) h += '<p class="item-sub">' + fmt(it.sub) + '</p>';
       if (it.hint) h += '<p class="item-hint">' + fmt(it.hint) + '</p>';
       if (it.recall) {
         var src = self.item(it.recall), txt = src.versions.length ? src.versions[0].fields.text : (src.draft.text || '');
