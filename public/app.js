@@ -477,6 +477,7 @@
     },
     loadReviewFeedback: function () {
       var self=this, due=self.me.review && self.me.review.release_at;
+      if(['catchup','finished'].includes(clockMode(self.me.session)))return;
       if (!due || self.stageIdx()!==5 || self.view!==5 || self.reviewFeedback || self.reviewLoading || nowMs()<Date.parse(due)) return;
       if (Date.now()-self.lastReviewFetch<3500) return;
       self.lastReviewFetch=Date.now(); self.reviewLoading=true;
@@ -1420,13 +1421,28 @@
   };
   Student.renderSupplements=function(){
     var self=this,mode=clockMode(self.me.session);var d=$('#video-dialog');if(d)d.remove();
-    $('#left').innerHTML='<section class="panel"><h2>보완 5분</h2><p>시간 안에 마치지 못한 문항을 보완하세요. 원래 답안은 그대로 보관됩니다.</p><p>이 시간에는 AI와 교사의 추가 발문이 제공되지 않습니다.</p></section>';$('#layout').classList.remove('noleft');
+    $('#left').hidden=false;$('#left').innerHTML=mode==='finished'?'<section class="panel"><h2>수업 완료</h2><p>정답·해설과 나의 성찰은 오른쪽에서 계속 확인할 수 있습니다.</p><p>수업 시간에 제출한 답안과 보완본은 그대로 보관됩니다.</p></section>':'<section class="panel"><h2>보완 5분</h2><p>시간 안에 마치지 못한 문항을 보완하세요. 원래 답안은 그대로 보관됩니다.</p><p>정답·해설은 오른쪽 위에서 다시 볼 수 있습니다. 이 시간에는 AI와 교사의 추가 발문이 제공되지 않습니다.</p></section>';$('#layout').classList.remove('noleft');
     $('#right').innerHTML='<p class="loading">보완할 문항을 불러오는 중…</p>';
     api('GET','me/supplements').then(function(r){if(App.screen!=='student'||!['catchup','finished'].includes(clockMode(self.me.session)))return;
       var disabled=mode==='finished'?' disabled':'';self.supplementLocal=store('pq4r:supplement:'+self.me.session.code+':'+self.me.student.code)||{};
       $('#right').innerHTML='<h1>'+(mode==='finished'?'수업 완료':'미완료 문항 보완')+'</h1><p class="notice-bar">'+(mode==='finished'?'보완 시간이 끝났습니다. 저장된 내용을 확인할 수 있습니다.':'5분이 끝나면 자동 종료됩니다. 보완 답안은 시간 내 답안과 별도 저장됩니다.')+'</p>'+r.items.map(function(x){var it=resolveItem(x.item_id,self.group(),self.settings()),original=x.original||{},values=self.supplementLocal[it.id]||x.saved&&x.saved.fields||self.pending[it.id]&&self.pending[it.id].draft||original.draft||{};return '<section class="panel supplement-item" data-supplement="'+it.id+'"><h2>'+esc(it.title)+'</h2>'+figHTML(it.fig)+choicesHTML(it.choices)+(it.fixedAI?'<p>'+fmt(it.fixedAI.text)+'</p>':'')+'<details><summary>시간 내 기록 보기</summary>'+fieldsView(it,original.draft||{},{})+'</details>'+it.fields.map(function(f){var v=values[f.key]||'';if(f.kind==='choice'||f.kind==='multi')return '<fieldset><legend>'+fmt(f.label)+'</legend>'+f.options.map(function(o){return '<label class="choice-line"><input data-sup-field="'+f.key+'" type="'+(f.kind==='multi'?'checkbox':'radio')+'" name="sup-'+it.id+'-'+f.key+'" value="'+esc(o.v)+'"'+((f.kind==='multi'?multiVals(v):[v]).includes(o.v)?' checked':'')+disabled+'><span>'+fmt(o.label)+'</span></label>';}).join('')+'</fieldset>';return '<label>'+fmt(f.label)+'<textarea data-sup-field="'+f.key+'" rows="2" maxlength="3000"'+disabled+'>'+esc(v)+'</textarea></label>';}).join('')+'<p class="hint small" data-sup-status="'+it.id+'">'+(x.saved?'서버에 저장된 보완본이 있습니다.':'')+'</p></section>';}).join('')+(!r.items.length?'<p>보완할 미완료 문항이 없습니다. 수고했어요.</p>':'');
+      $('#right').insertAdjacentHTML('afterbegin','<section class="panel end-review" id="end-review"><h2>정답·해설 및 나의 성찰</h2><p>불러오는 중…</p></section>');self.loadCompletedReview();
       $$('.supplement-item').forEach(function(panel){panel.oninput=function(){var id=panel.getAttribute('data-supplement'),fields={};$$('[data-sup-field]',panel).forEach(function(n){var k=n.getAttribute('data-sup-field');if(n.type==='radio'){if(n.checked)fields[k]=n.value;}else if(n.type==='checkbox'){if(n.checked)fields[k]=(fields[k]?fields[k]+',':'')+n.value;}else fields[k]=n.value;});self.supplementLocal[id]=fields;store('pq4r:supplement:'+self.me.session.code+':'+self.me.student.code,self.supplementLocal);var status=$('[data-sup-status="'+id+'"]');status.textContent='이 기기에 보관 중 · 서버 저장 대기';clearTimeout(self.saveTimers['sup:'+id]);self.saveTimers['sup:'+id]=setTimeout(function(){self.flushSupplement(id);},300);};});
     }).catch(function(e){$('#right').innerHTML='<p class="warnline">'+esc(e.message)+'</p>';});
+  };
+  Student.loadCompletedReview=function(){
+    var self=this,session=self.me.session.code,token=App.tok;
+    return api('GET','me/review-feedback').then(function(data){
+      if(App.screen!=='student'||App.tok!==token||self.me.session.code!==session||!['catchup','finished'].includes(clockMode(self.me.session)))return;
+      var box=$('#end-review');if(!box)return;
+      var names={explain:'다른 사람에게 설명할 수 있다',partial:'일부는 이해했지만 아직 어렵다',uncertain:'아직 이해하지 못했다'};
+      var ref=data.reflection,draft=store('pq4r:reflection:'+session+':'+self.me.student.code);
+      var own=ref||draft;
+      box.innerHTML='<h2>정답·해설 다시 보기</h2><p>수업이 끝난 뒤에도 정답과 해설, 제출한 답안을 확인할 수 있습니다.</p><div class="completed-solutions">'+(data.solutions||[]).map(function(sol,i){
+        var p=sol.problem||{},ans=(data.answers||[]).find(function(a){return a.item_id===sol.item_id;}),ri=ITEM[sol.item_id]?resolveItem(sol.item_id,self.group(),self.settings()):null;
+        return '<details class="review-solution"'+(i===0?' open':'')+'><summary><b>'+esc(shortOf(sol.item_id))+'</b> · '+esc(sol.answer)+'</summary><div class="completed-solution-body">'+(ri&&paperAsset(ri,self.group())?paperProblem(ri,self.group()):'<h3>'+fmt(p.title||'')+'</h3>'+figHTML(p.fig)+choicesHTML(p.choices))+'<h3>정답과 해설</h3><p class="completed-answer">'+esc(sol.answer)+'</p><ol>'+(sol.steps||[]).map(function(t){return '<li>'+fmt(t)+'</li>';}).join('')+'<h3>해설 공개 전 나의 답안</h3>'+(ri&&ans?fieldsView(ri,ans.pre_response||{},{}) :'<p>제출 기록이 없습니다.</p>')+'</div></details>';
+      }).join('')+'</div><section class="completed-reflection"><h2>나의 성찰</h2>'+(own?'<p class="hint">'+(ref?'서버에 저장된 성찰입니다.':'이 기기에 남아 있는 임시저장본입니다. 제출 완료 기록과 구분됩니다.')+'</p><p><b>이해 정도:</b> '+esc(names[own.understanding]||'선택 기록 없음')+'</p><p><b>새롭게 알게 된 점·어려운 점:</b> '+esc(own.comparison||'작성 기록 없음')+'</p>':'<p>저장된 성찰이 없습니다.</p>')+'</section>';
+    }).catch(function(e){var box=$('#end-review');if(box&&App.tok===token&&self.me.session.code===session){box.innerHTML='<h2>정답·해설 다시 보기</h2><p class="warnline">'+esc(e.message)+'</p><button type="button" class="btn" id="retry-completed-review">다시 불러오기</button>';$('#retry-completed-review').onclick=function(){self.loadCompletedReview();};}});
   };
   Student.flushSupplement=function(id){
     var self=this;self.supplementFlights=self.supplementFlights||{};if(self.supplementFlights[id])return self.supplementFlights[id];
