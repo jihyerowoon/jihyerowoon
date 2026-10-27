@@ -11,7 +11,9 @@ module.exports=async function main(){
  r=await call('POST','admin/class-roster',{class_code:'T01',csv:'code,pin\nT01,1111\nT02,1111\nT04,1111'},rt);check(r.body.created===3,'실제 형식의 학생 코드 세 개 등록');
  for(const [code,class_name,lesson] of [['T01','T1',1],['T01-L1','T01',1],['T01-L2','T01',2]]){r=await call('POST','admin/session',{code,class_name,lesson,settings:{autoTimer:true}},rt);check(r.status===200,'수업 준비 '+code);}
  const body={class_code:'t01',student_code:'t01',pin:'1111'};
- r=await call('POST','login/student',body);check(r.body.code==='class_waiting','시작 전 대기, 차시 입력 요구 없음');
+ r=await call('POST','login/student',body);check(r.body.code==='class_ambiguous','복수 준비 수업은 교사 선택 전 임의 연결하지 않음');
+ await call('POST','staff/ready',{session:'T01-L2'},tt);
+ r=await call('POST','login/student',body);check(r.status===200&&r.body.me.session.stage===0&&!r.body.me.session.clock.deadline,'교사가 선택한 수업에 먼저 입장해 타이머 없이 대기');
  r=await call('POST','login/student',{...body,class_code:'T1'});check(r.status===403&&r.body.code==='not_in_class','T1/T01은 다른 반, 타반 입장 차단');
  r=await call('POST','login/student',{...body,pin:'2222'});check(r.status===401,'틀린 PIN 차단');
  r=await call('POST','staff/clock',{session:'T01-L2',action:'start'},tt);check(r.status===200,'교사가 2차시 선택 및 시작');

@@ -29,7 +29,8 @@ module.exports=async function(){let n=0;const check=(v,msg)=>{assert.ok(v,msg);n
  r=await call('GET','me',undefined,st);check(r.body.session.status==='closed','이전 로그인도 종료 사실 인지');
  r=await call('POST','login/student',entry);check(r.status===200&&r.body.me.session.code===second&&r.body.me.session.stage===0,'동일 학생과 PIN으로 새 Preview에 입장');
  check(!r.body.me.session.clock.deadline&&Object.keys(r.body.me.items).length===0,'지난 답이나 경과 시간 승계 없음');
- r=await call('POST','staff/new-demo',body,tt);check(r.status===200,'대기 중인 시연 반복 생성');
+ r=await call('POST','staff/new-demo',body,tt);check(r.status===409,'학생이 입장한 대기 시연은 명시적 확인 없이 종료하지 않음');
+ r=await call('POST','staff/new-demo',{...body,replace_session:second},tt);check(r.status===200,'확인 후 대기 중인 시연 반복 생성');
  const [waiting]=await sql`select count(*)::int as n from sessions where class_name='TESTDEMO' and status='open'`;check(waiting.n===1,'시연 반복에도 입장 후보 하나');
  r=await call('POST','login/student',entry);check(r.status===200&&r.body.me.session.stage===0,'시연 반복 후 학생 입장 성공');
  const {students}= (await call('GET','admin/students',undefined,rt)).body;check(students.filter(x=>x.class_name==='TESTDEMO').length===1,'시연마다 학생 재등록 불필요');

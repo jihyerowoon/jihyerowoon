@@ -448,12 +448,15 @@ tr:last-child td { border-bottom: 0; }
 @media(max-width:1150px){.console-grid{grid-template-columns:1fr 1fr}.console-grid>.rcard:last-child{grid-column:1/-1}.class-layout{grid-template-columns:190px minmax(0,1fr)}}
 @media(max-width:720px){.class-layout,.console-grid{grid-template-columns:1fr}.console-header{display:block}.student-grid{grid-template-columns:repeat(5,minmax(0,1fr))}.teacher-console{padding:10px}.clock-digits{font-size:27px}.class-layout>.rcard .sesslist{display:flex;overflow:auto}.class-layout .sessrow{min-width:160px}.console-grid>.rcard:last-child{grid-column:auto}}
 </style>
+<style>
+.class-main>section:nth-child(2){border:2px solid #637bb4;background:#f7faff}.class-main .tablewrap{max-height:340px;overflow:auto}.class-main .tablewrap thead{position:sticky;top:0;background:white;z-index:1}.teacher-live-timer{padding:14px 20px;border-radius:12px;background:#eaf2ff;white-space:nowrap;font-size:15px}.teacher-live-timer .clock-digits{display:block;font-size:44px;line-height:1.15}.console-header #clock-actions .btn.primary{font-size:18px;min-height:52px;padding:12px 24px}.staff-view-nav{margin:12px 0}.console-header>div{min-width:0}@media(max-width:720px){.teacher-live-timer{margin:12px 0}.teacher-live-timer .clock-digits{display:inline-block;margin-left:10px}.console-header #clock-actions .btn.primary{width:100%}.console-header>.row{display:flex;flex-wrap:wrap}}
+</style>
 </head>
 <body>
 <div id="app"><main class="loading">불러오는 중…</main></div>
 <div id="toasts" aria-live="polite"></div>
 <div class="netbar" id="netbar" hidden>연결이 끊겼어요 · 다시 연결하는 중</div>
 <noscript>이 페이지는 자바스크립트가 필요해요.</noscript>
-<script src="app.js?v=0.5.3"></script>
+<script src="app.js?v=0.5.4"></script>
 </body>
 </html>

@@ -21,7 +21,7 @@ module.exports=async function run(browser){
  await sql`insert into students ${sql(more,'code','grp','class_name','pin_hash','pin_enc')}`;
  await page.locator('#cl-video').fill('https://www.youtube.com/watch?v=dQw4w9WgXcQ');await page.locator('#cl-prepare').click();await page.locator('.student-tile').nth(29).waitFor();
  await page.getByRole('button',{name:'수업 시작',exact:true}).click();await page.getByRole('button',{name:'긴급 일시정지'}).waitFor();
- const [se]=await sql`select * from sessions where code='TESTUI-L1'`;
+ const [se]=await sql`select * from sessions where class_name='TESTUI' and status='open' and settings->>'autoTimer'='true'`;
  const students=await sql`select id,code,grp from students where class_name='TESTUI' order by code`;
  const toks=students.slice(0,2).map(st=>A.sign({role:'student',sub:st.id,ses:se.id,code:st.code,grp:st.grp},3600));
  for(let i=0;i<2;i++){const st=students[i];await sql`insert into participants(session_id,student_id)values(${se.id},${st.id})`;await call('POST','me/submit',{item_id:'L1PV01',fields:{text:'어떤 조건인지 잘 모르겠어요'}},toks[i]);await call('POST','me/help',{item_id:'L1PV01'},toks[i]);}
