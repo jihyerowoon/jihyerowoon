@@ -65,6 +65,9 @@ create table if not exists item_states (
   primary key (session_id, student_id, item_id)
 );
 
+-- 질문 입력도 두 집단 동일하게 자동 저장한다.
+alter table item_states add column if not exists question_draft text not null default '';
+
 -- 학생 화면에 보이는 지원 대화(AI·교사·안내)
 create table if not exists messages (
   seq bigserial primary key,
@@ -96,6 +99,8 @@ create table if not exists help_requests (
   answer_message uuid
 );
 create index if not exists help_open on help_requests (session_id) where answered_at is null;
+
+alter table help_requests add column if not exists question_text text not null default '';
 
 -- 연구 기록(06 로그 사전 + 추가 항목). 추가만 가능하고 고치거나 지울 수 없다.
 create table if not exists events (
