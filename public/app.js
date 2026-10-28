@@ -859,7 +859,7 @@
       if (fresh) $('#tdetail').innerHTML = '<p class="empty">불러오는 중…</p>';
       return api('GET', 'staff/student?session=' + encodeURIComponent(self.code) + '&code=' + encodeURIComponent(code)).then(function (d) {
         if (App.screen!=='teacher'||self.sel !== code||self.code!==requestSession) return;
-        var keepForm = !fresh && self.detail && self.detail.student.code === code && $('#sendform') && ($('#sf-custom') && $('#sf-custom').value || document.activeElement && $('#td-form') && $('#td-form').contains(document.activeElement));
+        var keepForm = !fresh && self.detail && self.detail.student.code === code && $('#sendform') && ($('#sf-custom') && $('#sf-custom').value || document.activeElement && (($('#td-form')&&$('#td-form').contains(document.activeElement))||($('#oral-log')&&$('#oral-log').contains(document.activeElement))));
         self.detail = d;
         if (keepForm) self.renderDetailTop(); else self.renderDetail();
       }).catch(function (e) { $('#tdetail').innerHTML = '<p class="empty">' + esc(e.message) + '</p>'; });
@@ -867,9 +867,9 @@
     renderDetail: function () {
       var self = this, d = self.detail, s = d.student, n = $('#tdetail');
       n.innerHTML = '<div class="td-h"><h2>' + esc(s.code) + ' <span class="grp ' + s.group.toLowerCase() + '">' + groupKo(s.group) + '</span></h2></div><div id="td-top"></div>' +
-        (s.group === 'CONTROL' ? '<div id="td-form"></div>' : '<p class="note">실험집단 학생은 AI 튜터가 지원해요. 교사는 수학 내용을 따로 돕지 않습니다.</p>');
+        (s.group === 'CONTROL' ? '<div id="td-form"></div><div id="oral-log"></div>' : '<p class="note">실험집단 학생은 AI 튜터가 지원해요. 교사는 수학 내용을 따로 돕지 않습니다.</p>');
       self.renderDetailTop();
-      if (s.group === 'CONTROL') self.renderForm();
+      if (s.group === 'CONTROL') {self.renderForm();self.renderOralNote();}
     },
     renderDetailTop: function () {
       var self = this, d = self.detail, s = d.student, n = $('#td-top'); if (!n) return;
@@ -957,6 +957,23 @@
         }).catch(function (e) { toast(e.message, 'crit'); }).then(function () { if ($('#sendform button[type=submit]')) $('#sendform button[type=submit]').disabled = false; });
       };
     }
+  };
+  Teacher.renderOralNote=function(){
+    var self=this,n=$('#oral-log');if(!n||!self.detail)return;
+    var notes=(self.detail.oral_notes||[]).filter(function(x){return x.item_id===self.selItem;});
+    n.innerHTML='<details class="oral-note"><summary>수업 중 구두 질문 및 교사 발화 기록 (수동 입력)</summary>'
+      +'<p class="hint">교사가 실제로 들은 문장이나 말한 문장을 입력합니다. 녹음이나 자동 음성인식은 아닙니다.</p>'
+      +'<form id="oral-note-form"><label>누가 말했나요?<select id="oral-speaker"><option value="STUDENT">학생의 질문</option><option value="TEACHER">교사의 발화</option></select></label>'
+      +'<label>실제로 말한 내용<textarea id="oral-text" rows="3" maxlength="800" required placeholder="실제로 들은 말을 가능한 그대로 적어 주세요."></textarea></label>'
+      +'<button class="btn" type="submit">이 발화를 연구 로그에 저장</button></form>'
+      +'<div class="oral-history">'+notes.map(function(x){return '<p><b>'+(x.speaker==='STUDENT'?'학생':'교사')+'</b> · '+esc(x.utterance)+' <small>'+kst(x.at)+'</small></p>';}).join('')+'</div></details>';
+    $('#oral-note-form').onsubmit=function(ev){
+      ev.preventDefault();var btn=this.querySelector('button'),text=$('#oral-text').value.trim();if(!text)return;
+      btn.disabled=true;
+      api('POST','staff/oral-note',{session:self.code,code:self.sel,item_id:self.selItem,speaker:$('#oral-speaker').value,utterance:text})
+        .then(function(){toast('구두 발화 기록을 저장했습니다.');return self.loadDetail(true);})
+        .catch(function(e){toast(e.message,'warn');btn.disabled=false;});
+    };
   };
   function fieldsView(ri, fields, sel) {
     fields = fields || {}; sel = sel || {};
