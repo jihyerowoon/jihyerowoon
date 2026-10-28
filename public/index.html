@@ -495,6 +495,16 @@ body.is-student #layout{max-width:1420px;margin-inline:auto;grid-template-column
 @media(max-width:720px){.is-teacher .student-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.is-teacher .student-tile{min-height:135px}.is-student .paper-item .item-f .btn{width:100%}.time-warning{font-size:16px;margin-inline:8px}}
 @media(prefers-reduced-motion:reduce){.is-teacher .student-tile{transition:none}}
 
+
+/* 학생의 궁금한 점은 활동지에 붙이고, 별도 팝업을 띄우지 않는다 */
+.help-question-label{display:block;font-size:15px;font-weight:700;color:#294365;margin:14px 0 5px}
+.help-question-label small{font-size:12px;font-weight:400;color:#687b92}
+.help-question-input{display:block;width:100%;border:1.5px solid #b2c7e2;border-radius:8px;min-height:44px;font-size:16px;padding:11px 12px;background:#fbfdff;margin-bottom:12px}
+.help-question-input:focus{outline:3px solid #2866b6;outline-offset:2px}
+.student-question-history{border:1px solid #b9d2e7;border-radius:10px;padding:14px;margin:16px 0;background:#f0f7ff}
+.student-question-history p{white-space:pre-wrap;font-size:15px;padding:8px 0;border-bottom:1px solid #dce9f6}
+.student-question-history small{font-size:12px;color:#52687b}
+.request-student-question{background:#fff5d7;border-left:5px solid #bf8613;padding:12px 15px;font-size:17px;line-height:1.6;margin:12px 0}
 </style>
 </head>
 <body>
