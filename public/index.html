@@ -505,6 +505,82 @@ body.is-student #layout{max-width:1420px;margin-inline:auto;grid-template-column
 .student-question-history p{white-space:pre-wrap;font-size:15px;padding:8px 0;border-bottom:1px solid #dce9f6}
 .student-question-history small{font-size:12px;color:#52687b}
 .request-student-question{background:#fff5d7;border-left:5px solid #bf8613;padding:12px 15px;font-size:17px;line-height:1.6;margin:12px 0}
+
+/* 30명 읽기 전용 활동지: 5열 x 6행, 선택 후 실제 입력 내용 확대 */
+#teacher-wall .worksheet-wall-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#teacher-wall .worksheet-wall-title h2{margin:0}
+#teacher-wall .worksheet-view-controls{margin:12px 0}
+.is-teacher .student-grid.worksheet-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;align-items:stretch}
+.is-teacher .worksheet-tile{min-width:0;min-height:248px;max-height:290px;display:flex;flex-direction:column;align-items:stretch;gap:5px;padding:9px;border:2px solid #b7c9e2;background:#f8fbff;text-align:left;overflow:hidden}
+.is-teacher .worksheet-tile.need-help{border-color:#bb6a08;background:#fff5dc}
+.is-teacher .worksheet-tile .tile-head{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.is-teacher .worksheet-tile .tile-head>b{font-size:16px}
+.is-teacher .worksheet-tile .tile-head>strong{font-size:11.5px}
+.is-teacher .worksheet-tile .tile-live-item{font-size:12px;font-weight:800;color:#1d4c86}
+.is-teacher .worksheet-tile .mini-mirror{display:block;flex:1;min-height:0;overflow:hidden;position:relative}
+.is-teacher .worksheet-tile .mini-mirror::after{content:"";position:absolute;bottom:0;left:0;right:0;height:15px;background:linear-gradient(transparent,#f8fbff);pointer-events:none}
+.is-teacher .worksheet-tile.need-help .mini-mirror::after{background:linear-gradient(transparent,#fff5dc)}
+.is-teacher .worksheet-tile small{font-size:11px}
+.mirror-sheet{background:white;border:1px solid #c4d3e7;border-radius:5px;color:#1f2d42;padding:8px;font-family:'Malgun Gothic',sans-serif;line-height:1.35;overflow:hidden}
+.mirror-sheet-head{display:flex;justify-content:space-between;font-size:10px;color:#42628b;border-bottom:1px solid #d9e4f2;padding-bottom:4px;margin-bottom:5px}
+.mirror-problem-title{font-size:12px;font-weight:700;line-height:1.45;margin:0 0 6px}
+.mirror-figure{display:flex;justify-content:center;max-height:78px;overflow:hidden;margin-bottom:6px}
+.mirror-figure-img{display:block;width:auto;max-width:100%;height:auto;max-height:76px;object-fit:contain}
+.mirror-answer-fields{display:grid;gap:5px}
+.mirror-field{display:grid;gap:2px;border:1px solid #d7e1ef;border-radius:4px;padding:5px;background:#fafcff;min-width:0}
+.mirror-field.focused{border:2px solid #3a70c8;background:#eaf3ff}
+.mirror-field-name{font-size:10px;font-weight:700;line-height:1.4}
+.mirror-field-value{font-size:11px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;line-height:1.45;max-height:58px;overflow:hidden}
+.mirror-field-value i{color:#718099}
+.mirror-field-selections{font-size:10px;color:#3d5e81;line-height:1.3}
+.mirror-sheet-foot{display:flex;justify-content:space-between;gap:6px;font-size:10px;color:#506783;border-top:1px solid #d7e1ef;margin-top:6px;padding-top:5px}
+.teacher-worksheet-dialog{width:min(1100px,96vw);max-width:96vw;height:min(94vh,1080px);max-height:96vh;padding:0;border:1px solid #b7c9de;border-radius:12px;box-shadow:0 18px 60px #0003}
+.teacher-worksheet-dialog::backdrop{background:rgba(12,28,53,.72)}
+.worksheet-zoom-shell{height:100%;display:flex;flex-direction:column;min-height:0}
+.worksheet-zoom-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 20px;background:#eaf3ff;border-bottom:1px solid #c6d7ed}
+.worksheet-zoom-header h2{margin:0;font-size:23px;color:#153868}
+.worksheet-zoom-header .hint{font-size:13px;margin:5px 0 0}
+.worksheet-zoom-actions{display:flex;gap:6px;flex-wrap:wrap}
+.worksheet-zoom-content{flex:1;min-height:0;overflow-y:auto;background:#e9eff7;padding:20px}
+.worksheet-zoom-caption{padding:9px 20px;margin:0;background:#fff;color:#56647a;font-size:12px;line-height:1.5}
+.worksheet-zoom-content .mirror-sheet-large{max-width:890px;margin:auto;padding:28px;border-radius:8px;box-shadow:0 2px 10px #0000000a}
+.mirror-sheet-large .mirror-sheet-head{font-size:15px;padding-bottom:10px;margin-bottom:14px}
+.mirror-sheet-large .mirror-problem-title{font-size:22px;line-height:1.6}
+.mirror-sheet-large .mirror-figure{max-height:none;margin:16px auto;overflow:visible}
+.mirror-sheet-large .mirror-figure-img{max-height:380px;max-width:100%;object-fit:contain}
+.mirror-sheet-large .mirror-problem .choicelist{font-size:16px;line-height:1.7}
+.mirror-sheet-large .mirror-fixed-explanation{padding:14px;background:#f4f7fd;font-size:16px}
+.mirror-sheet-large .mirror-answer-fields{gap:14px;margin:16px 0}
+.mirror-sheet-large .mirror-field{padding:14px 17px;border-radius:9px}
+.mirror-sheet-large .mirror-field-name{font-size:16px}
+.mirror-sheet-large .mirror-field-value{font-size:19px;line-height:1.7;max-height:none;min-height:42px}
+.mirror-sheet-large .mirror-field-selections{font-size:15px}
+.mirror-sheet-large .mirror-sheet-foot{font-size:14px;margin-top:18px;padding-top:12px}
+.worksheet-zoom-help{max-width:890px;margin:16px auto 8px;background:#fff4d8;border:2px solid #cb9f3d;border-radius:8px;padding:18px;line-height:1.6}
+.worksheet-zoom-help h3{font-size:18px;margin:0 0 10px}
+.worksheet-zoom-help p{font-size:16px;white-space:pre-wrap}
+#teacher-wall:fullscreen{background:#edf3fc;padding:12px;display:flex;flex-direction:column;overflow:hidden;width:100vw;height:100vh;border-radius:0}
+#teacher-wall:fullscreen .worksheet-wall-title{flex:none}
+#teacher-wall:fullscreen .worksheet-view-controls{flex:none;margin:5px 0}
+#teacher-wall:fullscreen .student-grid.worksheet-grid{flex:1;min-height:0;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,1fr));gap:6px;overflow:hidden;margin-top:5px}
+#teacher-wall:fullscreen .worksheet-tile{min-height:0;max-height:none;height:100%;padding:5px;gap:2px}
+#teacher-wall:fullscreen .worksheet-tile .tile-head>b{font-size:14px}
+#teacher-wall:fullscreen .worksheet-tile .tile-head>strong{font-size:10px}
+#teacher-wall:fullscreen .worksheet-tile .tile-live-item{font-size:10px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-sheet{padding:4px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-problem-title{font-size:10px;margin-bottom:2px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-figure{max-height:38px;margin-bottom:2px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-figure-img{max-height:36px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-field{padding:3px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-field-value{font-size:9px;max-height:26px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-field-name{font-size:9px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-sheet-foot{font-size:9px}
+#teacher-wall:fullscreen .worksheet-tile>small{display:none}
+#teacher-wall:fullscreen .teacher-worksheet-dialog{width:min(1100px,95vw)}
+@media(max-width:1200px){.is-teacher .student-grid.worksheet-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:740px){.is-teacher .student-grid.worksheet-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.worksheet-zoom-header{padding:10px;align-items:flex-start}.worksheet-zoom-content{padding:8px}.worksheet-zoom-content .mirror-sheet-large{padding:13px}.mirror-sheet-large .mirror-problem-title{font-size:18px}}
+@media(prefers-reduced-motion:reduce){.teacher-worksheet-dialog{scroll-behavior:auto}}
+
 </style>
 </head>
 <body>
@@ -512,6 +588,6 @@ body.is-student #layout{max-width:1420px;margin-inline:auto;grid-template-column
 <div id="toasts" aria-live="polite"></div>
 <div class="netbar" id="netbar" hidden>연결이 끊겼어요 · 다시 연결하는 중</div>
 <noscript>이 페이지는 자바스크립트가 필요해요.</noscript>
-<script src="app.js?v=0.5.8"></script>
+<script src="app.js?v=0.5.9"></script>
 </body>
 </html>
