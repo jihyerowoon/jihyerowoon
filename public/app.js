@@ -1373,7 +1373,25 @@
     var people=self.data.students,online=people.filter(function(p){return p.last_seen&&nowMs()-Date.parse(p.last_seen)<90000;}).length;
     $('#console-stats').innerHTML='<span>등록 <b>'+people.length+'</b></span><span>접속 <b>'+online+'</b></span><span>도움 요청 <b>'+self.data.requests.length+'</b></span><span>현재 단계 미제출 <b>'+people.filter(function(p){return self.stageItems().some(function(id){return !p.items[id]||!p.items[id].a;});}).length+'</b></span>';
   };
-  Teacher.renderRoster=function(){var self=this;if(!self.data)return;var reqs=self.data.requests,ids=self.stageItems();$('#student-grid').innerHTML=self.data.students.filter(function(p){return self.filter==='help'?reqs.some(function(r){return r.code===p.code;}):self.filter==='missing'?ids.some(function(id){return !p.items[id]||!p.items[id].a;}):true;}).map(function(p){var help=reqs.some(function(r){return r.code===p.code;}),offline=!p.last_seen||nowMs()-Date.parse(p.last_seen)>90000,submitted=ids.filter(function(id){return p.items[id]&&p.items[id].a;}).length,draft=ids.some(function(id){return p.items[id]&&p.items[id].d;});return '<button class="student-tile '+(help?'need-help':offline?'offline':submitted===ids.length?'submitted':'writing')+'" data-student="'+esc(p.code)+'"><b>'+esc(p.code)+'</b><span>'+(offline?'미접속':help?'도움 요청':submitted===ids.length?'제출 완료':draft?'작성 중':'미제출')+'</span><small>'+submitted+'/'+ids.length+' 제출</small></button>';}).join('')||'<p class="hint">표시할 학생이 없습니다.</p>';};
+  Teacher.renderRoster=function(){
+    var self=this;if(!self.data)return;var reqs=self.data.requests,ids=self.stageItems();
+    $('#student-grid').innerHTML=self.data.students.filter(function(p){
+      return self.filter==='help'?reqs.some(function(r){return r.code===p.code;}):self.filter==='missing'?ids.some(function(id){return !p.items[id]||!p.items[id].a;}):true;
+    }).map(function(p){
+      var help=reqs.some(function(r){return r.code===p.code;}),offline=!p.last_seen||nowMs()-Date.parse(p.last_seen)>90000;
+      var submitted=ids.filter(function(id){return p.items[id]&&p.items[id].a;}).length;
+      var draft=ids.some(function(id){return p.items[id]&&p.items[id].d;});
+      var active=p.focus_item&&ids.indexOf(p.focus_item)>=0?p.focus_item:(p.recent&&ids.indexOf(p.recent.item_id)>=0?p.recent.item_id:null);
+      var label=active?shortOf(active):'문항 선택 전';
+      var preview=p.recent&&p.recent.preview?p.recent.preview:'';
+      var status=offline?'미접속':help?'도움 요청':submitted===ids.length?'제출 완료':draft?'답안 작성 중':'대기 또는 읽는 중';
+      return '<button class="student-tile '+(help?'need-help':offline?'offline':submitted===ids.length?'submitted':'writing')+(self.sel===p.code?' selected':'')+'" data-student="'+esc(p.code)+'" title="'+esc(p.code)+' · '+esc(label)+' · '+esc(preview)+'">'
+       +'<span class="tile-head"><b>'+esc(p.code)+'</b><strong>'+esc(status)+'</strong></span>'
+       +'<span class="tile-item">'+esc(label)+'</span>'
+       +'<span class="tile-preview">'+esc(preview||'입력한 답안이 아직 없습니다.')+'</span>'
+       +'<small>'+submitted+'/'+ids.length+' 제출 · 클릭해 답안 보기</small></button>';
+    }).join('')||'<p class="hint">표시할 학생이 없습니다.</p>';
+  };
   Teacher.renderQueue=function(){var self=this,qs=self.data.requests;
     var ids=Array.from(new Set(qs.map(function(r){return r.item_id;})));
     if(!ids.includes(self.reqItem)){self.reqItem=ids[0]||'';self.picked={};self.bankId='';} var first=qs.filter(function(r){return r.item_id===self.reqItem;})[0]; if(first&&!Object.keys(self.picked).length){self.picked[first.id]=first.attempt;if(first.recommendation)self.bankId=first.recommendation.id;}
