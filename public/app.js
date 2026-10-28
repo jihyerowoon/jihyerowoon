@@ -318,7 +318,7 @@
       var self = this;
       self.me = me; self.view = me.session.stage; self.focus = null; self.busy = {}; self.pending = store(self.pendKey()) || {}; self.reviewFeedback = null; self.reviewLoading = false; self.lastReviewFetch = 0; self.reviewReflectionShown = false;
       document.body.className = 'is-student g-' + me.student.group.toLowerCase();
-      Object.keys(self.pending).forEach(function (id) { var p = self.pending[id]; var it = self.item(id); it.draft = p.draft; it.draft_sel = p.draft_sel; it.reason = p.reason; self.flushDraft(id); });
+      Object.keys(self.pending).forEach(function (id) { var p = self.pending[id]; var it = self.item(id); it.draft = p.draft; it.draft_sel = p.draft_sel; it.reason = p.reason; it.question_draft=p.question||''; self.flushDraft(id); });
       self.shell();
       every(4000, function () { return self.poll(); }, 15000);
       App.timers.push(setInterval(function () {
@@ -567,6 +567,8 @@
       h += '</div>';
       if (editable) {
         h += '<div class="revise" data-revise="' + it.id + '" hidden><label for="rv-' + it.id + '">고친 이유 <small>(선택)</small></label><input id="rv-' + it.id + '" data-reason="' + it.id + '" maxlength="300" autocomplete="off" value="' + esc(rec.reason || '') + '" placeholder="무엇을 왜 고쳤는지 한 줄로"></div>' +
+          '<label class="help-question-label" for="ask-' + it.id + '">궁금하거나 막힌 부분이 있나요? <small>선택 입력 · 먼저 답을 제출해 주세요.</small></label>'+
+          '<input class="help-question-input" id="ask-' + it.id + '" maxlength="280" type="text" data-help-question="' + it.id + '" placeholder="예: 조건이 하나 더 있는지 어떻게 확인하나요?" value="' + esc(rec.question_draft||'') + '">'+
           '<footer class="item-f"><button type="button" class="btn primary" data-act="submit" data-id="' + it.id + '">내 답 제출하기</button><button type="button" class="btn ghost" data-act="help" data-id="' + it.id + '">질문으로 도움받기</button><span class="busy" data-busy="' + it.id + '" hidden>점검 중…</span></footer>';
       }
       return h + '<div class="thread" data-thread="' + it.id + '"></div></article>';
@@ -633,7 +635,7 @@
     /* 임시저장: 1초 뒤 서버로, 실패하면 이 기기에 보관했다가 다시 보낸다 */
     saveDraft: function (id) {
       var self = this, r = self.item(id);
-      self.pending[id] = { draft: clone(r.draft), draft_sel: clone(r.draft_sel), reason: r.reason || '', t: Date.now() };
+      self.pending[id] = { draft: clone(r.draft), draft_sel: clone(r.draft_sel), reason: r.reason || '', question:r.question_draft||'', t: Date.now() };
       store(self.pendKey(), self.pending);
       clearTimeout(self.saveTimers[id]);
       self.saveTimers[id] = setTimeout(function () { self.flushDraft(id); }, 300);
@@ -642,7 +644,7 @@
       var self=this,p=self.pending[id];if(!p)return Promise.resolve();
       self.draftFlights=self.draftFlights||{};
       if(self.draftFlights[id])return self.draftFlights[id].then(function(){if(self.pending[id]&&self.pending[id]!==p)return self.flushDraft(id);});
-      var flight=api('POST','me/draft',{item_id:id,draft:p.draft,draft_sel:p.draft_sel,reason:p.reason}).then(function(r){
+      var flight=api('POST','me/draft',{item_id:id,draft:p.draft,draft_sel:p.draft_sel,reason:p.reason,question:p.question}).then(function(r){
         if(r.saved&&self.pending[id]===p){delete self.pending[id];store(self.pendKey(),self.pending);}
         var n=$('#savestate');if(n)n.textContent=r.saved?'임시저장 '+kst(r.at):'시간 종료로 원본에 저장되지 않았습니다. 입력은 이 기기에 보관되어 보완 때 확인할 수 있습니다.';
       }).catch(function(){var n=$('#savestate');if(n)n.textContent='임시저장 실패 · 이 기기에 보관하고 다시 보낼게요';clearTimeout(self.saveTimers[id]);self.saveTimers[id]=setTimeout(function(){self.flushDraft(id);},5000);}).then(function(){delete self.draftFlights[id];if(self.pending[id]&&self.pending[id]!==p)return self.flushDraft(id);});
@@ -666,6 +668,7 @@
       right.addEventListener('input', function (ev) {
         var t = ev.target;
         if (t.hasAttribute('data-reason')) { var id0 = t.getAttribute('data-reason'); self.item(id0).reason = t.value; self.saveDraft(id0); return; }
+        if(t.hasAttribute('data-help-question')){var askId=t.getAttribute('data-help-question');self.item(askId).question_draft=t.value;self.saveDraft(askId);return;}
         if (!t.hasAttribute('data-field') || t.type === 'radio' || t.type === 'checkbox') return;
         var id = t.getAttribute('data-item');
         self.item(id).draft[t.getAttribute('data-field')] = t.value; self.refreshItemLight(id); self.saveDraft(id);
@@ -734,7 +737,7 @@
       var self = this; if (self.busy[id] || !self.editable()) return;
       self.busy[id] = true; self.refreshItem(id);
       var send = self.pending[id] ? self.flushDraft(id) : Promise.resolve();
-      send.then(function () { return api('POST', 'me/help', { item_id: id, client_ts: new Date().toISOString() }); })
+      send.then(function () { return api('POST', 'me/help', { item_id: id, question:self.item(id).question_draft||'', client_ts: new Date().toISOString() }); })
         .then(function (res) { self.applyResult(res); if (res.duplicate) toast('이미 도움을 요청했어요. 선생님을 기다려 주세요.'); })
         .catch(function (e) { toast(e.message, 'warn'); })
         .then(function () { self.busy[id] = false; self.refreshItem(id); });
