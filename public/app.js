@@ -1339,6 +1339,21 @@
   };
   function clockLabel(s){return ({waiting:'시작 대기',running:'진행 중',paused:'일시정지',catchup:'보완 시간',finished:'완료'})[clockMode(s)]||'수동 진행';}
   Teacher.picked={};Teacher.filter='all';Teacher.reqItem='';Teacher.bankId='';
+  function countdownNotice(target,session){
+    if(!session||clockMode(session)!=='running'||!session.clock||!session.clock.deadline)return;
+    var left=(Date.parse(session.clock.deadline)-nowMs())/1000;if(!(left>0))return;
+    var key=session.code+':'+session.stage+':'+session.clock.deadline;
+    if(target._timeKey!==key){target._timeKey=key;target._timeNotified={};}
+    var current=null;[180,120,60,30,10].forEach(function(t){if(left<=t)current=t;});
+    if(current===null||target._timeNotified[current])return;
+    target._timeNotified[current]=true;
+    var label=({180:'3분',120:'2분',60:'1분',30:'30초',10:'10초'})[current];
+    var message='남은 시간 '+label+' · '+(session.stage===5?'풀이와 성찰을 확인하세요.':'답을 작성하고 제출해 주세요.');
+    var id=target===Student?'student-time-warning':'teacher-time-warning',box=$('#'+id);
+    if(!box){box=document.createElement('div');box.id=id;box.className='time-warning';box.setAttribute('role','status');box.setAttribute('aria-live','polite');var anchor=target===Student?$('#layout'):$('#console-stats');if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(box,anchor);}
+    if(box)box.textContent=message;
+    toast(message,'warn');
+  }
   Teacher.soundEnabled=false;Teacher.alertAudio=null;
   Teacher.notifyNew=function(requests){
     if(!requests.length)return;
@@ -1378,7 +1393,7 @@
     $('#queue').onchange=function(ev){var t=ev.target;if(!t.matches('[data-request-pick]'))return;var r=self.data.requests.find(function(x){return x.id===t.getAttribute('data-request-pick');});if(t.checked)self.picked[r.id]=r.attempt;else delete self.picked[r.id];self.renderBatch();};
     $$('[data-notice]').forEach(function(b){b.onclick=function(){api('POST','staff/announce',{session:self.code,key:b.getAttribute('data-notice')}).then(function(){toast('전체 학생에게 안내를 보냈어요.');}).catch(function(e){toast(e.message,'warn');});};});
     every(3000,function(){return self.refresh();},5000);
-    App.timers.push(setInterval(function(){if(self.data){var t=$('#timer');if(t)t.innerHTML=timerText(self.data.session);var live=$('#teacher-live-timer');if(live)live.innerHTML=timerText(self.data.session);}},1000));
+    App.timers.push(setInterval(function(){if(self.data){var t=$('#timer');if(t)t.innerHTML=timerText(self.data.session);var live=$('#teacher-live-timer');if(live)live.innerHTML=timerText(self.data.session);countdownNotice(self,self.data.session);}},1000));
     self.refresh();
   };
   Teacher.refresh=function(){var self=this,requestSession=self.code;return api('GET','staff/overview?session='+encodeURIComponent(requestSession)).then(function(r){if(App.screen!=='teacher'||self.code!==requestSession)return;if(self.data&&r.session.stage_rev<self.data.session.stage_rev)return;var prev=self.data;self.data=r;
@@ -1520,7 +1535,7 @@
     App.timers.push(setInterval(function(){
     var s=self.me.session,c=s.clock||{},m=clockMode(s);if(m!=='running'&&m!=='catchup')return;var left=(Date.parse(c.deadline)-nowMs())/1000;
     var phase=m+':'+s.stage+':'+c.deadline;
-    if(left<=60&&left>0){var warning=phase+(left<=10?':10':':60');if(self.lastWarning!==warning){self.lastWarning=warning;toast(left<=10?'10초 뒤 자동 이동합니다. 다 쓰지 않아도 페이지가 넘어갑니다.':'1분 남았습니다. 시간이 끝나면 자동 이동합니다.','warn');}}
+     if(m==='running')countdownNotice(self,s);
     if(left<=2&&self.nearEndFlush!==phase){self.nearEndFlush=phase;Object.keys(self.pending).forEach(function(id){self.flushDraft(id);});}
     if(left<=0&&!self.clockPolling){self.clockPolling=true;self.poll().finally(function(){self.clockPolling=false;});}
   },500));};
