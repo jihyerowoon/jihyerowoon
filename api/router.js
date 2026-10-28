@@ -56,6 +56,7 @@ const routes = {
   'GET staff/student': { roles: STAFF, fn: async function (ctx) { return T.studentDetail(ctx.query); } },
   'POST staff/stage': { roles: STAFF, body: true, fn: async function (ctx) { return T.stage(ctx.tok, ctx.body); } },
   'POST staff/send': { roles: STAFF, body: true, fn: async function (ctx) { return T.send(ctx.tok, ctx.body); } },
+  'POST staff/oral-note': { roles: STAFF, body: true, fn: async function(ctx){await Room.access(ctx.tok,ctx.body.session);return T.oralNote(ctx.tok,ctx.body);} },
 
   'POST admin/session': { roles: RESEARCHER, body: true, fn: async function (ctx) { return T.createSession(ctx.tok, ctx.body); } },
   'POST admin/session/update': { roles: RESEARCHER, body: true, fn: async function (ctx) { return T.updateSession(ctx.tok, ctx.body); } },
