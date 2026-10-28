@@ -1403,9 +1403,9 @@
     }
   };
   Teacher.shell=function(){
-    var self=this;self.picked={};self.bankId='';self.reqItem='';self.batchResults='';self.queueFingerprint=null;self.filter='all';self.readyAttempt=null;
+    var self=this;self.picked={};self.bankId='';self.reqItem='';self.batchResults='';self.queueFingerprint=null;self.filter='all';self.gridMode=store('pq4r:teacher-grid')||'worksheet';self.mirrorStudent=null;self.readyAttempt=null;
     $('#app').innerHTML=topbar((App.role==='researcher'?'연구자 수업 운영':'교사 '+esc(App.tid||'T1'))+' · '+esc(self.code),'<button class="btn sm" id="t-switch">'+(App.role==='researcher'?'연구 준비':'수업 바꾸기')+'</button>')+
-      '<main class="teacher-console"><section class="console-header rcard"><div><h1 id="console-title">수업 운영</h1><p id="console-sub" class="hint"></p></div><div id="teacher-live-timer" class="teacher-live-timer" aria-live="off"></div><div class="row"><div id="clock-actions" class="row"></div><button class="btn" id="t-demo-restart" hidden>시연 처음부터</button></div></section><div class="row staff-view-nav"><button class="btn sm" id="teacher-research-view">연구 준비 화면</button><button class="btn sm" id="teacher-student-view">학생 입장 화면 열기</button><button class="btn sm" id="teacher-alert-enable" type="button">알림 소리 켜기</button><span class="hint small">새 도움 요청은 화면에 표시됩니다. 소리 알림은 버튼으로 켜세요.</span></div><div class="notice-bar" id="teacher-entry-note"></div><div class="console-stats" id="console-stats"></div><div class="console-grid"><section class="rcard"><h2>전체 학생 현황</h2><div class="row"><button class="btn sm" data-filter="all">전체</button><button class="btn sm" data-filter="help">도움 요청</button><button class="btn sm" data-filter="missing">미제출</button></div><div class="student-grid" id="student-grid"></div><div class="tablewrap"><table class="roster" id="roster" hidden></table></div></section><section class="rcard"><h2 id="request-title">도움 요청</h2><label>문항별 보기<select id="request-item"></select></label><p class="hint small">학생의 최근 제출 답안과 추천 발문을 바로 확인하세요. 도움 버튼을 누른 요청만 표시합니다.</p><div id="queue"></div></section><section class="rcard"><div id="batch-panel"></div><details id="detail-fold" open><summary>학생 답안과 지원 기록</summary><div id="tdetail"><p class="hint">학생을 선택하면 자세한 답과 기록을 볼 수 있습니다.</p></div></details></section></div><div class="row" id="notice-actions"><b>전체 안내</b><button class="btn sm" data-notice="time">시간 확인</button><button class="btn sm" data-notice="save">제출 안내</button><button class="btn sm" data-notice="device">접속 문제 안내</button></div></main>';
+      '<main class="teacher-console"><section class="console-header rcard"><div><h1 id="console-title">수업 운영</h1><p id="console-sub" class="hint"></p></div><div id="teacher-live-timer" class="teacher-live-timer" aria-live="off"></div><div class="row"><div id="clock-actions" class="row"></div><button class="btn" id="t-demo-restart" hidden>시연 처음부터</button></div></section><div class="row staff-view-nav"><button class="btn sm" id="teacher-research-view">연구 준비 화면</button><button class="btn sm" id="teacher-student-view">학생 입장 화면 열기</button><button class="btn sm" id="teacher-alert-enable" type="button">알림 소리 켜기</button><span class="hint small">새 도움 요청은 화면에 표시됩니다. 소리 알림은 버튼으로 켜세요.</span></div><div class="notice-bar" id="teacher-entry-note"></div><div class="console-stats" id="console-stats"></div><div class="console-grid"><section class="rcard"><h2>전체 학생 현황</h2><div class="row worksheet-view-controls"><button class="btn sm primary" data-grid-mode="worksheet" aria-pressed="true">활동지 30명 보기</button><button class="btn sm" data-grid-mode="status" aria-pressed="false">상태만 보기</button><span class="hint small">학생이 입력 중인 현재 활동지를 약 3초마다 반영합니다. 화면 영상 공유는 아닙니다.</span></div><div class="row"><button class="btn sm" data-filter="all">전체</button><button class="btn sm" data-filter="help">도움 요청</button><button class="btn sm" data-filter="missing">미제출</button></div><div class="student-grid" id="student-grid"></div><div class="tablewrap"><table class="roster" id="roster" hidden></table></div></section><section class="rcard"><h2 id="request-title">도움 요청</h2><label>문항별 보기<select id="request-item"></select></label><p class="hint small">학생의 최근 제출 답안과 추천 발문을 바로 확인하세요. 도움 버튼을 누른 요청만 표시합니다.</p><div id="queue"></div></section><section class="rcard"><div id="batch-panel"></div><details id="detail-fold" open><summary>학생 답안과 지원 기록</summary><div id="tdetail"><p class="hint">학생을 선택하면 자세한 답과 기록을 볼 수 있습니다.</p></div></details></section></div><div class="row" id="notice-actions"><b>전체 안내</b><button class="btn sm" data-notice="time">시간 확인</button><button class="btn sm" data-notice="save">제출 안내</button><button class="btn sm" data-notice="device">접속 문제 안내</button></div></main>';
     bindExit();
     $('#teacher-alert-enable').onclick=function(){
       if(!self.soundEnabled){
@@ -1418,8 +1418,12 @@
     $('#teacher-research-view').onclick=function(){tabStore('pq4r:staff-screen',{screen:'researcher'});if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{var a=rememberedStaff('researcher');if(a)restoreStaff(a);else renderEntry('researcher');}};
     $('#teacher-student-view').onclick=function(){var cls=self.data&&self.data.session.class_name;if(cls)window.open('/?class='+encodeURIComponent(cls)+'#login-student','_blank','noopener');};
     $('#t-switch').onclick=function(){if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{self.code=null;store('pq4r:teacher-session',null);Teacher.start();}};
-    $$('[data-filter]').forEach(function(b){b.onclick=function(){self.filter=b.getAttribute('data-filter');self.renderRoster();};});
-    $('#student-grid').onclick=function(ev){var b=ev.target.closest('[data-student]');if(b){$('#detail-fold').open=true;self.select(b.getAttribute('data-student'),null);}};
+    $('[data-filter]').forEach(function(b){b.onclick=function(){self.filter=b.getAttribute('data-filter');self.renderRoster();};});
+    $('[data-grid-mode]').forEach(function(b){b.onclick=function(){self.gridMode=b.getAttribute('data-grid-mode');store('pq4r:teacher-grid',self.gridMode);self.renderRoster();};});
+    $('#student-grid').onclick=function(ev){var b=ev.target.closest('[data-student]');if(!b)return;
+      if(self.gridMode==='worksheet')self.openWorksheet(b.getAttribute('data-student'));
+      else{$('#detail-fold').open=true;self.select(b.getAttribute('data-student'),null);}
+    };
     $('#request-item').onchange=function(){self.reqItem=this.value;self.picked={};self.bankId='';self.renderQueue();self.renderBatch();};
     $('#queue').onclick=function(ev){var pick=ev.target.closest('[data-request-recommend],[data-request-toggle]');if(pick){var rid=pick.getAttribute('data-request-recommend')||pick.getAttribute('data-request-toggle'),req=self.data.requests.find(function(x){return x.id===rid;});if(!req)return;if(pick.hasAttribute('data-request-recommend')){self.picked={};self.picked[rid]=req.attempt;self.bankId=req.recommendation?req.recommendation.id:'';}else if(self.picked[rid]!==undefined)delete self.picked[rid];else self.picked[rid]=req.attempt;self.renderQueue();self.renderBatch();return;}var b=ev.target.closest('[data-request-detail]');if(b){var r=self.data.requests.find(function(x){return x.id===b.getAttribute('data-request-detail');});$('#detail-fold').open=true;self.select(r.code,r.item_id);}};
     $('#queue').onchange=function(ev){var t=ev.target;if(!t.matches('[data-request-pick]'))return;var r=self.data.requests.find(function(x){return x.id===t.getAttribute('data-request-pick');});if(t.checked)self.picked[r.id]=r.attempt;else delete self.picked[r.id];self.renderBatch();};
@@ -1431,7 +1435,7 @@
   Teacher.refresh=function(){var self=this,requestSession=self.code;return api('GET','staff/overview?session='+encodeURIComponent(requestSession)).then(function(r){if(App.screen!=='teacher'||self.code!==requestSession)return;if(self.data&&r.session.stage_rev<self.data.session.stage_rev)return;var prev=self.data;self.data=r;
     if(prev){var oldIds=new Set((prev.requests||[]).map(function(q){return q.id;}));self.notifyNew((r.requests||[]).filter(function(q){return !oldIds.has(q.id);}));}
     else document.title='PQ4R 수업 운영';
-    self.data.requests.forEach(function(q){if(self.picked[q.id]!==undefined&&self.picked[q.id]!==q.attempt)delete self.picked[q.id];});Object.keys(self.picked).forEach(function(id){if(!r.requests.some(function(q){return q.id===id;}))delete self.picked[id];});self.renderTop();self.renderRoster();var fingerprint=JSON.stringify(r.requests)+r.group+clockMode(r.session);if(fingerprint!==self.queueFingerprint){self.queueFingerprint=fingerprint;self.renderQueue();self.renderBatch();}if(self.sel&&(!prev||JSON.stringify(prev.students)!==JSON.stringify(r.students)))return self.loadDetail();}).catch(function(e){toast(e.message,'warn');});};
+    self.data.requests.forEach(function(q){if(self.picked[q.id]!==undefined&&self.picked[q.id]!==q.attempt)delete self.picked[q.id];});Object.keys(self.picked).forEach(function(id){if(!r.requests.some(function(q){return q.id===id;}))delete self.picked[id];});self.renderTop();self.renderRoster();if(self.mirrorStudent)self.renderWorksheetModal();var fingerprint=JSON.stringify(r.requests)+r.group+clockMode(r.session);if(fingerprint!==self.queueFingerprint){self.queueFingerprint=fingerprint;self.renderQueue();self.renderBatch();}if(self.sel&&(!prev||JSON.stringify(prev.students)!==JSON.stringify(r.students)))return self.loadDetail();}).catch(function(e){toast(e.message,'warn');});};
   Teacher.renderTop=function(){
     var self=this,s=self.data.session,m=clockMode(s),auto=!!s.settings.autoTimer;
     $('#console-title').textContent=(s.class_name||s.code)+' · '+(self.data.group?groupKo(self.data.group):'수업 운영');
@@ -1448,25 +1452,110 @@
     var people=self.data.students,online=people.filter(function(p){return p.last_seen&&nowMs()-Date.parse(p.last_seen)<90000;}).length;
     $('#console-stats').innerHTML='<span>등록 <b>'+people.length+'</b></span><span>접속 <b>'+online+'</b></span><span>도움 요청 <b>'+self.data.requests.length+'</b></span><span>현재 단계 미제출 <b>'+people.filter(function(p){return self.stageItems().some(function(id){return !p.items[id]||!p.items[id].a;});}).length+'</b></span>';
   };
+
+  /* 학생 브라우저의 실제 영상이 아니라 문제 본문, 선택 항목, 자동저장된 답안을 읽기 전용으로 재구성한다. */
+  Teacher.mirrorField=function(f,value,sel,focused,small){
+    var v=String(value==null?'':value);
+    if(f.kind==='choice'||f.kind==='multi'){
+      var selected=f.kind==='multi'?multiVals(v):[v];
+      v=(f.options||[]).filter(function(o){return selected.indexOf(o.v)>=0;}).map(function(o){return plain(o.label);}).join(', ');
+    }
+    var choices=Array.isArray(sel)?sel.map(elLabel).join(', '):'';
+    return '<div class="mirror-field'+(focused?' focused':'')+'"><span class="mirror-field-name">'+fmt(f.label)+'</span>'+
+      '<span class="mirror-field-value">'+(v.trim()?esc(v):'<i>아직 입력하지 않음</i>')+'</span>'+
+      (choices?'<span class="mirror-field-selections">도형 선택: '+esc(choices)+'</span>':'')+'</div>';
+  };
+  Teacher.worksheetHTML=function(p,full){
+    var ws=p.worksheet,s=this.data&&this.data.session||{},it=ws&&ITEM[ws.item_id]?resolveItem(ws.item_id,p.group,s.settings||{}):null;
+    if(!it)return '<p class="mirror-empty">현재 단계의 활동지가 아직 열리지 않았습니다.</p>';
+    var asset=paperAsset(it,p.group),fig=asset?'<img class="mirror-figure-img" loading="lazy" src="'+esc(asset)+'" alt="현재 문제의 활동지 그림">':(it.fig?'<img class="mirror-figure-img" loading="lazy" src="'+esc(it.fig.file)+'" alt="'+esc(plain(it.fig.desc||'문제 그림'))+'">':'');
+    var fields=ws.fields||{},selected=ws.selections||{},count=0;
+    var answer=it.fields.map(function(f){
+      if(String(fields[f.key]||'').trim()||(selected[f.key]||[]).length)count++;
+      return Teacher.mirrorField(f,fields[f.key],selected[f.key],ws.focused_field===f.key,full);
+    }).join('');
+    var head='<div class="mirror-sheet-head"><span>'+esc(C.stages[s.stage].ko)+'</span><strong>'+esc(shortOf(it.id))+'</strong></div>';
+    var problem='<div class="mirror-problem"><p class="mirror-problem-title">'+fmt(it.title)+'</p>'+
+      (fig?'<div class="mirror-figure">'+fig+'</div>':'')+
+      (full&&!asset&&it.choices?choicesHTML(it.choices):'')+
+      (full&&!asset&&it.fixedAI?'<div class="mirror-fixed-explanation"><b>공통 검토 설명</b><p>'+fmt(it.fixedAI.text)+'</p></div>':'')+
+      (full&&it.sub?'<p>'+fmt(it.sub)+'</p>':'')+'</div>';
+    var foot='<div class="mirror-sheet-foot"><span>'+(ws.attempts>0?'제출 '+ws.attempts+'회':'아직 미제출')+'</span><span>답안 작성 '+count+'/'+it.fields.length+'칸</span></div>';
+    return '<div class="mirror-sheet'+(full?' mirror-sheet-large':'')+'">'+head+problem+'<div class="mirror-answer-fields">'+answer+'</div>'+foot+'</div>';
+  };
   Teacher.renderRoster=function(){
-    var self=this;if(!self.data)return;var reqs=self.data.requests,ids=self.stageItems();
-    $('#student-grid').innerHTML=self.data.students.filter(function(p){
+    var self=this;if(!self.data)return;
+    var reqs=self.data.requests,ids=self.stageItems(),showSheet=self.gridMode==='worksheet',grid=$('#student-grid');
+    grid.classList.toggle('worksheet-grid',showSheet);
+    $$('[data-grid-mode]').forEach(function(b){var active=b.getAttribute('data-grid-mode')===self.gridMode;b.setAttribute('aria-pressed',String(active));b.classList.toggle('primary',active);});
+    grid.innerHTML=self.data.students.filter(function(p){
       return self.filter==='help'?reqs.some(function(r){return r.code===p.code;}):self.filter==='missing'?ids.some(function(id){return !p.items[id]||!p.items[id].a;}):true;
     }).map(function(p){
       var help=reqs.some(function(r){return r.code===p.code;}),offline=!p.last_seen||nowMs()-Date.parse(p.last_seen)>90000;
       var submitted=ids.filter(function(id){return p.items[id]&&p.items[id].a;}).length;
       var draft=ids.some(function(id){return p.items[id]&&p.items[id].d;});
-      var active=p.focus_item&&ids.indexOf(p.focus_item)>=0?p.focus_item:(p.recent&&ids.indexOf(p.recent.item_id)>=0?p.recent.item_id:null);
+      var active=p.worksheet&&p.worksheet.item_id?p.worksheet.item_id:null;
       var label=active?shortOf(active):'문항 선택 전';
       var preview=p.recent&&p.recent.preview?p.recent.preview:'';
       var status=offline?'미접속':help?'도움 요청':submitted===ids.length?'제출 완료':draft?'답안 작성 중':'대기 또는 읽는 중';
-      return '<button class="student-tile '+(help?'need-help':offline?'offline':submitted===ids.length?'submitted':'writing')+(self.sel===p.code?' selected':'')+'" data-student="'+esc(p.code)+'" title="'+esc(p.code)+' · '+esc(label)+' · '+esc(preview)+'">'
-       +'<span class="tile-head"><b>'+esc(p.code)+'</b><strong>'+esc(status)+'</strong></span>'
-       +'<span class="tile-item">'+esc(label)+'</span>'
-       +'<span class="tile-preview">'+esc(preview||'입력한 답안이 아직 없습니다.')+'</span>'
-       +'<small>'+submitted+'/'+ids.length+' 제출 · 클릭해 답안 보기</small></button>';
+      var kind=help?'need-help':offline?'offline':submitted===ids.length?'submitted':'writing';
+      var info='<span class="tile-head"><b>'+esc(p.code)+'</b><strong>'+esc(status)+'</strong></span>';
+      if(showSheet){
+        return '<button type="button" class="student-tile worksheet-tile '+kind+'" data-student="'+esc(p.code)+'" aria-label="'+esc(p.code)+' '+esc(status)+' 활동지 크게 보기">'+info+
+          '<span class="tile-live-item">'+esc(label)+'</span><span class="mini-mirror">'+self.worksheetHTML(p,false)+'</span>'+
+          '<small>클릭하면 활동지 확대 · '+submitted+'/'+ids.length+' 제출</small></button>';
+      }
+      return '<button type="button" class="student-tile '+kind+(self.sel===p.code?' selected':'')+'" data-student="'+esc(p.code)+'" title="'+esc(p.code)+' · '+esc(label)+' · '+esc(preview)+'">'+info+
+        '<span class="tile-item">'+esc(label)+'</span><span class="tile-preview">'+esc(preview||'입력한 답안이 아직 없습니다.')+'</span>'+
+        '<small>'+submitted+'/'+ids.length+' 제출 · 클릭해 답안 보기</small></button>';
     }).join('')||'<p class="hint">표시할 학생이 없습니다.</p>';
   };
+  Teacher.openWorksheet=function(code){
+    if(!this.data||!this.data.students.some(function(p){return p.code===code;}))return;
+    var self=this,dlg=$('#teacher-worksheet-dialog');
+    if(!dlg){
+      dlg=document.createElement('dialog');dlg.id='teacher-worksheet-dialog';dlg.className='teacher-worksheet-dialog';
+      dlg.innerHTML='<div class="worksheet-zoom-shell"><div class="worksheet-zoom-header"><div><h2 id="worksheet-zoom-title"></h2><p id="worksheet-zoom-status" class="hint"></p></div><div class="worksheet-zoom-actions">'+
+        '<button type="button" class="btn sm" id="worksheet-prev">이전 학생</button><button type="button" class="btn sm" id="worksheet-next">다음 학생</button>'+
+        '<button type="button" class="btn sm" id="worksheet-see-history">답안 이력 보기</button><button type="button" class="btn sm primary" id="worksheet-zoom-close">닫기</button></div></div>'+
+        '<div id="worksheet-zoom-content" class="worksheet-zoom-content"></div><p class="worksheet-zoom-caption">학생이 웹앱에서 마지막으로 선택한 문제와 저장된 답안을 보여줍니다. 실제 PC 화면 또는 마우스 움직임을 전송하지 않습니다.</p></div>';
+      document.body.appendChild(dlg);
+      dlg.addEventListener('close',function(){self.mirrorStudent=null;});
+      $('#worksheet-zoom-close').onclick=function(){dlg.close();};
+      $('#worksheet-prev').onclick=function(){self.stepWorksheet(-1);};
+      $('#worksheet-next').onclick=function(){self.stepWorksheet(1);};
+      $('#worksheet-see-history').onclick=function(){var code=self.mirrorStudent,p=self.data&&self.data.students.find(function(x){return x.code===code;});dlg.close();$('#detail-fold').open=true;self.select(code,p&&p.worksheet&&p.worksheet.item_id||null);$('#detail-fold').scrollIntoView({block:'start',behavior:'smooth'});};
+    }
+    self.mirrorStudent=code;
+    self.mirrorFingerprint=null;
+    self.renderWorksheetModal();
+    if(!dlg.open)dlg.showModal();
+  };
+  Teacher.stepWorksheet=function(direction){
+    if(!this.data||!this.mirrorStudent)return;
+    var people=this.data.students,idx=people.findIndex(function(p){return p.code===this.mirrorStudent;}.bind(this));
+    if(idx<0)return;
+    this.mirrorStudent=people[(idx+direction+people.length)%people.length].code;
+    this.mirrorFingerprint=null;
+    this.renderWorksheetModal();
+    var box=$('#worksheet-zoom-content');if(box)box.scrollTop=0;
+  };
+  Teacher.renderWorksheetModal=function(){
+    var dlg=$('#teacher-worksheet-dialog');
+    if(!dlg||!dlg.open&&!this.mirrorStudent||!this.data||!this.mirrorStudent)return;
+    var p=this.data.students.find(function(x){return x.code===this.mirrorStudent;}.bind(this));
+    if(!p){if(dlg.open)dlg.close();return;}
+    var fingerprint=JSON.stringify({code:p.code,worksheet:p.worksheet,requests:(this.data.requests||[]).filter(function(r){return r.code===p.code;}),last_seen:p.last_seen,stage:this.data.session.stage});
+    if(fingerprint===this.mirrorFingerprint)return;
+    this.mirrorFingerprint=fingerprint;
+    $('#worksheet-zoom-title').textContent=p.code+' 학생 · 실시간 활동지';
+    var online=p.last_seen&&nowMs()-Date.parse(p.last_seen)<90000;
+    $('#worksheet-zoom-status').textContent=(online?'접속 중':'현재 미접속')+' · '+(p.worksheet&&p.worksheet.updated_at?'최근 서버 저장 '+kst(p.worksheet.updated_at):'아직 저장된 답안 없음')+' · 약 3초 간격으로 확인';
+    var content=$('#worksheet-zoom-content'),scroll=content.scrollTop,reqs=(this.data.requests||[]).filter(function(r){return r.code===p.code;});
+    content.innerHTML=this.worksheetHTML(p,true)+(reqs.length?'<section class="worksheet-zoom-help"><h3>도움 요청 '+reqs.length+'건</h3>'+reqs.map(function(q){return '<p><b>'+esc(shortOf(q.item_id))+'</b> '+(q.question_text?esc(q.question_text):'학생이 도움을 요청했습니다.')+'</p>';}).join('')+'</section>':'');
+    content.scrollTop=scroll;
+  };
+
   Teacher.renderQueue=function(){var self=this,qs=self.data.requests;
     var ids=Array.from(new Set(qs.map(function(r){return r.item_id;})));
     if(!ids.includes(self.reqItem)){self.reqItem=ids[0]||'';self.picked={};self.bankId='';} var first=qs.filter(function(r){return r.item_id===self.reqItem;})[0]; if(first&&!Object.keys(self.picked).length){self.picked[first.id]=first.attempt;if(first.recommendation)self.bankId=first.recommendation.id;}
