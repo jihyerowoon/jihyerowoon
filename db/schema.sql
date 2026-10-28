@@ -44,6 +44,11 @@ create table if not exists participants (
   primary key (session_id, student_id)
 );
 
+-- 교사용 활동지 관찰: 최근 선택 문항만 보관하는 운영 상태. 연구 원본 events는 변경하지 않는다.
+alter table participants add column if not exists focus_item text;
+alter table participants add column if not exists focus_field text;
+alter table participants add column if not exists focus_at timestamptz;
+
 -- 학생 × 문항의 현재 상태(엔진 rec, 임시저장, 제출본). 기록 원본은 events.
 create table if not exists item_states (
   session_id uuid not null references sessions(id) on delete restrict,
