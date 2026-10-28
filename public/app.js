@@ -653,7 +653,15 @@
       var self = this, right = $('#right'), lastInput = null;
       right.addEventListener('focusin', function (ev) {
         var t = ev.target;
-        if (t.matches('textarea[data-field], input[type=text][data-field]')) { lastInput = t; self.focus = { item: t.getAttribute('data-item'), field: t.getAttribute('data-field') }; self.markFocus(); self.renderFigSel(); }
+        if(t.matches('textarea[data-field], input[type=text][data-field], input[type=radio][data-field], input[type=checkbox][data-field]')){
+  if(t.matches('textarea[data-field], input[type=text][data-field]'))lastInput=t;
+  var id=t.getAttribute('data-item'),field=t.getAttribute('data-field');
+  self.focus={item:id,field:field};self.markFocus();self.renderFigSel();
+  if(self.lastFocus!==id+':'+field&&self.editable()){
+    self.lastFocus=id+':'+field;
+    api('POST','me/focus',{item_id:id,field:field}).catch(function(){/* 관찰 상태가 실패해도 답안은 따로 자동 저장 */});
+  }
+}
       });
       right.addEventListener('input', function (ev) {
         var t = ev.target;
@@ -866,11 +874,14 @@
       if (!self.selItem || !ITEM[self.selItem] || (items.indexOf(self.selItem) < 0 && !d.items[self.selItem])) self.selItem = items[0];
       var it = d.items[self.selItem], ri = resolveItem(self.selItem, s.group, self.data.session.settings);
       var h = '<div class="itabs">' + items.map(function (i) { return '<button class="itab' + (i === self.selItem ? ' on' : '') + '" data-itab="' + i + '">' + esc(shortOf(i)) + '</button>'; }).join('') + '</div><p class="td-q">' + fmt(ri.title) + '</p>' + (ri.choices ? choicesHTML(ri.choices) : '');
+      if(ri.fig)h+='<div class="teacher-worksheet-fig">'+figHTML(ri.fig)+'</div>';
       if (!it || !it.versions || !it.versions.length) {
         var dk = it && it.draft ? Object.keys(it.draft).filter(function (k) { return String(it.draft[k] || '').trim(); }) : [];
         h += dk.length ? '<p class="muted">작성 중(아직 제출 안 함)</p>' + fieldsView(ri, it.draft, it.draft_sel) : '<p class="muted">아직 제출하지 않았어요.</p>';
       } else {
         var first = it.versions[0], last = it.versions[it.versions.length - 1];
+        var currentDraft=it.draft||{},changed=Object.keys(currentDraft).some(function(k){return String(currentDraft[k]||'')!==String((last.fields||{})[k]||'');});
+        if(changed)h+='<section class="live-draft"><b>현재 수정 중인 답안 (자동저장본)</b>'+fieldsView(ri,currentDraft,it.draft_sel||{})+'</section>';
         h += '<p class="td-k">최근 제출 · ' + last.no + '회차 · ' + kst(last.at) + '</p>' + fieldsView(ri, last.fields, last.sel);
         if (last.reason) h += '<p class="td-reason">고친 이유: ' + esc(last.reason) + '</p>';
         if (it.versions.length > 1) h += '<details><summary>처음 제출본 보기 (' + kst(first.at) + ')</summary>' + fieldsView(ri, first.fields, first.sel) + '</details>';
