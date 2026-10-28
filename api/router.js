@@ -41,6 +41,7 @@ const routes = {
 
   'GET me': { roles: STUDENT, fn: async function (ctx) { return S.me(ctx.tok); } },
   'GET me/sync': { roles: STUDENT, fn: async function (ctx) { return S.sync(ctx.tok, ctx.query); } },
+  'POST me/focus': { roles: STUDENT, body: true, fn: async function(ctx){return S.focus(ctx.tok,ctx.body);} },
   'POST me/draft': { roles: STUDENT, body: true, fn: async function (ctx) { return S.saveDraft(ctx.tok, ctx.body); } },
   'POST me/submit': { roles: STUDENT, body: true, fn: async function (ctx) { return S.submit(ctx.tok, ctx.body); } },
   'POST me/help': { roles: STUDENT, body: true, fn: async function (ctx) { return S.help(ctx.tok, ctx.body); } },
