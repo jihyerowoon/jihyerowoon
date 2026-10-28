@@ -1339,11 +1339,36 @@
   };
   function clockLabel(s){return ({waiting:'시작 대기',running:'진행 중',paused:'일시정지',catchup:'보완 시간',finished:'완료'})[clockMode(s)]||'수동 진행';}
   Teacher.picked={};Teacher.filter='all';Teacher.reqItem='';Teacher.bankId='';
+  Teacher.soundEnabled=false;Teacher.alertAudio=null;
+  Teacher.notifyNew=function(requests){
+    if(!requests.length)return;
+    var label=requests.map(function(r){return r.code;}).join(', ');
+    document.title='[새 도움 요청 '+requests.length+'건] '+label+' · PQ4R';
+    toast(label+' 학생의 새 도움 요청이 도착했습니다.','warn');
+    if(this.soundEnabled){
+      try{
+        var ac=this.alertAudio;if(ac&&ac.state==='suspended')ac.resume();
+        if(ac){var osc=ac.createOscillator(),gain=ac.createGain();osc.type='sine';osc.frequency.setValueAtTime(660,ac.currentTime);osc.frequency.setValueAtTime(880,ac.currentTime+.15);gain.gain.setValueAtTime(.04,ac.currentTime);gain.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.34);osc.connect(gain).connect(ac.destination);osc.start();osc.stop(ac.currentTime+.35);}
+      }catch(e){}
+    }
+    if(document.hidden&&window.Notification&&Notification.permission==='granted'){
+      try{new Notification('학생 도움 요청 '+requests.length+'건',{body:label,tag:'pq4r-request-'+requests[0].id});}catch(e){}
+    }
+  };
   Teacher.shell=function(){
     var self=this;self.picked={};self.bankId='';self.reqItem='';self.batchResults='';self.queueFingerprint=null;self.filter='all';self.readyAttempt=null;
     $('#app').innerHTML=topbar((App.role==='researcher'?'연구자 수업 운영':'교사 '+esc(App.tid||'T1'))+' · '+esc(self.code),'<button class="btn sm" id="t-switch">'+(App.role==='researcher'?'연구 준비':'수업 바꾸기')+'</button>')+
-      '<main class="teacher-console"><section class="console-header rcard"><div><h1 id="console-title">수업 운영</h1><p id="console-sub" class="hint"></p></div><div id="teacher-live-timer" class="teacher-live-timer" aria-live="off"></div><div class="row"><div id="clock-actions" class="row"></div><button class="btn" id="t-demo-restart" hidden>시연 처음부터</button></div></section><div class="row staff-view-nav"><button class="btn sm" id="teacher-research-view">연구 준비 화면</button><button class="btn sm" id="teacher-student-view">학생 입장 화면 열기</button><span class="hint small">교사 화면에서 전체 현황과 개별 질문을 함께 확인합니다.</span></div><div class="notice-bar" id="teacher-entry-note"></div><div class="console-stats" id="console-stats"></div><div class="console-grid"><section class="rcard"><h2>전체 학생 현황</h2><div class="row"><button class="btn sm" data-filter="all">전체</button><button class="btn sm" data-filter="help">도움 요청</button><button class="btn sm" data-filter="missing">미제출</button></div><div class="student-grid" id="student-grid"></div><div class="tablewrap"><table class="roster" id="roster" hidden></table></div></section><section class="rcard"><h2 id="request-title">도움 요청</h2><label>문항별 보기<select id="request-item"></select></label><p class="hint small">학생의 최근 제출 답안과 추천 발문을 바로 확인하세요. 도움 버튼을 누른 요청만 표시합니다.</p><div id="queue"></div></section><section class="rcard"><div id="batch-panel"></div><details id="detail-fold" open><summary>학생 답안과 지원 기록</summary><div id="tdetail"><p class="hint">학생을 선택하면 자세한 답과 기록을 볼 수 있습니다.</p></div></details></section></div><div class="row" id="notice-actions"><b>전체 안내</b><button class="btn sm" data-notice="time">시간 확인</button><button class="btn sm" data-notice="save">제출 안내</button><button class="btn sm" data-notice="device">접속 문제 안내</button></div></main>';
-    bindExit();$('#teacher-research-view').onclick=function(){tabStore('pq4r:staff-screen',{screen:'researcher'});if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{var a=rememberedStaff('researcher');if(a)restoreStaff(a);else renderEntry('researcher');}};
+      '<main class="teacher-console"><section class="console-header rcard"><div><h1 id="console-title">수업 운영</h1><p id="console-sub" class="hint"></p></div><div id="teacher-live-timer" class="teacher-live-timer" aria-live="off"></div><div class="row"><div id="clock-actions" class="row"></div><button class="btn" id="t-demo-restart" hidden>시연 처음부터</button></div></section><div class="row staff-view-nav"><button class="btn sm" id="teacher-research-view">연구 준비 화면</button><button class="btn sm" id="teacher-student-view">학생 입장 화면 열기</button><button class="btn sm" id="teacher-alert-enable" type="button">알림 소리 켜기</button><span class="hint small">새 도움 요청은 화면에 표시됩니다. 소리 알림은 버튼으로 켜세요.</span></div><div class="notice-bar" id="teacher-entry-note"></div><div class="console-stats" id="console-stats"></div><div class="console-grid"><section class="rcard"><h2>전체 학생 현황</h2><div class="row"><button class="btn sm" data-filter="all">전체</button><button class="btn sm" data-filter="help">도움 요청</button><button class="btn sm" data-filter="missing">미제출</button></div><div class="student-grid" id="student-grid"></div><div class="tablewrap"><table class="roster" id="roster" hidden></table></div></section><section class="rcard"><h2 id="request-title">도움 요청</h2><label>문항별 보기<select id="request-item"></select></label><p class="hint small">학생의 최근 제출 답안과 추천 발문을 바로 확인하세요. 도움 버튼을 누른 요청만 표시합니다.</p><div id="queue"></div></section><section class="rcard"><div id="batch-panel"></div><details id="detail-fold" open><summary>학생 답안과 지원 기록</summary><div id="tdetail"><p class="hint">학생을 선택하면 자세한 답과 기록을 볼 수 있습니다.</p></div></details></section></div><div class="row" id="notice-actions"><b>전체 안내</b><button class="btn sm" data-notice="time">시간 확인</button><button class="btn sm" data-notice="save">제출 안내</button><button class="btn sm" data-notice="device">접속 문제 안내</button></div></main>';
+    bindExit();
+    $('#teacher-alert-enable').onclick=function(){
+      if(!self.soundEnabled){
+        try{var AC=window.AudioContext||window.webkitAudioContext;self.alertAudio=AC?new AC():null;if(self.alertAudio)self.alertAudio.resume();}catch(e){self.alertAudio=null;}
+        self.soundEnabled=true;this.textContent='알림 소리 켜짐';
+        if(window.Notification&&Notification.permission==='default')Notification.requestPermission().catch(function(){});
+        toast('새 요청이 도착하면 소리와 제목으로 알려드려요.');
+      }else{self.soundEnabled=false;this.textContent='알림 소리 켜기';}
+    };
+    $('#teacher-research-view').onclick=function(){tabStore('pq4r:staff-screen',{screen:'researcher'});if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{var a=rememberedStaff('researcher');if(a)restoreStaff(a);else renderEntry('researcher');}};
     $('#teacher-student-view').onclick=function(){var cls=self.data&&self.data.session.class_name;if(cls)window.open('/?class='+encodeURIComponent(cls)+'#login-student','_blank','noopener');};
     $('#t-switch').onclick=function(){if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{self.code=null;store('pq4r:teacher-session',null);Teacher.start();}};
     $$('[data-filter]').forEach(function(b){b.onclick=function(){self.filter=b.getAttribute('data-filter');self.renderRoster();};});
@@ -1356,7 +1381,10 @@
     App.timers.push(setInterval(function(){if(self.data){var t=$('#timer');if(t)t.innerHTML=timerText(self.data.session);var live=$('#teacher-live-timer');if(live)live.innerHTML=timerText(self.data.session);}},1000));
     self.refresh();
   };
-  Teacher.refresh=function(){var self=this,requestSession=self.code;return api('GET','staff/overview?session='+encodeURIComponent(requestSession)).then(function(r){if(App.screen!=='teacher'||self.code!==requestSession)return;if(self.data&&r.session.stage_rev<self.data.session.stage_rev)return;var prev=self.data;self.data=r;self.data.requests.forEach(function(q){if(self.picked[q.id]!==undefined&&self.picked[q.id]!==q.attempt)delete self.picked[q.id];});Object.keys(self.picked).forEach(function(id){if(!r.requests.some(function(q){return q.id===id;}))delete self.picked[id];});self.renderTop();self.renderRoster();var fingerprint=JSON.stringify(r.requests)+r.group+clockMode(r.session);if(fingerprint!==self.queueFingerprint){self.queueFingerprint=fingerprint;self.renderQueue();self.renderBatch();}if(self.sel&&(!prev||JSON.stringify(prev.students)!==JSON.stringify(r.students)))return self.loadDetail();}).catch(function(e){toast(e.message,'warn');});};
+  Teacher.refresh=function(){var self=this,requestSession=self.code;return api('GET','staff/overview?session='+encodeURIComponent(requestSession)).then(function(r){if(App.screen!=='teacher'||self.code!==requestSession)return;if(self.data&&r.session.stage_rev<self.data.session.stage_rev)return;var prev=self.data;self.data=r;
+    if(prev){var oldIds=new Set((prev.requests||[]).map(function(q){return q.id;}));self.notifyNew((r.requests||[]).filter(function(q){return !oldIds.has(q.id);}));}
+    else document.title='PQ4R 수업 운영';
+    self.data.requests.forEach(function(q){if(self.picked[q.id]!==undefined&&self.picked[q.id]!==q.attempt)delete self.picked[q.id];});Object.keys(self.picked).forEach(function(id){if(!r.requests.some(function(q){return q.id===id;}))delete self.picked[id];});self.renderTop();self.renderRoster();var fingerprint=JSON.stringify(r.requests)+r.group+clockMode(r.session);if(fingerprint!==self.queueFingerprint){self.queueFingerprint=fingerprint;self.renderQueue();self.renderBatch();}if(self.sel&&(!prev||JSON.stringify(prev.students)!==JSON.stringify(r.students)))return self.loadDetail();}).catch(function(e){toast(e.message,'warn');});};
   Teacher.renderTop=function(){
     var self=this,s=self.data.session,m=clockMode(s),auto=!!s.settings.autoTimer;
     $('#console-title').textContent=(s.class_name||s.code)+' · '+(self.data.group?groupKo(self.data.group):'수업 운영');
