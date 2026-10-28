@@ -358,6 +358,16 @@
           return self.reload().then(function () { if(App.screen==='student'&&App.tok===requestToken&&self.me.session.code===requestSession)self.onStageChange(prev, self.me.session.stage); });
         }
         if (r.messages.length || self.group() === 'CONTROL') self.refreshThreads();
+        var supports=r.messages.filter(function(m){return m.sender==='TEACHER'||m.sender==='AI';});
+        if(supports.length){
+          var recent=supports[supports.length-1],by=recent.sender==='TEACHER'?'선생님':'AI 튜터';
+          var alert=$('#student-hint-alert');
+          if(!alert){alert=document.createElement('div');alert.id='student-hint-alert';alert.className='time-warning hint-arrived';alert.setAttribute('role','status');var lay=$('#layout');if(lay&&lay.parentNode)lay.parentNode.insertBefore(alert,lay);}
+          if(alert){alert.innerHTML='<strong>'+by+'의 점검 질문이 도착했습니다.</strong> <button class="btn sm" type="button" id="student-see-hint">질문 확인</button>';
+            $('#student-see-hint').onclick=function(){var target=$('[data-thread="'+recent.item_id+'"]');if(target)target.scrollIntoView({behavior:'smooth',block:'center'});else toast('현재 열린 단계에서 해당 문제를 확인해 주세요.');};
+          }
+          toast(by+'의 점검 질문이 도착했습니다.','warn');
+        }
         if (r.review && r.review.unlocked && self.view === 5 && self.stageIdx() === 5) self.loadReviewFeedback();
       });
     },
@@ -883,7 +893,7 @@
         h += dk.length ? '<p class="muted">작성 중(아직 제출 안 함)</p>' + fieldsView(ri, it.draft, it.draft_sel) : '<p class="muted">아직 제출하지 않았어요.</p>';
       } else {
         var first = it.versions[0], last = it.versions[it.versions.length - 1];
-        var currentDraft=it.draft||{},changed=Object.keys(currentDraft).some(function(k){return String(currentDraft[k]||'')!==String((last.fields||{})[k]||'');});
+        var currentDraft=it.draft||{},changed=Object.keys(currentDraft).some(function(k){return String(currentDraft[k]||'')!==String((last.fields||{})[k]||'');})||JSON.stringify(it.draft_sel||{})!==JSON.stringify(last.sel||{});
         if(changed)h+='<section class="live-draft"><b>현재 수정 중인 답안 (자동저장본)</b>'+fieldsView(ri,currentDraft,it.draft_sel||{})+'</section>';
         h += '<p class="td-k">최근 제출 · ' + last.no + '회차 · ' + kst(last.at) + '</p>' + fieldsView(ri, last.fields, last.sel);
         if (last.reason) h += '<p class="td-reason">고친 이유: ' + esc(last.reason) + '</p>';
@@ -1365,7 +1375,7 @@
     if(!session||clockMode(session)!=='running'||!session.clock||!session.clock.deadline)return;
     var left=(Date.parse(session.clock.deadline)-nowMs())/1000;if(!(left>0))return;
     var key=session.code+':'+session.stage+':'+session.clock.deadline;
-    if(target._timeKey!==key){target._timeKey=key;target._timeNotified={};}
+    if(target._timeKey!==key){target._timeKey=key;target._timeNotified={};var oldBox=$('#'+(target===Student?'student-time-warning':'teacher-time-warning'));if(oldBox)oldBox.remove();}
     var current=null;[180,120,60,30,10].forEach(function(t){if(left<=t)current=t;});
     if(current===null||target._timeNotified[current])return;
     target._timeNotified[current]=true;
