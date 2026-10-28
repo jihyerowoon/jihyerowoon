@@ -893,8 +893,10 @@
       }
       var th = d.messages.filter(function (m) { return m.item_id === self.selItem && m.sender !== 'SYS'; });
       if (th.length) h += '<div class="td-thread">' + th.map(function (m) { return '<p><b>' + (m.sender === 'TEACHER' ? '교사' : 'AI') + ' L' + m.level + '</b> ' + fmt(m.text) + ' <time>' + kst(m.at) + '</time></p>'; }).join('') + '</div>';
+      var asks=(d.student_questions||[]).filter(function(q){return q.item_id===self.selItem;});
+      if(asks.length)h+='<section class="student-question-history"><b>학생이 직접 작성한 질문</b>'+asks.slice(0,5).map(function(q){return '<p>'+esc(q.question)+' <small>'+kst(q.at)+'</small></p>';}).join('')+'</section>';
       n.innerHTML = h;
-      $$('[data-itab]', n).forEach(function (b) { b.onclick = function () { self.selItem = b.getAttribute('data-itab'); self.confirmCustom = false; self.renderDetailTop(); if (s.group === 'CONTROL') self.renderForm(); }; });
+      $('[data-itab]', n).forEach(function (b) { b.onclick = function () { self.selItem = b.getAttribute('data-itab'); self.confirmCustom = false; self.renderDetailTop(); if (s.group === 'CONTROL') self.renderForm(); }; });
     },
     renderForm: function () {
       var self = this, d = self.detail, n = $('#td-form'); if (!n) return;
@@ -1446,7 +1448,10 @@
     $('#queue').innerHTML=self.data.group==='EXPERIMENT'?'<p class="hint">AI 발문과 학생 재응답은 왼쪽 학생을 눌러 확인하세요. 교사는 수학 발문을 따로 전송하지 않습니다.</p>':qs.filter(function(r){return r.item_id===self.reqItem;}).map(function(r){return '<article class="request-card"><div class="row"><b>'+esc(r.code)+'</b><small>대기 '+mmss((nowMs()-Date.parse(r.at))/1000)+'</small><button class="btn sm" data-request-detail="'+esc(r.id)+'">전체 답안</button></div>'+fieldsView(resolveItem(r.item_id,'CONTROL',self.data.session.settings),r.fields,r.sel||{})+'<div class="request-recommend"><b>추천 발문</b><p>'+fmt(r.recommendation?r.recommendation.text:'아래 발문 목록에서 선택하세요.')+'</p><small>'+esc(r.recommendation?r.recommendation.reason:'')+'</small></div><button class="btn primary" data-request-recommend="'+esc(r.id)+'">이 학생 · 추천 발문 선택</button><button class="btn sm" data-request-toggle="'+esc(r.id)+'">'+(self.picked[r.id]!==undefined?'전송 대상에서 빼기':'함께 보낼 학생에 추가')+'</button></article>';}).join('')||'<p class="hint">기다리는 요청이 없습니다.</p>';
   };
   Teacher.renderBatch=function(){var self=this,n=$('#batch-panel'),count=Object.keys(self.picked).length;if(self.data.group==='EXPERIMENT'){n.innerHTML='<h2>실험집단 수업 관리</h2><p>자동 타이머로 모든 학생이 함께 이동합니다. 학생을 선택하면 답안과 AI 지원 기록을 확인할 수 있습니다.</p><p class="hint">접속 문제나 수업 진행만 안내해 주세요.</p>';return;}
-    var list=self.bank.bank.filter(function(b){return b.item===self.reqItem&&b.level===1;});list.sort(function(a,b){return (a.state==='*'?0:1)-(b.state==='*'?0:1);});
+    var list=self.bank.bank.filter(function(b){return b.item===self.reqItem&&b.level===1;});
+    var pickedRequest=self.data.requests.find(function(r){return self.picked[r.id]!==undefined&&r.item_id===self.reqItem;});
+    var recommendedId=(pickedRequest&&pickedRequest.recommendation&&pickedRequest.recommendation.id)||self.bankId;
+    list.sort(function(a,b){return (a.id===recommendedId?-2:a.state==='*'?1:0)-(b.id===recommendedId?-2:b.state==='*'?1:0);});
     if(!list.some(function(b){return b.id===self.bankId;}))self.bankId='';
     var options=function(bs){return bs.map(function(b){return '<label class="bankopt"><input type="radio" name="batch-bank" value="'+esc(b.id)+'"'+(b.id===self.bankId?' checked':'')+'><span>'+fmt(b.text)+'</span></label>';}).join('');};
     n.innerHTML='<h2>추천 발문 확인 · 전송</h2><p>선택한 학생 <b>'+count+'명</b> · '+esc(self.reqItem?shortOf(self.reqItem):'문항 선택 대기')+'</p>'+options(list.slice(0,4))+(list.length>4?'<details><summary>다른 발문 '+(list.length-4)+'개</summary>'+options(list.slice(4))+'</details>':'')+'<button class="btn primary batch-send" id="batch-send"'+(!count||!self.bankId||clockMode(self.data.session)==='paused'||['catchup','finished','waiting'].includes(clockMode(self.data.session))?' disabled':'')+'>선택한 '+count+'명에게 보내기</button><p class="hint small">각 학생에게만 개별 전달됩니다. 전송 직전 답안과 요청을 다시 확인합니다.</p><div id="batch-results" role="status">'+(self.batchResults||'')+'</div>';
