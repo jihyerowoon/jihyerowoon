@@ -1420,6 +1420,9 @@
     $('#t-switch').onclick=function(){if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{self.code=null;store('pq4r:teacher-session',null);Teacher.start();}};
     $('[data-filter]').forEach(function(b){b.onclick=function(){self.filter=b.getAttribute('data-filter');self.renderRoster();};});
     $('[data-grid-mode]').forEach(function(b){b.onclick=function(){self.gridMode=b.getAttribute('data-grid-mode');store('pq4r:teacher-grid',self.gridMode);self.renderRoster();};});
+    $('#teacher-wall').addEventListener('fullscreenchange',function(){
+      var b=$('#teacher-wall-fullscreen');if(b)b.textContent=document.fullscreenElement===$('#teacher-wall')?'전체화면 닫기':'5열 6행 전체화면';
+    });
     $('#teacher-wall-fullscreen').onclick=function(){
       var wall=$('#teacher-wall');if(!wall)return;
       if(document.fullscreenElement===wall){if(document.exitFullscreen)document.exitFullscreen().catch(function(){toast('전체화면을 종료할 수 없습니다.','warn');});}
@@ -1530,7 +1533,7 @@
       $('#worksheet-zoom-close').onclick=function(){dlg.close();};
       $('#worksheet-prev').onclick=function(){self.stepWorksheet(-1);};
       $('#worksheet-next').onclick=function(){self.stepWorksheet(1);};
-      $('#worksheet-see-history').onclick=function(){var code=self.mirrorStudent,p=self.data&&self.data.students.find(function(x){return x.code===code;});dlg.close();$('#detail-fold').open=true;self.select(code,p&&p.worksheet&&p.worksheet.item_id||null);$('#detail-fold').scrollIntoView({block:'start',behavior:'smooth'});};
+      $('#worksheet-see-history').onclick=function(){var code=self.mirrorStudent,p=self.data&&self.data.students.find(function(x){return x.code===code;});dlg.close();if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen().catch(function(){});$('#detail-fold').open=true;self.select(code,p&&p.worksheet&&p.worksheet.item_id||null);$('#detail-fold').scrollIntoView({block:'start',behavior:'smooth'});};
     }
     self.mirrorStudent=code;
     self.mirrorFingerprint=null;
