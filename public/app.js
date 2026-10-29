@@ -284,7 +284,7 @@
         (tab === 'teacher' ? '<label>교사 ID<input id="l-tid" maxlength="20" value="' + esc(last.tid || 'T01') + '"></label>' : '') +
         '<label>' + (tab === 'teacher' ? '교사' : '연구자') + ' 비밀번호<input id="l-pw" type="password" required autocomplete="current-password"></label>' +
         '<button class="btn primary" type="submit">입장</button><p class="err" id="l-err" role="alert"></p>' +
-        '<p class="hint">이 브라우저에 로그인 상태를 자동으로 기억합니다. 비밀번호는 저장하지 않습니다.</p><p class="hint">' + (tab === 'teacher' ? '수업 진행과 통제집단 지원 화면이에요. 교사 ID는 기록의 teacher_id에 남아요.' : '수업 만들기, 명단, 기록·내보내기, 처치충실도 화면이에요.') + '</p></form>';
+        '<p class="hint">이 브라우저에 로그인 상태를 자동으로 기억합니다. 비밀번호는 저장하지 않습니다.</p><p class="hint">' + (tab === 'teacher' ? '교사 ID는 T01입니다. 수업 진행과 학생의 질문 확인, 발문 전송에 사용합니다. 기존 교사 비밀번호를 입력하세요.' : '수업 만들기, 명단, 기록·내보내기, 처치충실도 화면이에요.') + '</p></form>';
     }
     $('#lf').addEventListener('submit', function (ev) {
       ev.preventDefault();clearTimeout(App.loginRetry);
@@ -374,7 +374,7 @@
     onStageChange: function (prev, cur) {
       MatViewer.close('STAGE_CHANGED');
       var video=$('#video-dialog');if(video)video.remove();
-      if (this.me.session.status !== 'open') {logout('이전 수업이 종료되었습니다. 새 시연은 반 코드로 다시 입장해 주세요.');return;}
+      if (this.me.session.status !== 'open') {logout('이전 수업이 종료되었습니다. 수업 코드로 다시 입장해 주세요.');return;}
       this.view = cur; this.renderStepper(); this.renderDemo(); this.renderStage();
       if (cur !== prev) toast(C.stages[cur].id + ' ' + C.stages[cur].ko + ' 단계가 열렸어요.');
     },
@@ -1663,7 +1663,7 @@
   }
   Student.showNotice=function(n){if(!n||n.id===this.noticeId)return;this.noticeId=n.id;toast(n.text,'warn');var box=$('#student-notice');if(!box){box=document.createElement('div');box.id='student-notice';box.className='notice-bar';box.setAttribute('role','status');$('#app').prepend(box);}box.textContent=n.text;};
   var originalStudentStart=Student.start;
-  Student.start=function(me){var self=this;if(me.session.status!=='open')return logout('이전 수업이 종료되었습니다. 반 코드로 다시 입장해 주세요.');self.lastWarning='';self.nearEndFlush='';originalStudentStart.call(self,me);self.showNotice(me.notice);studentStatus();
+  Student.start=function(me){var self=this;if(me.session.status!=='open')return logout('이전 수업이 종료되었습니다. 수업 코드로 다시 입장해 주세요.');self.lastWarning='';self.nearEndFlush='';originalStudentStart.call(self,me);self.showNotice(me.notice);studentStatus();
     App.timers.push(setInterval(function(){if(App.screen==='student'&&clockMode(self.me.session)==='waiting'&&!self.waitingPoll){self.waitingPoll=true;self.poll().finally(function(){self.waitingPoll=false;});}},1000));
     App.timers.push(setInterval(function(){
     var s=self.me.session,c=s.clock||{},m=clockMode(s);if(m!=='running'&&m!=='catchup')return;var left=(Date.parse(c.deadline)-nowMs())/1000;
