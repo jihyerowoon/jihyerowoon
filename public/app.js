@@ -1682,9 +1682,9 @@
     var step=$('#stepper');if(step)step.innerHTML='';
     var badge=$('#r-sess');if(badge)badge.textContent='수업 준비';
     body.innerHTML='<p class="loading">A01, T01 수업 코드와 학생 명단 확인 중…</p>';
-    Promise.all([api('GET','admin/classes'),api('GET','admin/students')]).then(function(all){
+    Promise.all([api('GET','admin/classes'),api('GET','admin/students'),api('GET','admin/lesson-assets')]).then(function(all){
       if(App.screen!=='researcher'||self.tab!=='classes')return;
-      var cs=all[0].classes||[],students=all[1].students||[];
+      var cs=all[0].classes||[],students=all[1].students||[],assets=all[2].files||[];
       var settings=[{code:'A01',prefix:'A'},{code:'T01',prefix:'T'}];
       var cards=settings.map(function(g){
         var expected=Array.from({length:30},function(_,i){return g.prefix+String(i+1).padStart(2,'0');});
@@ -1709,8 +1709,52 @@
         '<button class="btn primary" id="fixed-setup-submit">학생 60명 등록 또는 확인</button></section>'+
         '<p class="hint">기존 학생 코드가 다른 수업에 연결되어 있으면 기존 기록을 보호하기 위해 등록을 중단합니다. 공통 PIN은 분실 시 구분이 어려우므로 실제 연구에서는 보안에 주의하세요.</p>'+
         '<div class="fixed-class-grid">'+cards+'</div>'+
+        '<section class="rcard" id="lesson-pdf-manager"><h2>활동지 · 정답지 · 성찰지 PDF 등록</h2>'+
+        '<p>압축을 푼 PDF 14개를 모두 선택하면 파일명에서 차시와 종류를 자동 판별합니다. 공통 성찰지는 1~8차시에 한 번에 연결합니다.</p>'+
+        '<label class="pdf-upload-drop">PDF 원본 여러 개 선택<input id="lesson-pdf-upload" type="file" multiple accept=".pdf,application/pdf"></label>'+
+        '<div id="pdf-upload-progress" role="status" aria-live="polite"></div>'+
+        '<div class="lesson-pdf-status">'+Array.from({length:8},function(_,i){var n=i+1;return '<div class="pdf-status-row"><strong>'+n+'차시</strong> '+
+          ['worksheet','answer','reflection'].map(function(kind){var found=assets.some(function(x){return x.lesson===n&&x.kind===kind;});
+           return '<span class="pill '+(found?'ok':'warn')+'">'+({worksheet:'활동지',answer:'정답지',reflection:'성찰지'}[kind])+' '+(found?'등록':'미등록')+'</span>';
+          }).join(' ')+'</div>';}).join('')+'</div>'+
+        '<p class="hint small">1~2차시는 기존 온라인 활동지를 사용하며, 2차시 정답은 웹앱의 기존 해설을 유지합니다. 미등록 PDF는 화면에 원본으로 표시되지 않습니다. PDF 등록 전에는 해당 차시 본수업을 시작할 수 없습니다.</p></section>'+
         '<section class="rcard"><h3>시험 수업과 실제 수업</h3><p>같은 학생 코드와 PIN을 계속 사용합니다. 다만 시험은 “새 시험 수업 준비”, 본실험은 “새 본수업 준비”로 시작해야 이전 기록과 섞이지 않습니다.</p>'+
         '<p class="hint">실제 수업이 진행 중이면 새 수업을 만들지 말고 “현재 수업 운영”을 선택하세요. 기존 기록을 삭제하거나 초기화하지 않습니다.</p></section></div>';
+      $('#lesson-pdf-upload').onchange=async function(){
+        var fileList=Array.from(this.files||[]),status=$('#pdf-upload-progress');
+        if(!fileList.length)return;
+        var jobs=[],errors=[];
+        fileList.forEach(function(file){
+          if(!/\.pdf$/i.test(file.name)){errors.push(file.name+': PDF 형식이 아닙니다.');return;}
+          var kind=/성찰/.test(file.name)?'reflection':/정답|해설/.test(file.name)?'answer':'worksheet';
+          var m=/([1-8])차시/.exec(file.name),lessons=kind==='reflection'?[1,2,3,4,5,6,7,8]:m?[Number(m[1])]:[];
+          if(!lessons.length){errors.push(file.name+': 차시 번호를 찾을 수 없습니다.');return;}
+          if(file.size>1550000){errors.push(file.name+': 1.55MB를 초과합니다. PDF를 더 작게 저장하세요.');return;}
+          lessons.forEach(function(lesson){jobs.push({file,lesson,kind});});
+        });
+        if(!jobs.length){status.textContent=errors.join(' / ')||'등록할 파일이 없습니다.';return;}
+        if(!confirm('활동지와 정답지 원본 '+fileList.length+'개를 등록할까요? 같은 차시의 이전 파일은 새 파일로 바뀌고 변경 기록이 남습니다.'))return;
+        this.disabled=true;
+        var done=0,cache=new Map(),ok=0;
+        try{
+          for(const job of jobs){
+            status.textContent='업로드 중 '+(done+1)+'/'+jobs.length+': '+job.lesson+'차시 '+({worksheet:'활동지',answer:'정답지',reflection:'성찰지'}[job.kind]);
+            try{
+              var base64=cache.get(job.file);
+              if(!base64){
+                base64=await new Promise(function(resolve,reject){var reader=new FileReader();reader.onload=function(){resolve(String(reader.result).split(',')[1]||'');};reader.onerror=function(){reject(new Error('파일을 읽지 못했습니다.'));};reader.readAsDataURL(job.file);});
+                cache.set(job.file,base64);
+              }
+              await api('POST','admin/lesson-asset',{lesson:job.lesson,kind:job.kind,filename:job.file.name,data_base64:base64});
+              ok++;
+            }catch(e){errors.push(job.lesson+'차시 '+job.kind+': '+e.message);}
+            done++;
+          }
+          status.textContent='등록 성공 '+ok+'/'+jobs.length+(errors.length?' · 오류: '+errors.join(' / '):' · 모든 등록 완료');
+          await self.renderClasses();
+          toast(errors.length?'일부 자료에 오류가 있습니다. PDF 상태를 확인하세요.':'원본 PDF 등록을 완료했습니다.',errors.length?'warn':'ok');
+        }finally{this.disabled=false;}
+      };
       $('#fixed-setup-submit').onclick=function(){
         if(!confirm('학생 60명의 코드를 A01~A30, T01~T30으로 등록하고, 교사 ID는 T01, 기존 해당 학생의 PIN도 모두 1111로 맞추시겠습니까? 기존 답안 기록은 삭제하지 않습니다.'))return;
         var b=this;b.disabled=true;b.textContent='등록 중…';
