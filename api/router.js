@@ -27,6 +27,7 @@ const routes = {
   'POST me/reflection-draft': { roles: STUDENT, body: true, fn: async function(ctx){return S.reflectionDraft(ctx.tok,ctx.body);} },
   'GET admin/classes': { roles: RESEARCHER, fn: async function(){return Room.classes();} },
   'POST admin/class': { roles: RESEARCHER, body: true, fn: async function(ctx){return Room.saveClass(ctx.tok,ctx.body);} },
+  'POST admin/fixed-codes': { roles: RESEARCHER, body: true, fn: async function(ctx){return Room.setupFixedCodes(ctx.tok);} },
   'POST admin/class-roster': { roles: RESEARCHER, body: true, fn: async function(ctx){return Room.roster(ctx.tok,ctx.body);} },
   'POST staff/send-batch': { roles: STAFF, body: true, fn: async function(ctx){return Room.batchSend(ctx.tok,ctx.body);} },
   'POST staff/clock': { roles: STAFF, body: true, fn: async function(ctx){return Room.clock(ctx.tok,ctx.body);} },
