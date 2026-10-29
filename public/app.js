@@ -1678,7 +1678,7 @@
   Researcher.renderClassesLegacy=Researcher.renderClasses;
   Researcher.renderClasses=function(){
     var self=this,body=$('#rbody');if(!body)return;
-    $('.rtab').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')==='classes');});
+    $$('.rtab').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')==='classes');});
     var step=$('#stepper');if(step)step.innerHTML='';
     var badge=$('#r-sess');if(badge)badge.textContent='수업 준비';
     body.innerHTML='<p class="loading">A01, T01 수업 코드와 학생 명단 확인 중…</p>';
@@ -1719,8 +1719,8 @@
           return self.loadSessions().then(function(){return self.renderClasses();});
         }).catch(function(e){toast(e.message,'warn');b.disabled=false;b.textContent='학생 60명 등록 또는 확인';});
       };
-      $('[data-fixed-open]').forEach(function(b){b.onclick=function(){Teacher.start(b.getAttribute('data-fixed-open'));};});
-      $('[data-fixed-run], [data-fixed-demo]').forEach(function(b){b.onclick=function(){
+      $$('[data-fixed-open]').forEach(function(b){b.onclick=function(){Teacher.start(b.getAttribute('data-fixed-open'));};});
+      $$('[data-fixed-run], [data-fixed-demo]').forEach(function(b){b.onclick=function(){
         var code=b.getAttribute('data-fixed-run')||b.getAttribute('data-fixed-demo'),demo=b.hasAttribute('data-fixed-demo'),
             current=self.sessions.filter(function(x){return x.class_name===code&&x.status==='open'&&clockMode(x)!=='finished';})[0],
             lesson=Number($('[data-fixed-lesson="'+code+'"]').value);
