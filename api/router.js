@@ -6,6 +6,7 @@ const S = require('../lib/student');
 const T = require('../lib/staff');
 const D = require('../lib/db');
 const Room = require('../lib/classroom');
+const Assets = require('../lib/assets');
 const { HttpError, readBody, send, sendText } = require('../lib/util');
 
 /* 브라우저로 보내는 공개분. 정답(KEYS)·정답 기준(RUBRIC)·발문 은행(BANK)·AI 설명의 정오 판단(FIXED_AI.type/ok)은 보내지 않는다 */
@@ -26,6 +27,9 @@ const routes = {
   'POST staff/new-demo': { roles: STAFF, body: true, fn: async function(ctx){return Room.newDemo(ctx.tok,ctx.body);} },
   'POST me/reflection-draft': { roles: STUDENT, body: true, fn: async function(ctx){return S.reflectionDraft(ctx.tok,ctx.body);} },
   'GET admin/classes': { roles: RESEARCHER, fn: async function(){return Room.classes();} },
+  'GET admin/lesson-assets': { roles: RESEARCHER, fn: async function(){return Assets.manifest();} },
+  'POST admin/lesson-asset': { roles: RESEARCHER, body: true, fn: async function(ctx){return Assets.upload(ctx.tok,ctx.body);} },
+  'GET me/lesson-asset': { roles: STUDENT, fn: async function(ctx){return Assets.student(ctx.tok,ctx.query);} },
   'POST admin/class': { roles: RESEARCHER, body: true, fn: async function(ctx){return Room.saveClass(ctx.tok,ctx.body);} },
   'POST admin/fixed-codes': { roles: RESEARCHER, body: true, fn: async function(ctx){return Room.setupFixedCodes(ctx.tok);} },
   'POST admin/class-roster': { roles: RESEARCHER, body: true, fn: async function(ctx){return Room.roster(ctx.tok,ctx.body);} },
