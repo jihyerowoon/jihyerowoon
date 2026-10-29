@@ -605,6 +605,22 @@ body.is-student #layout{max-width:1420px;margin-inline:auto;grid-template-column
 .fixed-video-options summary{cursor:pointer;font-weight:700;color:#344b6b}
 .fixed-video-options label{display:grid;gap:5px;margin-top:9px}
 .fixed-video-options input{width:100%}
+
+/* 연구용 3~8차시 원본 활동지 PDF 및 공통 정답·성찰지 */
+.pdf-upload-drop{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;min-height:90px;background:#eaf2ff;border:2px dashed #779ccc;border-radius:12px;padding:18px;font-weight:800;color:#19416f;cursor:pointer}
+.pdf-upload-drop input{font-size:13px;max-width:100%}
+#pdf-upload-progress{padding:12px 0;min-height:28px;overflow-wrap:anywhere;font-weight:700}
+.lesson-pdf-status{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.pdf-status-row{display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:8px 10px;background:#f6f9fe;border:1px solid #d7e1ee;border-radius:8px;font-size:13px}
+.pdf-status-row strong{width:45px}
+.student-pdf-panel{margin:14px 0 18px;background:#f8fbff;border:2px solid #c4d5eb;border-radius:11px;padding:15px}
+.student-pdf-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.student-pdf-head h3{margin:0;color:#15366e;font-size:19px}
+.student-pdf-panel .hint{font-size:13px;margin:7px 0 10px}
+.student-pdf-nav{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
+.student-pdf-frame{display:block;width:100%;min-height:590px;height:65vh;border:1px solid #9eb4d0;border-radius:7px;background:white}
+@media(max-width:800px){.lesson-pdf-status{grid-template-columns:1fr}.student-pdf-frame{height:60vh;min-height:380px}}
+
 </style>
 </head>
 <body>
