@@ -21,7 +21,7 @@
     var t = document.createElement('div'); t.className = 'toast' + (kind ? ' ' + kind : ''); t.textContent = msg;
     $('#toasts').appendChild(t); setTimeout(function () { t.classList.add('out'); }, 2800); setTimeout(function () { t.remove(); }, 3300);
   }
-  function groupKo(g) { return g === 'EXPERIMENT' ? '실험집단' : g === 'CONTROL' ? '통제집단' : '-'; }
+  function groupKo(g) { return g === 'EXPERIMENT' ? 'A01' : g === 'CONTROL' ? 'T01' : '-'; }
   function supporterKo(g) { return g === 'EXPERIMENT' ? 'AI 튜터' : '선생님'; }
   function store(k, v) { try { if (v === undefined) { var x = localStorage.getItem(k); return x ? JSON.parse(x) : null; } if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } return null; }
 
@@ -274,14 +274,14 @@
     var box = $('#loginbox');
     if (tab === 'student') {
       box.innerHTML = '<form class="login-form" id="lf" autocomplete="off">' +
-        '<label>반 코드<input id="l-sess" required maxlength="24" value="' + esc(new URLSearchParams(location.search).get('class') || last.classCode || '') + '" autocapitalize="characters" spellcheck="false"></label>' +
+        '<label>수업 코드<input id="l-sess" required maxlength="24" value="' + esc(new URLSearchParams(location.search).get('class') || last.classCode || '') + '" autocapitalize="characters" spellcheck="false"></label>' +
         '<label>학생 코드<input id="l-code" required maxlength="20" value="' + esc(last.code || '') + '" autocapitalize="characters" spellcheck="false"></label>' +
         '<label>PIN<input id="l-pin" required inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" type="password" autocomplete="off"></label>' +
         '<button class="btn primary" type="submit">입장</button><p class="err" id="l-err" role="alert"></p>' +
-        '<p class="hint">반 코드와 본인 학생 코드, PIN을 입력하세요. 차시는 입력하지 않습니다. 선생님이 시작한 수업으로 자동 연결됩니다.</p></form>';
+        '<p class="hint">수업 코드 A01 또는 T01, 본인 학생 코드, PIN을 입력하세요. 차시는 자동으로 연결됩니다.</p></form>';
     } else {
       box.innerHTML = '<form class="login-form staff" id="lf">' +
-        (tab === 'teacher' ? '<label>교사 ID<input id="l-tid" maxlength="20" value="' + esc(last.tid || 'T1') + '"></label>' : '') +
+        (tab === 'teacher' ? '<label>교사 ID<input id="l-tid" maxlength="20" value="' + esc(last.tid || 'T01') + '"></label>' : '') +
         '<label>' + (tab === 'teacher' ? '교사' : '연구자') + ' 비밀번호<input id="l-pw" type="password" required autocomplete="current-password"></label>' +
         '<button class="btn primary" type="submit">입장</button><p class="err" id="l-err" role="alert"></p>' +
         '<p class="hint">이 브라우저에 로그인 상태를 자동으로 기억합니다. 비밀번호는 저장하지 않습니다.</p><p class="hint">' + (tab === 'teacher' ? '수업 진행과 통제집단 지원 화면이에요. 교사 ID는 기록의 teacher_id에 남아요.' : '수업 만들기, 명단, 기록·내보내기, 처치충실도 화면이에요.') + '</p></form>';
@@ -380,7 +380,7 @@
     },
     shell: function () {
       var self = this, g = self.group();
-      $('#app').innerHTML = topbar('학생 ' + esc(self.me.student.code) + ' · <span class="grp ' + g.toLowerCase() + '">' + groupKo(g) + ' · ' + supporterKo(g) + '</span>', '', self.lesson()) +
+      $('#app').innerHTML = topbar('학생 ' + esc(self.me.student.code) + ' · 수업 코드 ' + groupKo(g), '', self.lesson()) +
         '<div class="demo" id="demo" hidden></div><div class="layout" id="layout"><aside class="left" id="left"></aside><section class="right" id="right"></section></div>';
       bindExit('나가면 다시 들어올 때 PIN을 넣어야 해요. 나갈까요?');
       self.renderStepper(); self.renderDemo(); self.renderLeft(); self.renderStage();
@@ -877,7 +877,7 @@
     renderDetail: function () {
       var self = this, d = self.detail, s = d.student, n = $('#tdetail');
       n.innerHTML = '<div class="td-h"><h2>' + esc(s.code) + ' <span class="grp ' + s.group.toLowerCase() + '">' + groupKo(s.group) + '</span></h2></div><div id="td-top"></div>' +
-        (s.group === 'CONTROL' ? '<div id="td-form"></div><div id="oral-log"></div>' : '<p class="note">실험집단 학생은 AI 튜터가 지원해요. 교사는 수학 내용을 따로 돕지 않습니다.</p>');
+        (s.group === 'CONTROL' ? '<div id="td-form"></div><div id="oral-log"></div>' : '<p class="note">이 수업에서는 자동 질문 지원이 제공됩니다. 교사는 수학 내용을 따로 전송하지 않습니다.</p>');
       self.renderDetailTop();
       if (s.group === 'CONTROL') {self.renderForm();self.renderOralNote();}
     },
@@ -1007,11 +1007,11 @@
       document.body.className = 'is-researcher';
       self.code = store('pq4r:researcher-session') || null;
       $('#app').innerHTML = topbar('연구자 화면', '<span id="r-sess" class="pill"></span>') +
-        '<nav class="rtabs" id="rtabs" aria-label="연구자 메뉴">' + [['classes','반과 학생 등록'],['sess','지난 수업 관리'],['log','기록 저장']].map(function (t) {
+        '<nav class="rtabs" id="rtabs" aria-label="연구자 메뉴">' + [['classes','수업 준비'],['sess','지난 수업 관리'],['log','기록 저장']].map(function (t) {
           return '<button class="rtab" data-tab="' + t[0] + '">' + t[1] + '</button>';
         }).join('') + '<details class="r-advanced"><summary>기타 기능</summary><div class="r-advanced-list">' + [['roster','기존 전체 명단'],['status','연결 확인'],['fid','처치충실도'],['rev','사람 검토'],['bank','발문 은행'],['worksheet','활동지 점검'],['mat','개념 자료']].map(function (t) {
           return '<button class="rtab" data-tab="' + t[0] + '">' + t[1] + '</button>';
-        }).join('') + '</div></details></nav><p class="simple-help">반과 학생 등록에서 준비를 마친 뒤 수업 운영을 누르세요. 기존 명단은 기존 수업 관리와 기타 기능에서 확인할 수 있습니다.</p><section class="rbody" id="rbody"></section>';
+        }).join('') + '</div></details></nav><p class="simple-help">수업 코드 A01 또는 T01을 사용합니다. 학생은 수업 코드, 개인 학생 코드, PIN만 입력합니다. 시험과 본실험은 각각 새 수업으로 시작하세요.</p><section class="rbody" id="rbody"></section>';
       bindExit();
       $('#rtabs').addEventListener('click', function (ev) { var b = ev.target.closest('[data-tab]'); if (!b) return; self.tab = b.getAttribute('data-tab'); self.render(); });
       App.timers.push(setInterval(function () { var t = $('#timer'), s = self.cur(); if (t && s) t.innerHTML = timerText(s); }, 1000));
@@ -1404,7 +1404,7 @@
   };
   Teacher.shell=function(){
     var self=this;self.picked={};self.bankId='';self.reqItem='';self.batchResults='';self.queueFingerprint=null;self.filter='all';self.gridMode=store('pq4r:teacher-grid')||'worksheet';self.mirrorStudent=null;self.readyAttempt=null;
-    $('#app').innerHTML=topbar((App.role==='researcher'?'연구자 수업 운영':'교사 '+esc(App.tid||'T1'))+' · '+esc(self.code),'<button class="btn sm" id="t-switch">'+(App.role==='researcher'?'연구 준비':'수업 바꾸기')+'</button>')+
+    $('#app').innerHTML=topbar((App.role==='researcher'?'연구자 수업 운영':'교사 '+esc(App.tid||'T01'))+' · '+esc(self.code),'<button class="btn sm" id="t-switch">'+(App.role==='researcher'?'연구 준비':'수업 바꾸기')+'</button>')+
       '<main class="teacher-console"><section class="console-header rcard"><div><h1 id="console-title">수업 운영</h1><p id="console-sub" class="hint"></p></div><div id="teacher-live-timer" class="teacher-live-timer" aria-live="off"></div><div class="row"><div id="clock-actions" class="row"></div><button class="btn" id="t-demo-restart" hidden>시연 처음부터</button></div></section><div class="row staff-view-nav"><button class="btn sm" id="teacher-research-view">연구 준비 화면</button><button class="btn sm" id="teacher-student-view">학생 입장 화면 열기</button><button class="btn sm" id="teacher-alert-enable" type="button">알림 소리 켜기</button><span class="hint small">새 도움 요청은 화면에 표시됩니다. 소리 알림은 버튼으로 켜세요.</span></div><div class="notice-bar" id="teacher-entry-note"></div><div class="console-stats" id="console-stats"></div><div class="console-grid"><section class="rcard" id="teacher-wall"><div class="worksheet-wall-title"><h2>전체 학생 현황</h2><button type="button" class="btn sm" id="teacher-wall-fullscreen">5열 6행 전체화면</button></div><div class="row worksheet-view-controls"><button class="btn sm primary" data-grid-mode="worksheet" aria-pressed="true">활동지 30명 보기</button><button class="btn sm" data-grid-mode="status" aria-pressed="false">상태만 보기</button><span class="hint small">학생이 입력 중인 현재 활동지를 약 3초마다 반영합니다. 화면 영상 공유는 아닙니다.</span></div><div class="row"><button class="btn sm" data-filter="all">전체</button><button class="btn sm" data-filter="help">도움 요청</button><button class="btn sm" data-filter="missing">미제출</button></div><div class="student-grid" id="student-grid"></div><div class="tablewrap"><table class="roster" id="roster" hidden></table></div></section><section class="rcard"><h2 id="request-title">도움 요청</h2><label>문항별 보기<select id="request-item"></select></label><p class="hint small">학생의 최근 제출 답안과 추천 발문을 바로 확인하세요. 도움 버튼을 누른 요청만 표시합니다.</p><div id="queue"></div></section><section class="rcard"><div id="batch-panel"></div><details id="detail-fold" open><summary>학생 답안과 지원 기록</summary><div id="tdetail"><p class="hint">학생을 선택하면 자세한 답과 기록을 볼 수 있습니다.</p></div></details></section></div><div class="row" id="notice-actions"><b>전체 안내</b><button class="btn sm" data-notice="time">시간 확인</button><button class="btn sm" data-notice="save">제출 안내</button><button class="btn sm" data-notice="device">접속 문제 안내</button></div></main>';
     bindExit();
     $('#teacher-alert-enable').onclick=function(){
@@ -1448,7 +1448,7 @@
   Teacher.renderTop=function(){
     var self=this,s=self.data.session,m=clockMode(s),auto=!!s.settings.autoTimer;
     $('#console-title').textContent=(s.class_name||s.code)+' · '+(self.data.group?groupKo(self.data.group):'수업 운영');
-    $('#console-sub').textContent=lessonLabel(s.lesson)+' · '+clockLabel(s)+' · '+(self.data.group==='EXPERIMENT'?'AI 튜터가 수학 발문을 제공합니다. 교사는 진행과 접속을 관리합니다.':'학생의 답안을 보고 준비된 발문을 개별 전달합니다.');
+    $('#console-sub').textContent=lessonLabel(s.lesson)+' · '+clockLabel(s)+' · '+(self.data.group==='EXPERIMENT'?'학생 학습 상태와 자동 발문 기록을 확인합니다. 교사는 진행과 접속을 관리합니다.':'학생의 답안을 보고 준비된 발문을 개별 전달합니다.');
     var t=$('#timer');if(t)t.innerHTML=timerText(s);var live=$('#teacher-live-timer');if(live)live.innerHTML=timerText(s);var step=$('#stepper');if(step)step.innerHTML=stepperHTML(s.stage,s.stage,{noNav:true,lesson:s.lesson});
     var note=$('#teacher-entry-note');
     if(!auto){note.innerHTML='<b>이전 방식으로 만든 수동 수업입니다.</b> 이 수업에는 자동 시작 버튼이 없습니다. 연구자 화면에서 등록된 반을 선택한 뒤 새 수업이나 시연을 준비해 주세요. <button class="btn sm" id="open-research-setup">연구자 수업 준비로</button>';$('#open-research-setup').onclick=function(){if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{var saved=rememberedStaff('researcher');if(saved){tabStore('pq4r:staff-screen',{screen:'researcher'});restoreStaff(saved);}else renderEntry('researcher');}};}
@@ -1572,7 +1572,7 @@
     $('#request-title').textContent=self.data.group==='EXPERIMENT'?'AI 지원 현황':'도움 요청';
     $('#queue').innerHTML=self.data.group==='EXPERIMENT'?'<p class="hint">AI 발문과 학생 재응답은 왼쪽 학생을 눌러 확인하세요. 교사는 수학 발문을 따로 전송하지 않습니다.</p>':qs.filter(function(r){return r.item_id===self.reqItem;}).map(function(r){return '<article class="request-card"><div class="row"><b>'+esc(r.code)+'</b><small>대기 '+mmss((nowMs()-Date.parse(r.at))/1000)+'</small><button class="btn sm" data-request-detail="'+esc(r.id)+'">전체 답안</button></div>'+fieldsView(resolveItem(r.item_id,'CONTROL',self.data.session.settings),r.fields,r.sel||{})+(r.question_text?'<p class="request-student-question"><b>학생의 질문:</b> '+esc(r.question_text)+'</p>':'')+'<div class="request-recommend"><b>추천 발문</b><p>'+fmt(r.recommendation?r.recommendation.text:'아래 발문 목록에서 선택하세요.')+'</p><small>'+esc(r.recommendation?r.recommendation.reason:'')+'</small></div><button class="btn primary" data-request-recommend="'+esc(r.id)+'">이 학생 · 추천 발문 선택</button><button class="btn sm" data-request-toggle="'+esc(r.id)+'">'+(self.picked[r.id]!==undefined?'전송 대상에서 빼기':'함께 보낼 학생에 추가')+'</button></article>';}).join('')||'<p class="hint">기다리는 요청이 없습니다.</p>';
   };
-  Teacher.renderBatch=function(){var self=this,n=$('#batch-panel'),count=Object.keys(self.picked).length;if(self.data.group==='EXPERIMENT'){n.innerHTML='<h2>실험집단 수업 관리</h2><p>자동 타이머로 모든 학생이 함께 이동합니다. 학생을 선택하면 답안과 AI 지원 기록을 확인할 수 있습니다.</p><p class="hint">접속 문제나 수업 진행만 안내해 주세요.</p>';return;}
+  Teacher.renderBatch=function(){var self=this,n=$('#batch-panel'),count=Object.keys(self.picked).length;if(self.data.group==='EXPERIMENT'){n.innerHTML='<h2>수업 학습 상태 관리</h2><p>자동 타이머로 모든 학생이 함께 이동합니다. 학생을 선택하면 답안과 AI 지원 기록을 확인할 수 있습니다.</p><p class="hint">접속 문제나 수업 진행만 안내해 주세요.</p>';return;}
     var list=self.bank.bank.filter(function(b){return b.item===self.reqItem&&b.level===1;});
     var pickedRequest=self.data.requests.find(function(r){return self.picked[r.id]!==undefined&&r.item_id===self.reqItem;});
     var recommendedId=(pickedRequest&&pickedRequest.recommendation&&pickedRequest.recommendation.id)||self.bankId;
@@ -1672,6 +1672,65 @@
     if(left<=2&&self.nearEndFlush!==phase){self.nearEndFlush=phase;Object.keys(self.pending).forEach(function(id){self.flushDraft(id);});}
     if(left<=0&&!self.clockPolling){self.clockPolling=true;self.poll().finally(function(){self.clockPolling=false;});}
   },500));};
+
+
+  /* 현장 운영용 단순 화면. 내부 데이터베이스 반 구분은 유지하지만 사용자는 두 수업 코드만 선택한다. */
+  Researcher.renderClassesLegacy=Researcher.renderClasses;
+  Researcher.renderClasses=function(){
+    var self=this,body=$('#rbody');if(!body)return;
+    $('.rtab').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')==='classes');});
+    var step=$('#stepper');if(step)step.innerHTML='';
+    var badge=$('#r-sess');if(badge)badge.textContent='수업 준비';
+    body.innerHTML='<p class="loading">A01, T01 수업 코드와 학생 명단 확인 중…</p>';
+    Promise.all([api('GET','admin/classes'),api('GET','admin/students')]).then(function(all){
+      if(App.screen!=='researcher'||self.tab!=='classes')return;
+      var cs=all[0].classes||[],students=all[1].students||[];
+      var settings=[{code:'A01',prefix:'A'},{code:'T01',prefix:'T'}];
+      var cards=settings.map(function(g){
+        var expected=Array.from({length:30},function(_,i){return g.prefix+String(i+1).padStart(2,'0');});
+        var enrolled=students.filter(function(p){return expected.indexOf(p.code)>=0&&p.class_name===g.code&&p.active;});
+        var known=cs.some(function(x){return x.code===g.code;});
+        var running=self.sessions.filter(function(x){return x.class_name===g.code&&x.status==='open'&&clockMode(x)!=='finished';})[0];
+        var latest=self.sessions.filter(function(x){return x.class_name===g.code;})[0]||null;
+        var ready=known&&enrolled.length===30;
+        return '<article class="rcard fixed-class-card"><div class="fixed-class-head"><div><span class="fixed-code">'+g.code+'</span><h2>'+g.code+' 수업</h2></div><span class="pill '+(ready?'ok':'warn')+'">'+enrolled.length+' / 30명 등록</span></div>'+
+          '<p>학생 코드 <b>'+g.prefix+'01 ~ '+g.prefix+'30</b> · 공통 PIN <b>1111</b> · 교사 ID <b>T01</b></p>'+
+          '<p class="hint">학생 입장 시 수업 코드: <strong>'+g.code+'</strong> (매 차시 동일)</p>'+
+          '<div class="fixed-class-actions"><label>차시 선택<select data-fixed-lesson="'+g.code+'">'+Object.keys(C.lessons).map(function(n){return '<option value="'+n+'">'+esc(lessonLabel(+n))+'</option>';}).join('')+'</select></label>'+
+          '<button class="btn primary" data-fixed-run="'+g.code+'"'+(!ready?' disabled':'')+'>새 본수업 준비</button>'+
+          '<button class="btn" data-fixed-demo="'+g.code+'"'+(!ready?' disabled':'')+'>새 시험 수업 준비</button>'+
+          (running?'<button class="btn" data-fixed-open="'+esc(running.code)+'">현재 수업 운영</button>':latest?'<span class="hint small">마지막 수업: '+(latest.settings&&latest.settings.demoSession?'시험':'본수업')+'</span>':'')+
+          '</div><p class="hint small">새 수업을 준비하면 학생 코드는 유지되고 답안 및 로그는 새로운 실행 기록으로 저장됩니다.</p></article>';
+      }).join('');
+      body.innerHTML='<div class="fixed-setup"><h1>수업 준비</h1>'+
+        '<p>학생은 수업 코드, 학생 코드, PIN만 입력합니다. 내부 등록 작업은 여기서 한 번만 진행합니다.</p>'+
+        '<section class="rcard fixed-setup-head"><div><h2>학생 60명 코드 설정</h2><p>수업 코드 A01과 T01 · 학생 A01 ~ A30, T01 ~ T30 · 교사 ID T01 · 공통 PIN 1111</p></div>'+
+        '<button class="btn primary" id="fixed-setup-submit">학생 60명 등록 또는 확인</button></section>'+
+        '<p class="hint">기존 학생 코드가 다른 수업에 연결되어 있으면 기존 기록을 보호하기 위해 등록을 중단합니다. 공통 PIN은 분실 시 구분이 어려우므로 실제 연구에서는 보안에 주의하세요.</p>'+
+        '<div class="fixed-class-grid">'+cards+'</div>'+
+        '<section class="rcard"><h3>시험 수업과 실제 수업</h3><p>같은 학생 코드와 PIN을 계속 사용합니다. 다만 시험은 “새 시험 수업 준비”, 본실험은 “새 본수업 준비”로 시작해야 이전 기록과 섞이지 않습니다.</p>'+
+        '<p class="hint">실제 수업이 진행 중이면 새 수업을 만들지 말고 “현재 수업 운영”을 선택하세요. 기존 기록을 삭제하거나 초기화하지 않습니다.</p></section></div>';
+      $('#fixed-setup-submit').onclick=function(){
+        if(!confirm('학생 60명의 코드를 A01~A30, T01~T30으로 등록하고, 교사 ID는 T01, 기존 해당 학생의 PIN도 모두 1111로 맞추시겠습니까? 기존 답안 기록은 삭제하지 않습니다.'))return;
+        var b=this;b.disabled=true;b.textContent='등록 중…';
+        api('POST','admin/fixed-codes',{}).then(function(r){
+          toast('등록 확인: 새 학생 '+r.created+'명, PIN 변경 및 복구 '+r.updated+'명, 유지 '+r.unchanged+'명.');
+          return self.loadSessions().then(function(){return self.renderClasses();});
+        }).catch(function(e){toast(e.message,'warn');b.disabled=false;b.textContent='학생 60명 등록 또는 확인';});
+      };
+      $('[data-fixed-open]').forEach(function(b){b.onclick=function(){Teacher.start(b.getAttribute('data-fixed-open'));};});
+      $('[data-fixed-run], [data-fixed-demo]').forEach(function(b){b.onclick=function(){
+        var code=b.getAttribute('data-fixed-run')||b.getAttribute('data-fixed-demo'),demo=b.hasAttribute('data-fixed-demo'),
+            current=self.sessions.filter(function(x){return x.class_name===code&&x.status==='open'&&clockMode(x)!=='finished';})[0],
+            lesson=Number($('[data-fixed-lesson="'+code+'"]').value);
+        if(current&&!confirm('이전 수업의 기록을 보존하고 새 '+(demo?'시험':'본')+'수업을 준비할까요? 이전 수업을 계속할 경우 “현재 수업 운영”을 선택해야 합니다.'))return;
+        b.disabled=true;
+        api('POST',demo?'staff/new-demo':'staff/new-lesson',{class_code:code,lesson:lesson,replace_session:current?current.code:null})
+          .then(function(r){return self.loadSessions().then(function(){Teacher.start(r.session.code);});})
+          .catch(function(e){toast(e.message,'warn');b.disabled=false;});
+      };});
+    }).catch(function(e){body.innerHTML='<p class="empty">'+esc(e.message)+'</p>';});
+  };
 
   function restoreStaff(a){
     App.tok=a.token;App.role=a.role;App.tid=a.tid||null;
