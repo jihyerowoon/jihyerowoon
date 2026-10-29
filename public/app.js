@@ -1822,7 +1822,7 @@
       var review=self.me.review||{};
       if(review.unlocked&&lesson!==2){
         self.ensureLessonPdf('answer');
-        $('#right').insertAdjacentHTML('beforeend',self.pdfPanel('answer',[1,2,3,4,5,6],lesson+'차시 정답지 · Review 6분 후 공개'));
+        $('#right').insertAdjacentHTML('beforeend',self.pdfPanel('answer',lesson===1?[1,2,3,4,5]:[1,2,3,4,5,6],lesson+'차시 정답지 · Review 6분 후 공개'));
       }
       if(review.reflect_unlocked){
         self.ensureLessonPdf('reflection');
