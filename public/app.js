@@ -1778,6 +1778,63 @@
     }).catch(function(e){body.innerHTML='<p class="empty">'+esc(e.message)+'</p>';});
   };
 
+
+  /* 원본 PDF는 서버에 연구자가 등록한 후에만 학생에게 표시한다.
+     활동지는 항상 읽기 전용, 정답은 Review 6분 후, 성찰지는 Review 10분 후 서버에서 개방. */
+  Student.ensureLessonPdf=function(kind){
+    var self=this,lesson=self.lesson(),cache=self.pdfCache||(self.pdfCache={}),loading=self.pdfLoading||(self.pdfLoading={});
+    if(cache[kind]||loading[kind])return;
+    loading[kind]=true;
+    api('GET','me/lesson-asset?lesson='+lesson+'&kind='+kind).then(function(r){
+      if(!self.me||self.lesson()!==lesson)return;
+      var raw=atob(r.base64),data=new Uint8Array(raw.length);
+      for(var i=0;i<raw.length;i++)data[i]=raw.charCodeAt(i);
+      cache[kind]={url:URL.createObjectURL(new Blob([data],{type:'application/pdf'})),filename:r.filename,sha256:r.sha256};
+    }).catch(function(e){if(self.me&&self.lesson()===lesson)cache[kind]={error:e.message};})
+    .then(function(){loading[kind]=false;if(App.screen==='student'&&self.me&&self.lesson()===lesson&&self.me.session.status==='open')self.renderStage();});
+  };
+  Student.pdfPanel=function(kind,pages,heading){
+    var self=this,cache=self.pdfCache||{},asset=cache[kind],step=self.stageIdx(),k=kind+':'+step;
+    var chosen=self.pdfPage&&self.pdfPage[k],page=pages.indexOf(chosen)>=0?chosen:pages[0];
+    if(!asset)return '<section class="student-pdf-panel"><h3>'+esc(heading)+'</h3><p class="hint">원본 PDF 불러오는 중…</p></section>';
+    if(asset.error)return '<section class="student-pdf-panel"><h3>'+esc(heading)+'</h3><p class="hint warn">원본 PDF가 아직 등록되지 않았습니다. 선생님께 알려 주세요.</p></section>';
+    return '<section class="student-pdf-panel"><div class="student-pdf-head"><h3>'+esc(heading)+'</h3>'+
+      '<a class="btn sm" href="'+asset.url+'#page='+page+'" target="_blank" rel="noopener">원본 크게 열기</a></div>'+
+      '<p class="hint">원본 활동지 그대로 표시합니다. 아래 답안 입력란에 작성해 주세요.</p>'+
+      (pages.length>1?'<nav class="student-pdf-nav" aria-label="활동지 쪽 선택">'+pages.map(function(n){
+         return '<button type="button" class="btn sm'+(n===page?' primary':'')+'" data-pdf-page="'+n+'" data-pdf-kind="'+kind+'">'+n+'쪽</button>';
+       }).join('')+'</nav>':'')+
+      '<iframe title="'+esc(heading)+' '+page+'쪽" class="student-pdf-frame" src="'+asset.url+'#page='+page+'&view=FitH" loading="lazy"></iframe>'+
+      '<p class="hint small">원본 문서는 내려받거나 새 창에서 크게 볼 수 있습니다.</p></section>';
+  };
+  var beforePdfStage=Student.renderStage;
+  Student.renderStage=function(){
+    beforePdfStage.call(this);
+    if(App.screen!=='student'||!this.me||!$('#right')||['waiting','catchup','finished'].includes(clockMode(this.me.session)))return;
+    var self=this,lesson=self.lesson(),stage=self.stageIdx(),view=self.view;
+    if(lesson>=3){
+      self.ensureLessonPdf('worksheet');
+      var pageMap={0:[1],1:[2],2:[3,4],3:[5,6,7],4:[8],5:[9]};
+      var chosenPages=pageMap[view]||[1];
+      $('#right').insertAdjacentHTML('afterbegin',self.pdfPanel('worksheet',chosenPages,lesson+'차시 원본 활동지'));
+    }
+    if(stage===5&&view===5){
+      var review=self.me.review||{};
+      if(review.unlocked&&lesson!==2){
+        self.ensureLessonPdf('answer');
+        $('#right').insertAdjacentHTML('beforeend',self.pdfPanel('answer',[1,2,3,4,5,6],lesson+'차시 정답지 · Review 6분 후 공개'));
+      }
+      if(review.reflect_unlocked){
+        self.ensureLessonPdf('reflection');
+        $('#right').insertAdjacentHTML('beforeend',self.pdfPanel('reflection',[1],'공통 성찰지 · Review 10분 후 공개'));
+      }
+    }
+    $$('[data-pdf-page]').forEach(function(b){b.onclick=function(){
+      var kind=b.getAttribute('data-pdf-kind'),key=kind+':'+self.stageIdx();
+      self.pdfPage=self.pdfPage||{};self.pdfPage[key]=Number(b.getAttribute('data-pdf-page'));
+      self.renderStage();
+    };});
+  };
   function restoreStaff(a){
     App.tok=a.token;App.role=a.role;App.tid=a.tid||null;
     $('#app').innerHTML='<main class="loading">저장된 '+(a.role==='teacher'?'교사':'연구자')+' 로그인으로 연결 중…</main>';
