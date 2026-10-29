@@ -1,6 +1,6 @@
 {
   "name": "pq4r-tutor-mvp",
-  "version": "0.5.10",
+  "version": "0.5.11",
   "private": true,
   "description": "PQ4R 튜터 1차시 연구용 MVP (Vercel + Postgres: Neon 또는 Supabase)",
   "license": "UNLICENSED",
