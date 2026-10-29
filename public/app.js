@@ -1716,7 +1716,8 @@
         '<div id="pdf-upload-progress" role="status" aria-live="polite">'+esc(self.assetUploadStatus||'')+'</div>'+
         '<div class="lesson-pdf-status">'+Array.from({length:8},function(_,i){var n=i+1;return '<div class="pdf-status-row"><strong>'+n+'차시</strong> '+
           ['worksheet','answer','reflection'].map(function(kind){var found=assets.some(function(x){return x.lesson===n&&x.kind===kind;});
-           return '<span class="pill '+(found?'ok':'warn')+'">'+({worksheet:'활동지',answer:'정답지',reflection:'성찰지'}[kind])+' '+(found?'등록':'미등록')+'</span>';
+           var builtin=(((n===1||n===2)&&kind==='worksheet')||(n===2&&kind==='answer'));
+           return '<span class="pill '+(found||builtin?'ok':'warn')+'">'+({worksheet:'활동지',answer:'정답지',reflection:'성찰지'}[kind])+' '+(found?'등록':builtin?'웹앱 내장':'미등록')+'</span>';
           }).join(' ')+'</div>';}).join('')+'</div>'+
         '<p class="hint small">1~2차시는 기존 온라인 활동지를 사용하며, 2차시 정답은 웹앱의 기존 해설을 유지합니다. 미등록 PDF는 화면에 원본으로 표시되지 않습니다. PDF 등록 전에는 해당 차시 본수업을 시작할 수 없습니다.</p></section>'+
         '<section class="rcard"><h3>시험 수업과 실제 수업</h3><p>같은 학생 코드와 PIN을 계속 사용합니다. 다만 시험은 “새 시험 수업 준비”, 본실험은 “새 본수업 준비”로 시작해야 이전 기록과 섞이지 않습니다.</p>'+
