@@ -581,6 +581,26 @@ body.is-student #layout{max-width:1420px;margin-inline:auto;grid-template-column
 @media(max-width:740px){.is-teacher .student-grid.worksheet-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.worksheet-zoom-header{padding:10px;align-items:flex-start}.worksheet-zoom-content{padding:8px}.worksheet-zoom-content .mirror-sheet-large{padding:13px}.mirror-sheet-large .mirror-problem-title{font-size:18px}}
 @media(prefers-reduced-motion:reduce){.teacher-worksheet-dialog{scroll-behavior:auto}}
 
+
+/* A01/T01 고정 수업 운영. 일반 사용자에게 데이터베이스 반 구분을 요구하지 않는다. */
+.fixed-setup{max-width:1320px;margin:auto;display:grid;gap:16px}
+.fixed-setup>h1{margin:0;font-size:27px}
+.fixed-setup-head{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;border:2px solid #b7c9e6}
+.fixed-setup-head h2{margin:0 0 7px}
+.fixed-setup-head p{margin:0;line-height:1.7}
+.fixed-setup-head .btn{min-height:54px;font-size:16px;padding:12px 22px}
+.fixed-class-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.fixed-class-card{border:1.5px solid #c5d5e8;display:grid;align-content:start;gap:13px}
+.fixed-class-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.fixed-class-head h2{font-size:23px;margin:4px 0 0}
+.fixed-code{font-size:14px;color:#50719d;font-weight:800}
+.fixed-class-card p{margin:0;line-height:1.7}
+.fixed-class-actions{display:flex;align-items:end;gap:9px;flex-wrap:wrap}
+.fixed-class-actions label{display:grid;gap:5px;font-size:13px;font-weight:700}
+.fixed-class-actions select{min-width:200px}
+.fixed-class-actions .btn{min-height:44px}
+@media(max-width:850px){.fixed-class-grid{grid-template-columns:1fr}.fixed-setup-head .btn{width:100%}}
+
 </style>
 </head>
 <body>
@@ -588,6 +608,6 @@ body.is-student #layout{max-width:1420px;margin-inline:auto;grid-template-column
 <div id="toasts" aria-live="polite"></div>
 <div class="netbar" id="netbar" hidden>연결이 끊겼어요 · 다시 연결하는 중</div>
 <noscript>이 페이지는 자바스크립트가 필요해요.</noscript>
-<script src="app.js?v=0.5.9"></script>
+<script src="app.js?v=0.5.10"></script>
 </body>
 </html>
