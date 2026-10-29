@@ -281,7 +281,7 @@
         '<p class="hint">수업 코드 A01 또는 T01, 본인 학생 코드, PIN을 입력하세요. 차시는 자동으로 연결됩니다.</p></form>';
     } else {
       box.innerHTML = '<form class="login-form staff" id="lf">' +
-        (tab === 'teacher' ? '<label>교사 ID<input id="l-tid" maxlength="20" value="' + esc(last.tid || 'T01') + '"></label>' : '') +
+        (tab === 'teacher' ? '<label>교사 ID<input id="l-tid" maxlength="20" value="' + esc(last.tid === 'T1' ? 'T01' : (last.tid || 'T01')) + '"></label>' : '') +
         '<label>' + (tab === 'teacher' ? '교사' : '연구자') + ' 비밀번호<input id="l-pw" type="password" required autocomplete="current-password"></label>' +
         '<button class="btn primary" type="submit">입장</button><p class="err" id="l-err" role="alert"></p>' +
         '<p class="hint">이 브라우저에 로그인 상태를 자동으로 기억합니다. 비밀번호는 저장하지 않습니다.</p><p class="hint">' + (tab === 'teacher' ? '교사 ID는 T01입니다. 수업 진행과 학생의 질문 확인, 발문 전송에 사용합니다. 기존 교사 비밀번호를 입력하세요.' : '수업 만들기, 명단, 기록·내보내기, 처치충실도 화면이에요.') + '</p></form>';
