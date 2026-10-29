@@ -181,3 +181,19 @@ create table if not exists supplements (
   primary key(session_id,student_id,item_id)
 );
 alter table supplements enable row level security;
+
+
+-- 연구자 원본 활동지·정답지·성찰지 (PDF만 허용). 학생 제공 시 서버에서 공개 시점을 검증한다.
+-- 본실험과 시연 중 문서 교체는 해시와 업로드 시각을 로그에 남겨 추적한다.
+create table if not exists lesson_assets (
+ lesson int not null check (lesson between 1 and 8),
+ kind text not null check(kind in ('worksheet','answer','reflection')),
+ filename text not null,
+ mime text not null default 'application/pdf',
+ bytes_base64 text not null,
+ sha256 text not null,
+ bytes_count int not null,
+ updated_at timestamptz not null default now(),
+ primary key(lesson,kind)
+);
+alter table lesson_assets enable row level security;
