@@ -462,7 +462,7 @@
       if (!due) return '';
       if (nowMs() < Date.parse(due)) return '<section class="panel"><h3>Review 첫 6분 · 문제 풀이</h3><p>정답 없이 문제를 풀고 풀이 근거를 작성해 제출해 주세요.</p><p id="review-release-count" class="hint small">정답 공개까지 ' + mmss((Date.parse(due)-nowMs())/1000) + '</p><p class="small">6분 뒤 두 집단에 정답과 풀이를 동시에 공개합니다. 작성한 답변은 보존됩니다.</p></section>';
       if (!data) return '<section class="panel"><h3>해설 공개 시간</h3><p>나의 답변을 보존하고 정답과 해설을 불러오는 중입니다.</p></section>';
-      var confidence = {explain:'다른 사람에게 설명할 수 있다',partial:'일부는 이해했지만 아직 어렵다',uncertain:'아직 이해하지 못했다'};
+      var confidence = {explain:'충분히 설명할 수 있다',partial:'일부 이해했다',uncertain:'아직 어렵다'};
       var solutionName = function(x) { var id=x.item_id||''; return id.indexOf('RV')>=0?'Review 다시 풀기':id.indexOf('RD')>=0?'Read 개념확인':'Reflect 문제 '+id.slice(-1); };
       var reflectAt=this.me.review&&this.me.review.reflection_at, canReflect=reflectAt&&nowMs()>=Date.parse(reflectAt);
       var cards = (data.solutions || []).map(function (sol,i) {
@@ -476,11 +476,11 @@
       }).join('');
       var ref = data.reflection;
       var completed = ref ? '<section class="panel"><h3>해설 후 성찰 저장 완료</h3><p><b>이해 정도:</b> ' + esc(confidence[ref.understanding]||'') + '</p><p><b>내 풀이와 비교:</b> ' + esc(ref.comparison) + '</p></section>' :
-        '<section class="panel"><h3>오늘 수업을 돌아보기</h3><p class="hint small">이해 정도를 선택하고 새롭게 알게 된 점이나 아직 어려운 점을 한 문장으로 적으세요.</p>' +
-        '<fieldset><legend>오늘 배운 내용을 다른 사람에게 설명할 수 있나요?</legend>' +
+        '<section class="panel"><h3>해설 공개 후 이해도 성찰</h3><p class="hint small">문제와 해설을 비교해 봅시다. 내가 실제로 이해한 것과 아직 어려운 부분을 솔직히 적어 주세요.</p>' +
+        '<fieldset><legend>지금 이 풀이를 다른 사람에게 설명할 수 있나요?</legend>' +
         Object.keys(confidence).map(function(k){return '<label class="choice-line"><input type="radio" name="post-understanding" value="'+k+'"><span>'+esc(confidence[k])+'</span></label>';}).join('') + '</fieldset>' +
-        '<label style="display:block;margin:10px 0">해설을 보고 새롭게 확인한 점 또는 아직 어려운 점 한 가지<textarea id="post-comparison" rows="2" maxlength="350" placeholder="한두 문장으로 적어 보세요."></textarea></label>' +
-        '<button type="button" class="btn primary" data-act="review-reflect">해설 후 성찰 저장</button></section>';
+        '<label style="display:block;margin:10px 0">내 풀이와 해설을 비교하여 새롭게 확인한 조건이나 성질, 또는 아직 이해하지 못한 부분 한 가지<textarea id="post-comparison" rows="2" maxlength="350" placeholder="한두 문장으로 적어 보세요."></textarea></label>' +
+        '<p class="hint">2분이 지나도 자동 종료되지 않습니다. 작성한 내용을 제출해 주세요.</p><button type="button" class="btn primary" data-act="review-reflect">성찰 제출</button></section>';
       var reflectUI = ref || canReflect ? completed : '<section class="panel"><h3>6~10분: 정답과 내 풀이 비교</h3><p>풀이에서 무엇이 같고 다른지 확인하세요. 마지막 2분에 짧은 이해도 성찰이 열립니다.</p><p id="review-reflect-count" class="hint small">성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000) + '</p></section>';
       if(canReflect)return reflectUI+'<details class="panel"><summary>정답과 풀이 다시 보기</summary>'+cards+'</details>';
       return '<section class="panel"><h2>Review 정답과 풀이 · 6분 후 공개</h2><p>첫 6분의 자기 풀이를 보존했습니다. 다음 4분은 정답 비교, 마지막 2분은 성찰입니다.</p><p class="hint small">두 집단에 동일하게 제공하는 검증용 해설 초안입니다.</p>' + cards + '</section>' + reflectUI;
@@ -1325,6 +1325,7 @@
     if(m==='legacy')return '기존 수동 수업';
     if(m==='waiting')return '<span class="tm-k">'+(s.settings&&s.settings.demoSession?'시연 · ':'')+'Preview 시작 대기</span><strong class="clock-digits">0:00</strong><small>경과 시간 · 시작 후 Preview '+stageMin(s.lesson,0)+'분</small>';
     if(m==='finished')return '수업 완료';
+    if(m==='reflection')return '<span class="tm-k">성찰 작성 중 · 자동 종료 없음</span><strong class="clock-digits">∞</strong><small>학생들이 성찰을 마치면 교사가 종료합니다.</small>';
     var left=m==='paused'?c.remaining_ms/1000:(Date.parse(c.deadline)-nowMs())/1000;
     var start=Date.parse(c.started_at||s.stage_opened&&s.stage_opened[0]),end=m==='paused'?Date.parse(c.paused_at):nowMs(),elapsed=Number.isFinite(start)?Math.max(0,(end-start-(c.paused_total_ms||0))/1000):0;
     return '<span class="tm-k">'+(m==='paused'?'일시정지':m==='catchup'?'보완 시간':C.stages[s.stage].id)+' 남은 시간</span> <strong class="clock-digits'+(left<=60?' clock-urgent':'')+'">'+mmss(Math.max(0,left))+'</strong><small>수업 경과 '+mmss(elapsed)+'</small>';
@@ -1369,7 +1370,7 @@
       $$('[data-cl-test]').forEach(function(b){b.onclick=function(){window.open('/?class='+encodeURIComponent(cls.code)+'#login-student','_blank','noopener');toast('새 창에서 반 코드와 학생 코드, PIN으로 입장해 확인하세요.');};});
     }).catch(function(e){toast(e.message,'warn');});
   };
-  function clockLabel(s){return ({waiting:'시작 대기',running:'진행 중',paused:'일시정지',catchup:'보완 시간',finished:'완료'})[clockMode(s)]||'수동 진행';}
+  function clockLabel(s){return ({waiting:'시작 대기',running:'진행 중',paused:'일시정지',catchup:'보완 시간',reflection:'성찰 작성 중',finished:'완료'})[clockMode(s)]||'수동 진행';}
   Teacher.picked={};Teacher.filter='all';Teacher.reqItem='';Teacher.bankId='';
   function countdownNotice(target,session){
     if(!session||clockMode(session)!=='running'||!session.clock||!session.clock.deadline)return;
@@ -1454,9 +1455,9 @@
     if(!auto){note.innerHTML='<b>이전 방식으로 만든 수동 수업입니다.</b> 이 수업에는 자동 시작 버튼이 없습니다. 연구자 화면에서 등록된 반을 선택한 뒤 새 수업이나 시연을 준비해 주세요. <button class="btn sm" id="open-research-setup">연구자 수업 준비로</button>';$('#open-research-setup').onclick=function(){if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{var saved=rememberedStaff('researcher');if(saved){tabStore('pq4r:staff-screen',{screen:'researcher'});restoreStaff(saved);}else renderEntry('researcher');}};}
     else if(m==='waiting'){note.textContent='① 학생들이 반 코드로 먼저 입장합니다. ② 아래 접속 인원을 확인합니다. ③ '+'수업 시작'+'을 누르면 모두 Preview 2분부터 시작합니다. 시작 전에는 시간이 흐르지 않습니다.';
       if(!s.clock.ready&&self.readyAttempt!==s.code){self.readyAttempt=s.code;api('POST','staff/ready',{session:s.code}).then(function(){return self.refresh();}).catch(function(e){toast(e.message,'warn');note.textContent=e.message;});}
-    }else if(m==='paused')note.textContent='현재 단계와 남은 시간, 학생 답안이 보존되어 있습니다. 이어서 진행을 누르면 이 지점부터 학생들과 함께 재개합니다. 새 수업을 만들 필요가 없습니다.';else note.textContent='교사 시작 시각을 기준으로 모든 학생이 함께 진행합니다. 시간이 끝나면 자동으로 다음 단계로 이동합니다.';
-    var actions=auto?(m==='waiting'?'<button class="btn primary" data-clock="start">'+'수업 시작'+'</button>':['running','catchup'].includes(m)?'<button class="btn" data-clock="pause">긴급 일시정지</button>':m==='paused'?'<button class="btn primary" data-clock="resume">이어서 진행</button>':'<span class="pill">수업 완료</span>'):'<button class="btn" id="t-prev">이전 단계</button><button class="btn primary" id="t-next">다음 단계</button>';
-    if($('#clock-actions').innerHTML!==actions){$('#clock-actions').innerHTML=actions;$$('[data-clock]').forEach(function(b){b.onclick=function(){b.disabled=true;api('POST','staff/clock',{session:self.code,action:b.getAttribute('data-clock')}).then(function(){self.queueFingerprint=null;return self.refresh();}).catch(function(e){toast(e.message,'warn');self.refresh();});};});if(!auto){$('#t-prev').onclick=function(){if(s.stage>0)self.setStage(-1);};$('#t-next').onclick=function(){if(s.stage<5)self.setStage(1);};}}
+    }else if(m==='paused')note.textContent='현재 단계와 남은 시간, 학생 답안이 보존되어 있습니다. 이어서 진행을 누르면 이 지점부터 학생들과 함께 재개합니다. 새 수업을 만들 필요가 없습니다.';else if(m==='reflection')note.textContent='성찰지 작성 중입니다. Review 마지막 2분이 지나도 자동 종료되지 않습니다. 모든 학생의 성찰 제출을 확인한 뒤 직접 종료하세요.';else note.textContent='교사 시작 시각을 기준으로 모든 학생이 함께 진행합니다. 시간이 끝나면 자동으로 다음 단계로 이동합니다.';
+    var actions=auto?(m==='waiting'?'<button class="btn primary" data-clock="start">'+'수업 시작'+'</button>':['running','catchup'].includes(m)?'<button class="btn" data-clock="pause">긴급 일시정지</button>':m==='reflection'?'<button class="btn primary" data-clock="finish">성찰 확인 후 수업 종료</button>':m==='paused'?'<button class="btn primary" data-clock="resume">이어서 진행</button>':'<span class="pill">수업 완료</span>'):'<button class="btn" id="t-prev">이전 단계</button><button class="btn primary" id="t-next">다음 단계</button>';
+    if($('#clock-actions').innerHTML!==actions){$('#clock-actions').innerHTML=actions;$$('[data-clock]').forEach(function(b){b.onclick=function(){if(b.getAttribute('data-clock')==='finish'&&!confirm('학생들의 성찰 제출을 확인했습니까? 종료하면 성찰을 추가 저장할 수 없습니다.'))return;b.disabled=true;api('POST','staff/clock',{session:self.code,action:b.getAttribute('data-clock')}).then(function(){self.queueFingerprint=null;return self.refresh();}).catch(function(e){toast(e.message,'warn');self.refresh();});};});if(!auto){$('#t-prev').onclick=function(){if(s.stage>0)self.setStage(-1);};$('#t-next').onclick=function(){if(s.stage<5)self.setStage(1);};}}
     var restart=$('#t-demo-restart');restart.hidden=!s.settings.demoSession;restart.onclick=function(){if(!confirm('새 시연을 Preview 2분에서 다시 준비할까요? 이전 답안과 기록은 그대로 보존됩니다.'))return;restart.disabled=true;api('POST','staff/new-demo',{class_code:s.class_name,lesson:s.lesson,videoUrl:s.settings.videoUrl||'',replace_session:s.status==='open'?s.code:null}).then(function(r){store('pq4r:teacher-session',r.session.code);Teacher.start(r.session.code);}).catch(function(e){toast(e.message,'warn');restart.disabled=false;});};
     var people=self.data.students,online=people.filter(function(p){return p.last_seen&&nowMs()-Date.parse(p.last_seen)<90000;}).length;
     $('#console-stats').innerHTML='<span>등록 <b>'+people.length+'</b></span><span>접속 <b>'+online+'</b></span><span>도움 요청 <b>'+self.data.requests.length+'</b></span><span>현재 단계 미제출 <b>'+people.filter(function(p){return self.stageItems().some(function(id){return !p.items[id]||!p.items[id].a;});}).length+'</b></span>';
@@ -1659,11 +1660,11 @@
   function studentStatus(){
     if(App.screen!=='student'||!Student.me)return;var self=Student,m=clockMode(self.me.session),requests=(self.me.requests||[]).filter(function(r){return stageIdxOf(r.stage)===self.stageIdx();}),bar=$('#student-status-bar');
     if(!bar){bar=document.createElement('div');bar.id='student-status-bar';bar.className='notice-bar';$('#layout').before(bar);}
-    bar.textContent=m==='waiting'?'입장 완료 · 교사의 수업 시작을 기다리고 있습니다.':m==='paused'?'수업 일시정지 · 입력과 타이머가 멈춰 있습니다.':m==='finished'?'수업 완료':m==='catchup'?'보완 시간 · 시간 내 답안과 별도 저장합니다.':requests.length?'도움 요청 '+requests.length+'건 전달됨 · 교사 답변은 해당 문제 아래에 표시됩니다.':'수업 진행 중 · 답을 제출한 뒤 도움이 필요하면 해당 문제에서 도움을 요청하세요.';
+    bar.textContent=m==='waiting'?'입장 완료 · 교사의 수업 시작을 기다리고 있습니다.':m==='paused'?'수업 일시정지 · 입력과 타이머가 멈춰 있습니다.':m==='finished'?'수업 완료':m==='catchup'?'보완 시간 · 시간 내 답안과 별도 저장합니다.':m==='reflection'?'성찰 작성 중 · 교사가 종료할 때까지 저장할 수 있습니다.':requests.length?'도움 요청 '+requests.length+'건 전달됨 · 교사 답변은 해당 문제 아래에 표시됩니다.':'수업 진행 중 · 답을 제출한 뒤 도움이 필요하면 해당 문제에서 도움을 요청하세요.';
   }
   Student.showNotice=function(n){if(!n||n.id===this.noticeId)return;this.noticeId=n.id;toast(n.text,'warn');var box=$('#student-notice');if(!box){box=document.createElement('div');box.id='student-notice';box.className='notice-bar';box.setAttribute('role','status');$('#app').prepend(box);}box.textContent=n.text;};
   var originalStudentStart=Student.start;
-  Student.start=function(me){var self=this;if(me.session.status!=='open')return logout('이전 수업이 종료되었습니다. 수업 코드로 다시 입장해 주세요.');self.lastWarning='';self.nearEndFlush='';originalStudentStart.call(self,me);self.showNotice(me.notice);studentStatus();
+  Student.start=function(me){var self=this;self.pdfCache={};self.pdfLoading={};self.pdfPage={};if(me.session.status!=='open')return logout('이전 수업이 종료되었습니다. 수업 코드로 다시 입장해 주세요.');self.lastWarning='';self.nearEndFlush='';originalStudentStart.call(self,me);self.showNotice(me.notice);studentStatus();
     App.timers.push(setInterval(function(){if(App.screen==='student'&&clockMode(self.me.session)==='waiting'&&!self.waitingPoll){self.waitingPoll=true;self.poll().finally(function(){self.waitingPoll=false;});}},1000));
     App.timers.push(setInterval(function(){
     var s=self.me.session,c=s.clock||{},m=clockMode(s);if(m!=='running'&&m!=='catchup')return;var left=(Date.parse(c.deadline)-nowMs())/1000;
