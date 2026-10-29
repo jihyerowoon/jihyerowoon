@@ -1003,7 +1003,7 @@
     tab: 'sess', code: null, sessions: [], events: [], admin: null,
     start: function () {
       cleanup(); App.screen = 'researcher';tabStore('pq4r:staff-screen',{screen:'researcher'});
-      var self = this;
+      var self = this;self.tab='classes';
       document.body.className = 'is-researcher';
       self.code = store('pq4r:researcher-session') || null;
       $('#app').innerHTML = topbar('연구자 화면', '<span id="r-sess" class="pill"></span>') +
@@ -1028,7 +1028,7 @@
     },
     renderTop: function () {
       var s = this.cur(), n = $('#stepper'); if (n) n.innerHTML = s ? stepperHTML(s.stage, s.stage, { noNav: true, lesson: s.lesson }) : '';
-      var p = $('#r-sess'); if (p) p.textContent = s ? '수업 ' + s.code : '수업 없음';
+      var p = $('#r-sess'); if (p) p.textContent = s ? '기록 ID ' + s.code : '수업 없음';
       var tl = $('#tb-lesson'); if (tl) tl.textContent = s ? lessonLabel(s.lesson) : 'PQ4R 튜터';
     },
     render: function () {
@@ -1404,7 +1404,7 @@
   };
   Teacher.shell=function(){
     var self=this;self.picked={};self.bankId='';self.reqItem='';self.batchResults='';self.queueFingerprint=null;self.filter='all';self.gridMode=store('pq4r:teacher-grid')||'worksheet';self.mirrorStudent=null;self.readyAttempt=null;
-    $('#app').innerHTML=topbar((App.role==='researcher'?'연구자 수업 운영':'교사 '+esc(App.tid||'T01'))+' · '+esc(self.code),'<button class="btn sm" id="t-switch">'+(App.role==='researcher'?'연구 준비':'수업 바꾸기')+'</button>')+
+    $('#app').innerHTML=topbar((App.role==='researcher'?'연구자 수업 운영':'교사 '+esc(App.tid||'T01'))+' · 수업 운영','<button class="btn sm" id="t-switch">'+(App.role==='researcher'?'연구 준비':'수업 바꾸기')+'</button>')+
       '<main class="teacher-console"><section class="console-header rcard"><div><h1 id="console-title">수업 운영</h1><p id="console-sub" class="hint"></p></div><div id="teacher-live-timer" class="teacher-live-timer" aria-live="off"></div><div class="row"><div id="clock-actions" class="row"></div><button class="btn" id="t-demo-restart" hidden>시연 처음부터</button></div></section><div class="row staff-view-nav"><button class="btn sm" id="teacher-research-view">연구 준비 화면</button><button class="btn sm" id="teacher-student-view">학생 입장 화면 열기</button><button class="btn sm" id="teacher-alert-enable" type="button">알림 소리 켜기</button><span class="hint small">새 도움 요청은 화면에 표시됩니다. 소리 알림은 버튼으로 켜세요.</span></div><div class="notice-bar" id="teacher-entry-note"></div><div class="console-stats" id="console-stats"></div><div class="console-grid"><section class="rcard" id="teacher-wall"><div class="worksheet-wall-title"><h2>전체 학생 현황</h2><button type="button" class="btn sm" id="teacher-wall-fullscreen">5열 6행 전체화면</button></div><div class="row worksheet-view-controls"><button class="btn sm primary" data-grid-mode="worksheet" aria-pressed="true">활동지 30명 보기</button><button class="btn sm" data-grid-mode="status" aria-pressed="false">상태만 보기</button><span class="hint small">학생이 입력 중인 현재 활동지를 약 3초마다 반영합니다. 화면 영상 공유는 아닙니다.</span></div><div class="row"><button class="btn sm" data-filter="all">전체</button><button class="btn sm" data-filter="help">도움 요청</button><button class="btn sm" data-filter="missing">미제출</button></div><div class="student-grid" id="student-grid"></div><div class="tablewrap"><table class="roster" id="roster" hidden></table></div></section><section class="rcard"><h2 id="request-title">도움 요청</h2><label>문항별 보기<select id="request-item"></select></label><p class="hint small">학생의 최근 제출 답안과 추천 발문을 바로 확인하세요. 도움 버튼을 누른 요청만 표시합니다.</p><div id="queue"></div></section><section class="rcard"><div id="batch-panel"></div><details id="detail-fold" open><summary>학생 답안과 지원 기록</summary><div id="tdetail"><p class="hint">학생을 선택하면 자세한 답과 기록을 볼 수 있습니다.</p></div></details></section></div><div class="row" id="notice-actions"><b>전체 안내</b><button class="btn sm" data-notice="time">시간 확인</button><button class="btn sm" data-notice="save">제출 안내</button><button class="btn sm" data-notice="device">접속 문제 안내</button></div></main>';
     bindExit();
     $('#teacher-alert-enable').onclick=function(){
@@ -1700,7 +1700,8 @@
           '<button class="btn primary" data-fixed-run="'+g.code+'"'+(!ready?' disabled':'')+'>새 본수업 준비</button>'+
           '<button class="btn" data-fixed-demo="'+g.code+'"'+(!ready?' disabled':'')+'>새 시험 수업 준비</button>'+
           (running?'<button class="btn" data-fixed-open="'+esc(running.code)+'">현재 수업 운영</button>':latest?'<span class="hint small">마지막 수업: '+(latest.settings&&latest.settings.demoSession?'시험':'본수업')+'</span>':'')+
-          '</div><p class="hint small">새 수업을 준비하면 학생 코드는 유지되고 답안 및 로그는 새로운 실행 기록으로 저장됩니다.</p></article>';
+          '</div><details class="fixed-video-options"><summary>Read 단계 개념영상 설정 (선택)</summary><label>영상 링크<input type="url" data-fixed-video="'+g.code+'" placeholder="https://..."></label></details>'+
+          '<p class="hint small">새 수업을 준비하면 학생 코드는 유지되고 답안 및 로그는 새로운 실행 기록으로 저장됩니다.</p></article>';
       }).join('');
       body.innerHTML='<div class="fixed-setup"><h1>수업 준비</h1>'+
         '<p>학생은 수업 코드, 학생 코드, PIN만 입력합니다. 내부 등록 작업은 여기서 한 번만 진행합니다.</p>'+
@@ -1725,7 +1726,7 @@
             lesson=Number($('[data-fixed-lesson="'+code+'"]').value);
         if(current&&!confirm('이전 수업의 기록을 보존하고 새 '+(demo?'시험':'본')+'수업을 준비할까요? 이전 수업을 계속할 경우 “현재 수업 운영”을 선택해야 합니다.'))return;
         b.disabled=true;
-        api('POST',demo?'staff/new-demo':'staff/new-lesson',{class_code:code,lesson:lesson,replace_session:current?current.code:null})
+        api('POST',demo?'staff/new-demo':'staff/new-lesson',{class_code:code,lesson:lesson,videoUrl:($('[data-fixed-video="'+code+'"]')||{}).value||'',replace_session:current?current.code:null})
           .then(function(r){return self.loadSessions().then(function(){Teacher.start(r.session.code);});})
           .catch(function(e){toast(e.message,'warn');b.disabled=false;});
       };});
