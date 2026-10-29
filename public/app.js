@@ -1708,12 +1708,12 @@
         '<p>학생은 수업 코드, 학생 코드, PIN만 입력합니다. 내부 등록 작업은 여기서 한 번만 진행합니다.</p>'+
         '<section class="rcard fixed-setup-head"><div><h2>학생 60명 코드 설정</h2><p>수업 코드 A01과 T01 · 학생 A01 ~ A30, T01 ~ T30 · 교사 ID T01 · 공통 PIN 1111</p></div>'+
         '<button class="btn primary" id="fixed-setup-submit">학생 60명 등록 또는 확인</button></section>'+
-        '<p class="hint">기존 학생 코드가 다른 수업에 연결되어 있으면 기존 기록을 보호하기 위해 등록을 중단합니다. 공통 PIN은 분실 시 구분이 어려우므로 실제 연구에서는 보안에 주의하세요.</p>'+
+        '<p class="hint">이전 수업에 연결된 학생도 지정한 코드로 재배정합니다. 이전 시험 기록은 보존하며 새 수업 기록과 분리합니다. 공통 PIN은 분실 시 구분이 어려우므로 실제 연구에서는 보안에 주의하세요.</p>'+
         '<div class="fixed-class-grid">'+cards+'</div>'+
         '<section class="rcard" id="lesson-pdf-manager"><h2>활동지 · 정답지 · 성찰지 PDF 등록</h2>'+
-        '<p>압축을 푼 PDF 14개를 모두 선택하면 파일명에서 차시와 종류를 자동 판별합니다. 공통 성찰지는 1~8차시에 한 번에 연결합니다.</p>'+
-        '<label class="pdf-upload-drop">PDF 원본 여러 개 선택<input id="lesson-pdf-upload" type="file" multiple accept=".pdf,application/pdf"></label>'+
-        '<div id="pdf-upload-progress" role="status" aria-live="polite"></div>'+
+        '<p>압축파일 ZIP 1개를 그대로 선택하거나, 압축을 푼 PDF 14개를 한 번에 선택하면 차시와 종류를 자동 판별합니다. 공통 성찰지는 1~8차시에 한 번에 연결합니다.</p>'+
+        '<label class="pdf-upload-drop">ZIP 1개 또는 PDF 14개 선택<input id="lesson-pdf-upload" type="file" multiple accept=".zip,.pdf,application/pdf,application/zip"></label>'+
+        '<div id="pdf-upload-progress" role="status" aria-live="polite">'+esc(self.assetUploadStatus||'')+'</div>'+
         '<div class="lesson-pdf-status">'+Array.from({length:8},function(_,i){var n=i+1;return '<div class="pdf-status-row"><strong>'+n+'차시</strong> '+
           ['worksheet','answer','reflection'].map(function(kind){var found=assets.some(function(x){return x.lesson===n&&x.kind===kind;});
            return '<span class="pill '+(found?'ok':'warn')+'">'+({worksheet:'활동지',answer:'정답지',reflection:'성찰지'}[kind])+' '+(found?'등록':'미등록')+'</span>';
@@ -1721,9 +1721,44 @@
         '<p class="hint small">1~2차시는 기존 온라인 활동지를 사용하며, 2차시 정답은 웹앱의 기존 해설을 유지합니다. 미등록 PDF는 화면에 원본으로 표시되지 않습니다. PDF 등록 전에는 해당 차시 본수업을 시작할 수 없습니다.</p></section>'+
         '<section class="rcard"><h3>시험 수업과 실제 수업</h3><p>같은 학생 코드와 PIN을 계속 사용합니다. 다만 시험은 “새 시험 수업 준비”, 본실험은 “새 본수업 준비”로 시작해야 이전 기록과 섞이지 않습니다.</p>'+
         '<p class="hint">실제 수업이 진행 중이면 새 수업을 만들지 말고 “현재 수업 운영”을 선택하세요. 기존 기록을 삭제하거나 초기화하지 않습니다.</p></section></div>';
+      // ZIP 1개 선택으로 PDF 원본 14개를 개별 업로드. 브라우저에서 압축 해제하여 서버 ZIP 업로드 제한 회피.
+      async function pdfsFromZip(file){
+        if(!('DecompressionStream' in window))throw Error('이 브라우저는 ZIP 자동 압축 해제를 지원하지 않습니다. Chrome 최신 버전에서 시도하세요.');
+        var bin=await file.arrayBuffer(),v=new DataView(bin),last=bin.byteLength-22,found=-1;
+        for(var pos=last;pos>=Math.max(0,last-65535);pos--)if(v.getUint32(pos,true)===0x06054b50){found=pos;break;}
+        if(found<0)throw Error('ZIP 중앙 디렉터리를 찾지 못했습니다.');
+        var count=v.getUint16(found+10,true),ptr=v.getUint32(found+16,true),files=[];
+        if(count>100||ptr>=bin.byteLength)throw Error('압축파일 구조가 올바르지 않습니다.');
+        for(var k=0;k<count;k++){
+          if(v.getUint32(ptr,true)!==0x02014b50)throw Error('ZIP 파일 목록이 손상되었습니다.');
+          var method=v.getUint16(ptr+10,true),size=v.getUint32(ptr+20,true),nameLen=v.getUint16(ptr+28,true),
+              extraLen=v.getUint16(ptr+30,true),commentLen=v.getUint16(ptr+32,true),loc=v.getUint32(ptr+42,true);
+          var name=new TextDecoder('utf-8').decode(new Uint8Array(bin,ptr+46,nameLen)).split('/').pop();
+          ptr+=46+nameLen+extraLen+commentLen;
+          if(!name||!/\.pdf$/i.test(name))continue;
+          if(!size||size>2000000||loc+30>bin.byteLength||v.getUint32(loc,true)!==0x04034b50)throw Error('ZIP 내부 PDF의 크기나 헤더가 잘못됐습니다: '+name);
+          var dataStart=loc+30+v.getUint16(loc+26,true)+v.getUint16(loc+28,true);
+          if(dataStart+size>bin.byteLength)throw Error('ZIP PDF 압축 데이터가 손상됐습니다: '+name);
+          var body=new Uint8Array(bin.slice(dataStart,dataStart+size)),bytes;
+          if(method===0)bytes=body;
+          else if(method===8){
+            try{bytes=new Uint8Array(await new Response(new Blob([body]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());}
+            catch(e){throw Error('압축 해제 실패 ('+name+'): '+e.message);}
+          }else throw Error('지원하지 않는 ZIP 압축 방식: '+method);
+          if(bytes.length>1550000||new TextDecoder('ascii').decode(bytes.slice(0,5))!=='%PDF-')throw Error('PDF 원본 또는 파일 크기를 확인하세요: '+name);
+          files.push(new File([bytes],name,{type:'application/pdf'}));
+        }
+        if(!files.length)throw Error('ZIP 안에서 PDF 파일을 찾지 못했습니다.');
+        return files;
+      }
       $('#lesson-pdf-upload').onchange=async function(){
         var fileList=Array.from(this.files||[]),status=$('#pdf-upload-progress');
         if(!fileList.length)return;
+        if(fileList.some(function(f){return /.zip$/i.test(f.name);})){
+          if(fileList.length!==1){status.textContent='ZIP 파일은 하나씩 선택해 주세요.';return;}
+          try{status.textContent='ZIP 압축 해제 중…';fileList=await pdfsFromZip(fileList[0]);}
+          catch(e){status.textContent='ZIP 압축 해제 실패: '+e.message;return;}
+        }
         var jobs=[],errors=[];
         fileList.forEach(function(file){
           if(!/\.pdf$/i.test(file.name)){errors.push(file.name+': PDF 형식이 아닙니다.');return;}
@@ -1751,7 +1786,7 @@
             }catch(e){errors.push(job.lesson+'차시 '+job.kind+': '+e.message);}
             done++;
           }
-          status.textContent='등록 성공 '+ok+'/'+jobs.length+(errors.length?' · 오류: '+errors.join(' / '):' · 모든 등록 완료');
+          self.assetUploadStatus='등록 성공 '+ok+'/'+jobs.length+(errors.length?' · 오류: '+errors.join(' / '):' · 모든 등록 완료');
           await self.renderClasses();
           toast(errors.length?'일부 자료에 오류가 있습니다. PDF 상태를 확인하세요.':'원본 PDF 등록을 완료했습니다.',errors.length?'warn':'ok');
         }finally{this.disabled=false;}
@@ -1760,7 +1795,7 @@
         if(!confirm('학생 60명의 코드를 A01~A30, T01~T30으로 등록하고, 교사 ID는 T01, 기존 해당 학생의 PIN도 모두 1111로 맞추시겠습니까? 기존 답안 기록은 삭제하지 않습니다.'))return;
         var b=this;b.disabled=true;b.textContent='등록 중…';
         api('POST','admin/fixed-codes',{}).then(function(r){
-          toast('등록 확인: 새 학생 '+r.created+'명, PIN 변경 및 복구 '+r.updated+'명, 유지 '+r.unchanged+'명.');
+          toast('등록 완료: 새 학생 '+r.created+'명, 기존 학생 재배정 '+r.reassigned+'명, 기타 업데이트 '+r.updated+'명, 유지 '+r.unchanged+'명.');
           return self.loadSessions().then(function(){return self.renderClasses();});
         }).catch(function(e){toast(e.message,'warn');b.disabled=false;b.textContent='학생 60명 등록 또는 확인';});
       };
