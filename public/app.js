@@ -2064,7 +2064,7 @@
     }
     // Review 성찰은 단일 웹 입력폼만 사용한다. 과거 버전의 중복 PDF 패널이 있으면 제거한다.
     if(stage===5&&view===5){
-      $('.student-pdf-panel').forEach(function(panel){
+      $$('.student-pdf-panel').forEach(function(panel){
         if(panel.querySelector('[data-pdf-kind="reflection"]')||/공통 성찰지/.test(panel.querySelector('h3')&&panel.querySelector('h3').textContent||''))panel.remove();
       });
     }
