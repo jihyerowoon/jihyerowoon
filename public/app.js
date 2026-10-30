@@ -906,7 +906,7 @@
       var asks=(d.student_questions||[]).filter(function(q){return q.item_id===self.selItem;});
       if(asks.length)h+='<section class="student-question-history"><b>학생이 직접 작성한 질문</b>'+asks.slice(0,5).map(function(q){return '<p>'+esc(q.question)+' <small>'+kst(q.at)+'</small></p>';}).join('')+'</section>';
       n.innerHTML = h;
-      $('[data-itab]', n).forEach(function (b) { b.onclick = function () { self.selItem = b.getAttribute('data-itab'); self.confirmCustom = false; self.renderDetailTop(); if (s.group === 'CONTROL') self.renderForm(); }; });
+      $$('[data-itab]', n).forEach(function (b) { b.onclick = function () { self.selItem = b.getAttribute('data-itab'); self.confirmCustom = false; self.renderDetailTop(); if (s.group === 'CONTROL') self.renderForm(); }; });
     },
     renderForm: function () {
       var self = this, d = self.detail, n = $('#td-form'); if (!n) return;
@@ -1419,8 +1419,8 @@
     $('#teacher-research-view').onclick=function(){tabStore('pq4r:staff-screen',{screen:'researcher'});if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{var a=rememberedStaff('researcher');if(a)restoreStaff(a);else renderEntry('researcher');}};
     $('#teacher-student-view').onclick=function(){var cls=self.data&&self.data.session.class_name;if(cls)window.open('/?class='+encodeURIComponent(cls)+'#login-student','_blank','noopener');};
     $('#t-switch').onclick=function(){if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{self.code=null;store('pq4r:teacher-session',null);Teacher.start();}};
-    $('[data-filter]').forEach(function(b){b.onclick=function(){self.filter=b.getAttribute('data-filter');self.renderRoster();};});
-    $('[data-grid-mode]').forEach(function(b){b.onclick=function(){self.gridMode=b.getAttribute('data-grid-mode');store('pq4r:teacher-grid',self.gridMode);self.renderRoster();};});
+    $$('[data-filter]').forEach(function(b){b.onclick=function(){self.filter=b.getAttribute('data-filter');self.renderRoster();};});
+    $$('[data-grid-mode]').forEach(function(b){b.onclick=function(){self.gridMode=b.getAttribute('data-grid-mode');store('pq4r:teacher-grid',self.gridMode);self.renderRoster();};});
     $('#teacher-wall').addEventListener('fullscreenchange',function(){
       var b=$('#teacher-wall-fullscreen');if(b)b.textContent=document.fullscreenElement===$('#teacher-wall')?'전체화면 닫기':'5열 6행 전체화면';
     });
