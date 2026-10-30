@@ -593,10 +593,8 @@
       });
       h += '</div>';
       if (editable) {
-        h += '<div class="revise" data-revise="' + it.id + '" hidden><label for="rv-' + it.id + '">고친 이유 <small>(선택)</small></label><input id="rv-' + it.id + '" data-reason="' + it.id + '" maxlength="300" autocomplete="off" value="' + esc(rec.reason || '') + '" placeholder="무엇을 왜 고쳤는지 한 줄로"></div>' +
-          ((it.stage === 'Preview' || it.kind === 'memo') ? '' :
-            '<label class="help-question-label" for="ask-' + it.id + '">궁금하거나 막힌 부분이 있나요? <small>선택 입력 · 먼저 답을 제출해 주세요.</small></label>'+
-            '<input class="help-question-input" id="ask-' + it.id + '" maxlength="280" type="text" data-help-question="' + it.id + '" placeholder="예: 조건이 하나 더 있는지 어떻게 확인하나요?" value="' + esc(rec.question_draft||'') + '">')+
+        h += '<div class="revise" data-revise="' + it.id + '" hidden><label for="rv-' + it.id + '">무엇을 수정했나요? <small>(수정해서 다시 제출할 때 작성)</small></label><input id="rv-' + it.id + '" data-reason="' + it.id + '" maxlength="300" autocomplete="off" value="' + esc(rec.reason || '') + '" placeholder="처음 답에서 바꾼 부분과 그 이유를 적어 보세요."></div>' +
+          
           '<footer class="item-f"><button type="button" class="btn primary" data-act="submit" data-id="' + it.id + '">내 답 제출하기</button>' +
           ((it.stage === 'Preview' || it.kind === 'memo') ? '' : '<button type="button" class="btn ghost" data-act="help" data-id="' + it.id + '">질문으로 도움받기</button>') +
           '<span class="busy" data-busy="' + it.id + '" hidden>점검 중…</span></footer>';
@@ -753,7 +751,7 @@
       self.busy[id] = true; self.refreshItem(id);
       api('POST', 'me/submit', { item_id: id, fields: self.currentFields(id), selections: clone(r.draft_sel || {}), reason: r.attempts ? (r.reason || '') : '', client_ts: new Date().toISOString() })
         .then(function (res) {
-          self.applyResult(res);toast('답안을 저장하고 점검했습니다. 도움이 필요할 때만 질문으로 도움받기를 눌러 주세요.');
+          self.applyResult(res);toast('답안을 저장했습니다. 필요하면 질문으로 도움받기를 눌러 주세요.');
           delete self.pending[id]; store(self.pendKey(), self.pending);
           var rv = $('[data-reason="' + id + '"]'); if (rv) rv.value = '';
         })
@@ -1653,6 +1651,14 @@
       $('#post-comparison').oninput=autoReflection;$$('input[name="post-understanding"]').forEach(function(r){r.onchange=autoReflection;});
     }
     if(m==='waiting'||m==='paused'){$$('#right input, #right textarea, #right button').forEach(function(n){n.disabled=true;});$('#right').insertAdjacentHTML('afterbegin','<p class="notice-bar">'+(m==='waiting'?(self.settings().demoSession?'새 시연은 Preview 2분에서 준비되었습니다. 교사가 시연 시작을 누르면 작성과 타이머가 함께 시작됩니다.':'선생님이 수업을 시작하면 작성할 수 있습니다.'):'수업이 일시정지되었습니다. 다시 시작할 때까지 기다려 주세요.')+'</p>');}
+    if(self.view===5&&self.stageIdx()===5){
+      var confidence=$('#right [data-fieldwrap$=":pre_confidence"]');
+      if(confidence){
+        var bottom=document.createElement('section');bottom.className='panel review-confidence-bottom';
+        bottom.innerHTML='<h3>정답 공개 전, 내 판단의 확신도</h3><p class="hint small">답과 풀이를 적은 뒤 마지막으로 표시하세요. 별도 질문이나 AI 발문은 필요하지 않습니다.</p>';
+        bottom.appendChild(confidence);$('#right').appendChild(bottom);
+      }
+    }
     if(self.view===2&&self.stageIdx()===2&&self.settings().videoUrl){self.renderReadVideo();}
     if(self.settings().autoTimer)$('#right').insertAdjacentHTML('afterbegin','<p class="notice-bar" role="note">다 쓰지 않아도 시간이 끝나면 자동 이동합니다. 작성 내용은 자동 저장되며, 마지막에 보완 5분을 제공합니다.</p>');
   };
