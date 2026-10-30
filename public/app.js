@@ -258,11 +258,28 @@
   /* =====================================================================
    * 입장
    * ===================================================================== */
+  /* 수업 공유 링크는 실행 번호만 포함. PIN이나 비밀번호를 링크에 넣지 않는다. */
+  function shareLink(role,classCode,sessionCode) {
+    if(!sessionCode||!classCode)throw new Error('먼저 수업을 준비해 주세요.');
+    var u=new URL('/',location.origin);
+    u.searchParams.set('class',classCode);
+    u.searchParams.set('session',sessionCode);
+    u.hash=role==='teacher'?'login-teacher':'login-student';
+    return u.href;
+  }
+  function copyShareLink(role,classCode,sessionCode) {
+    var url=shareLink(role,classCode,sessionCode);
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      navigator.clipboard.writeText(url).then(function(){toast((role==='teacher'?'교사용':'학생용')+' 수업 링크를 복사했습니다.');})
+        .catch(function(){window.prompt('아래 주소를 복사하세요.',url);});
+    else window.prompt('아래 주소를 복사하세요.',url);
+  }
+  function linkSession(){return new URLSearchParams(location.search).get('session')||'';}
   function renderEntry(tab) {
     cleanup(); App.screen = 'entry';
     document.body.className = 'is-entry';
     var last = store('pq4r:last') || {};
-    tab = tab || (location.hash==='#login-student'?'student':null) || last.tab || 'student';
+    tab = tab || (location.hash==='#login-teacher'?'teacher':location.hash==='#login-student'?'student':null) || last.tab || 'student';
     $('#app').innerHTML = '<main class="entry"><section class="entry-card">' +
       '<div class="brand"><svg viewBox="0 0 64 40" class="brand-mark" aria-hidden="true"><path d="M18 4 H60 L46 36 H4 Z"/><path d="M18 4 L46 36 M60 4 L4 36" class="d"/></svg>' +
       '<div><p class="eyebrow">연구용 MVP · ' + esc(C.versions.app) + '</p><h1>PQ4R 튜터</h1><p class="sub">' + Object.keys(C.lessons).map(function (k) { return esc(lessonLabel(+k)) + ' ' + C.lessons[k].total + '분 + 보완 5분'; }).join(' / ') + ' · 중학교 2학년</p></div></div>' +
@@ -293,13 +310,13 @@
       if (tab === 'student') {
         var sc = $('#l-sess').value.trim().toUpperCase(), code = $('#l-code').value.trim().toUpperCase();
         store('pq4r:last', Object.assign({}, last, { tab: 'student', classCode: sc, code: code }));
-        p = api('POST', 'login/student', { class_code: sc, student_code: code, pin: $('#l-pin').value.trim(), ua: navigator.userAgent.slice(0, 160) })
+        p = api('POST', 'login/student', { class_code: sc, session_code:linkSession(), student_code: code, pin: $('#l-pin').value.trim(), ua: navigator.userAgent.slice(0, 160) })
           .then(function (r) { App.tok = r.token; App.role = 'student'; saveAuth({ token: r.token, role: 'student' }); Student.start(r.me); });
       } else {
         var tid = tab === 'teacher' ? $('#l-tid').value.trim().toUpperCase() : null;
         store('pq4r:last', Object.assign({}, last, { tab: tab, tid: tid || last.tid }));
         p = api('POST', 'login/staff', { role: tab, password: $('#l-pw').value, teacher_id: tid })
-          .then(function (r) { App.tok = r.token; App.role = r.role; App.tid = r.tid; saveAuth({ token: r.token, role: r.role, tid: r.tid }); if (r.role === 'teacher') Teacher.start(); else Researcher.start(); });
+          .then(function (r) { App.tok = r.token; App.role = r.role; App.tid = r.tid; saveAuth({ token: r.token, role: r.role, tid: r.tid }); if (r.role === 'teacher') Teacher.start(linkSession()||null); else Researcher.start(); });
       }
       p.catch(function (e) { err.textContent = e.message;
         if(e.code==='class_waiting'){clearTimeout(App.loginRetry);var form=$('#lf'),waitingPin=$('#l-pin').value;App.timers.push(App.loginRetry=setTimeout(function(){if(App.screen==='entry'&&$('#lf')===form&&$('#l-sess').value.trim().toUpperCase()===sc&&$('#l-code').value.trim().toUpperCase()===code&&$('#l-pin').value===waitingPin)form.requestSubmit();},4000));}
@@ -1406,7 +1423,7 @@
   Teacher.shell=function(){
     var self=this;self.picked={};self.bankId='';self.reqItem='';self.batchResults='';self.queueFingerprint=null;self.filter='all';self.gridMode=store('pq4r:teacher-grid')||'worksheet';self.mirrorStudent=null;self.readyAttempt=null;
     $('#app').innerHTML=topbar((App.role==='researcher'?'연구자 수업 운영':'교사 '+esc(App.tid||'T01'))+' · 수업 운영','<button class="btn sm" id="t-switch">'+(App.role==='researcher'?'연구 준비':'수업 바꾸기')+'</button>')+
-      '<main class="teacher-console"><section class="console-header rcard"><div><h1 id="console-title">수업 운영</h1><p id="console-sub" class="hint"></p></div><div id="teacher-live-timer" class="teacher-live-timer" aria-live="off"></div><div class="row"><div id="clock-actions" class="row"></div><button class="btn" id="t-demo-restart" hidden>시연 처음부터</button></div></section><div class="row staff-view-nav"><button class="btn sm" id="teacher-research-view">수업 준비 화면</button><button class="btn sm" id="teacher-student-view">학생 입장 화면 열기</button><button class="btn sm" id="teacher-alert-enable" type="button">알림 소리 켜기</button><span class="hint small">새 도움 요청은 화면에 표시됩니다. 소리 알림은 버튼으로 켜세요.</span></div><div class="notice-bar" id="teacher-entry-note"></div><div class="console-stats" id="console-stats"></div><div class="console-grid"><section class="rcard" id="teacher-wall"><div class="worksheet-wall-title"><h2>전체 학생 현황</h2><button type="button" class="btn sm" id="teacher-wall-fullscreen">5열 6행 전체화면</button></div><div class="row worksheet-view-controls"><button class="btn sm primary" data-grid-mode="worksheet" aria-pressed="true">활동지 30명 보기</button><button class="btn sm" data-grid-mode="status" aria-pressed="false">상태만 보기</button><span class="hint small">학생이 입력 중인 현재 활동지를 약 3초마다 반영합니다. 화면 영상 공유는 아닙니다.</span></div><div class="row"><button class="btn sm" data-filter="all">전체</button><button class="btn sm" data-filter="help">도움 요청</button><button class="btn sm" data-filter="missing">미제출</button></div><div class="student-grid" id="student-grid"></div><div class="tablewrap"><table class="roster" id="roster" hidden></table></div></section><section class="rcard"><h2 id="request-title">도움 요청</h2><label>문항별 보기<select id="request-item"></select></label><p class="hint small">학생의 최근 제출 답안과 추천 발문을 바로 확인하세요. 도움 버튼을 누른 요청만 표시합니다.</p><div id="queue"></div></section><section class="rcard"><div id="batch-panel"></div><details id="detail-fold" open><summary>학생 답안과 지원 기록</summary><div id="tdetail"><p class="hint">학생을 선택하면 자세한 답과 기록을 볼 수 있습니다.</p></div></details></section></div><div class="row" id="notice-actions"><b>전체 안내</b><button class="btn sm" data-notice="time">시간 확인</button><button class="btn sm" data-notice="save">제출 안내</button><button class="btn sm" data-notice="device">접속 문제 안내</button></div></main>';
+      '<main class="teacher-console"><section class="console-header rcard"><div><h1 id="console-title">수업 운영</h1><p id="console-sub" class="hint"></p></div><div id="teacher-live-timer" class="teacher-live-timer" aria-live="off"></div><div class="row"><div id="clock-actions" class="row"></div><button class="btn" id="t-demo-restart" hidden>시연 처음부터</button></div></section><div class="row staff-view-nav"><button class="btn sm" id="teacher-research-view">수업 준비 화면</button><button class="btn sm" id="teacher-student-view">학생 입장 화면 열기</button><button class="btn sm primary" id="teacher-student-share">학생용 링크 복사</button><button class="btn sm" id="teacher-staff-share">교사용 링크 복사</button><button class="btn sm" id="teacher-alert-enable" type="button">알림 소리 켜기</button><span class="hint small">새 도움 요청은 화면에 표시됩니다. 소리 알림은 버튼으로 켜세요.</span></div><div class="notice-bar" id="teacher-entry-note"></div><div class="console-stats" id="console-stats"></div><div class="console-grid"><section class="rcard" id="teacher-wall"><div class="worksheet-wall-title"><h2>전체 학생 현황</h2><button type="button" class="btn sm" id="teacher-wall-fullscreen">5열 6행 전체화면</button></div><div class="row worksheet-view-controls"><button class="btn sm primary" data-grid-mode="worksheet" aria-pressed="true">활동지 30명 보기</button><button class="btn sm" data-grid-mode="status" aria-pressed="false">상태만 보기</button><span class="hint small">학생이 입력 중인 현재 활동지를 약 3초마다 반영합니다. 화면 영상 공유는 아닙니다.</span></div><div class="row"><button class="btn sm" data-filter="all">전체</button><button class="btn sm" data-filter="help">도움 요청</button><button class="btn sm" data-filter="missing">미제출</button></div><div class="student-grid" id="student-grid"></div><div class="tablewrap"><table class="roster" id="roster" hidden></table></div></section><section class="rcard"><h2 id="request-title">도움 요청</h2><label>문항별 보기<select id="request-item"></select></label><p class="hint small">학생의 최근 제출 답안과 추천 발문을 바로 확인하세요. 도움 버튼을 누른 요청만 표시합니다.</p><div id="queue"></div></section><section class="rcard"><div id="batch-panel"></div><details id="detail-fold" open><summary>학생 답안과 지원 기록</summary><div id="tdetail"><p class="hint">학생을 선택하면 자세한 답과 기록을 볼 수 있습니다.</p></div></details></section></div><div class="row" id="notice-actions"><b>전체 안내</b><button class="btn sm" data-notice="time">시간 확인</button><button class="btn sm" data-notice="save">제출 안내</button><button class="btn sm" data-notice="device">접속 문제 안내</button></div></main>';
     bindExit();
     $('#teacher-alert-enable').onclick=function(){
       if(!self.soundEnabled){
@@ -1417,7 +1434,9 @@
       }else{self.soundEnabled=false;this.textContent='알림 소리 켜기';}
     };
     $('#teacher-research-view').onclick=function(){tabStore('pq4r:staff-screen',{screen:'researcher'});if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{var a=rememberedStaff('researcher');if(a)restoreStaff(a);else renderEntry('researcher');}};
-    $('#teacher-student-view').onclick=function(){var cls=self.data&&self.data.session.class_name;if(cls)window.open('/?class='+encodeURIComponent(cls)+'#login-student','_blank','noopener');};
+    $('#teacher-student-view').onclick=function(){var cls=self.data&&self.data.session.class_name;if(cls&&self.code)window.open(shareLink('student',cls,self.code),'_blank','noopener');else toast('수업 데이터를 불러오는 중입니다.','warn');};
+    $('#teacher-student-share').onclick=function(){var cls=self.data&&self.data.session.class_name;if(cls)copyShareLink('student',cls,self.code);else toast('수업 데이터를 불러오는 중입니다.','warn');};
+    $('#teacher-staff-share').onclick=function(){var cls=self.data&&self.data.session.class_name;if(cls)copyShareLink('teacher',cls,self.code);else toast('수업 데이터를 불러오는 중입니다.','warn');};
     $('#t-switch').onclick=function(){if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{self.code=null;store('pq4r:teacher-session',null);Teacher.start();}};
     $$('[data-filter]').forEach(function(b){b.onclick=function(){self.filter=b.getAttribute('data-filter');self.renderRoster();};});
     $$('[data-grid-mode]').forEach(function(b){b.onclick=function(){self.gridMode=b.getAttribute('data-grid-mode');store('pq4r:teacher-grid',self.gridMode);self.renderRoster();};});
@@ -1700,7 +1719,7 @@
           '<div class="fixed-class-actions"><label>차시 선택<select data-fixed-lesson="'+g.code+'">'+Object.keys(C.lessons).map(function(n){return '<option value="'+n+'">'+esc(lessonLabel(+n))+'</option>';}).join('')+'</select></label>'+
           '<button class="btn primary" data-fixed-run="'+g.code+'"'+(!ready?' disabled':'')+'>새 본수업 준비</button>'+
           '<button class="btn" data-fixed-demo="'+g.code+'"'+(!ready?' disabled':'')+'>새 시험 수업 준비</button>'+
-          (running?'<button class="btn" data-fixed-open="'+esc(running.code)+'">현재 수업 운영</button>':latest?'<span class="hint small">마지막 수업: '+(latest.settings&&latest.settings.demoSession?'시험':'본수업')+'</span>':'')+
+          (running?'<button class="btn" data-fixed-open="'+esc(running.code)+'">현재 수업 운영</button><button class="btn primary" data-share-student="'+esc(g.code)+'" data-share-session="'+esc(running.code)+'">학생용 링크 복사</button><button class="btn" data-share-teacher="'+esc(g.code)+'" data-share-session="'+esc(running.code)+'">교사용 링크 복사</button>':latest?'<span class="hint small">마지막 수업: '+(latest.settings&&latest.settings.demoSession?'시험':'본수업')+'</span>':'')+
           '</div><details class="fixed-video-options"><summary>Read 단계 개념영상 설정 (선택)</summary><label>영상 링크<input type="url" data-fixed-video="'+g.code+'" placeholder="https://..."></label></details>'+
           '<p class="hint small">새 수업을 준비하면 학생 코드는 유지되고 답안 및 로그는 새로운 실행 기록으로 저장됩니다.</p></article>';
       }).join('');
@@ -1801,6 +1820,10 @@
         }).catch(function(e){toast(e.message,'warn');b.disabled=false;b.textContent='학생 60명 등록 또는 확인';});
       };
       $$('[data-fixed-open]').forEach(function(b){b.onclick=function(){Teacher.start(b.getAttribute('data-fixed-open'));};});
+      $$('[data-share-student],[data-share-teacher]').forEach(function(b){b.onclick=function(){
+        copyShareLink(b.hasAttribute('data-share-teacher')?'teacher':'student',
+          b.getAttribute('data-share-student')||b.getAttribute('data-share-teacher'),b.getAttribute('data-share-session'));
+      };});
       $$('[data-fixed-run], [data-fixed-demo]').forEach(function(b){b.onclick=function(){
         var code=b.getAttribute('data-fixed-run')||b.getAttribute('data-fixed-demo'),demo=b.hasAttribute('data-fixed-demo'),
             current=self.sessions.filter(function(x){return x.class_name===code&&x.status==='open'&&clockMode(x)!=='finished';})[0],
@@ -1874,7 +1897,7 @@
   function restoreStaff(a){
     App.tok=a.token;App.role=a.role;App.tid=a.tid||null;
     $('#app').innerHTML='<main class="loading">저장된 '+(a.role==='teacher'?'교사':'연구자')+' 로그인으로 연결 중…</main>';
-    function enter(){if(a.role==='teacher')return Teacher.start();var screen=tabStore('pq4r:staff-screen');if(screen&&screen.screen==='teacher'&&screen.session)return Teacher.start(screen.session);return Researcher.start();}
+    function enter(){if(a.role==='teacher')return Teacher.start(linkSession()||null);var screen=tabStore('pq4r:staff-screen');if(screen&&screen.screen==='teacher'&&screen.session)return Teacher.start(screen.session);return Researcher.start();}
     return api('POST','login/staff/refresh').then(function(r){saveAuth({token:r.token,role:r.role,tid:r.tid});return enter();}).catch(function(e){
       if(e.status===401||e.status===403){store(staffKey(a.role),null);return logout('저장된 로그인이 만료되거나 변경되었습니다. 한 번 다시 로그인해 주세요.');}
       $('#app').innerHTML='<main class="loading"><p>저장된 로그인은 유지되어 있습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.</p><button class="btn primary" id="staff-retry">자동로그인 다시 시도</button><button class="btn" id="staff-manual">직접 로그인</button></main>';
@@ -1899,7 +1922,7 @@
       $('#app').innerHTML = '<main class="loading">서버에 연결하지 못했어요. 잠시 뒤 새로고침해 주세요.</main>';
     });
   }
-  window.addEventListener('hashchange',function(){if(C&&/^#login/.test(location.hash))renderEntry(location.hash==='#login-student'?'student':undefined);});
+  window.addEventListener('hashchange',function(){if(C&&/^#login/.test(location.hash))renderEntry(location.hash==='#login-student'?'student':location.hash==='#login-teacher'?'teacher':undefined);});
   window.PQ_APP = App;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
