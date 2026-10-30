@@ -7,6 +7,7 @@ const T = require('../lib/staff');
 const D = require('../lib/db');
 const Room = require('../lib/classroom');
 const Assets = require('../lib/assets');
+const Records = require('../lib/record-download');
 const { HttpError, readBody, send, sendText } = require('../lib/util');
 
 /* 브라우저로 보내는 공개분. 정답(KEYS)·정답 기준(RUBRIC)·발문 은행(BANK)·AI 설명의 정오 판단(FIXED_AI.type/ok)은 보내지 않는다 */
@@ -21,6 +22,8 @@ function publicContent() {
 
 const STUDENT = ['student'], STAFF = ['teacher', 'researcher'], RESEARCHER = ['researcher'];
 const routes = {
+  'GET me/my-record': {roles:STUDENT,fn:async ctx=>Records.mine(ctx.tok)},
+  'GET staff/all-records': {roles:STAFF,fn:async ctx=>Records.all(ctx.tok,ctx.query)},
   'POST staff/new-lesson': { roles: STAFF, body: true, fn: async function(ctx){return Room.newLesson(ctx.tok,ctx.body);} },
   'POST staff/ready': { roles: STAFF, body: true, fn: async function(ctx){return Room.ready(ctx.tok,ctx.body);} },
   'POST login/staff/refresh': { roles: STAFF, noDb: true, fn: async function(ctx){return T.refreshLogin(ctx.tok);} },
