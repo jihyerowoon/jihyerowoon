@@ -1946,8 +1946,8 @@
     }).catch(function(e){Student.pdfRendererPromise=null;throw e;});
     return this.pdfRendererPromise;
   };
-  Student.renderPdfPage=function(kind,page){
-    var self=this,asset=self.pdfCache&&self.pdfCache[kind],canvas=$('#pdf-canvas-'+kind),hint=$('#pdf-status-'+kind);
+  Student.renderPdfPage=function(kind,page,canvasId){
+    var self=this,asset=self.pdfCache&&self.pdfCache[kind],canvas=$('#'+canvasId),hint=canvas&&canvas.closest('.student-pdf-panel').querySelector('[data-pdf-status]');
     if(!asset||!asset.url||!canvas)return;
     self.loadPdfRenderer().then(function(pdfjs){
       if(!asset.documentPromise)asset.documentPromise=pdfjs.getDocument({url:asset.url}).promise;
@@ -1975,7 +1975,7 @@
       (pages.length>1?'<nav class="student-pdf-nav" aria-label="활동지 쪽 선택">'+pages.map(function(n){
          return '<button type="button" class="btn sm'+(n===page?' primary':'')+'" data-pdf-page="'+n+'" data-pdf-kind="'+kind+'">'+n+'쪽</button>';
        }).join('')+'</nav>':'')+
-      '<div class="student-pdf-paper"><canvas id="pdf-canvas-'+kind+'" aria-label="'+esc(heading)+' '+page+'쪽"></canvas>'+
+      '<div class="student-pdf-paper"><canvas id="pdf-canvas-'+kind+'-'+page+'" data-pdf-canvas data-pdf-kind="'+kind+'" data-pdf-page-number="'+page+'" aria-label="'+esc(heading)+' '+page+'쪽"></canvas>'+
       (kind==='reflection'?'<div class="reflection-paper-entry"><label for="reflection-on-paper">성찰지 작성</label><textarea id="reflection-on-paper" rows="4" maxlength="350" placeholder="내 풀이에서 수정하거나 새롭게 알게 된 내용을 적어 보세요."></textarea><p class="hint small">이곳에서 작성한 내용은 아래 성찰 제출란과 연결됩니다.</p></div>':'')+
       '</div><p id="pdf-status-'+kind+'" class="hint small">선택한 '+page+'쪽을 크게 불러오는 중…</p></section>';
   };
@@ -1988,7 +1988,13 @@
       self.ensureLessonPdf('worksheet');
       var pageMap={0:[1],1:[2],2:[3,4],3:[5,6,7],4:[8],5:[9]};
       var chosenPages=pageMap[view]||[1];
-      $('#right').insertAdjacentHTML('afterbegin',self.pdfPanel('worksheet',chosenPages,lesson+'차시 원본 활동지'));
+      var stageItems=C.items.filter(function(it){return it.lesson===lesson&&it.stage===C.stages[view].id&&!it.archived;});
+      chosenPages.forEach(function(page,index){
+        var item=stageItems[index]||stageItems[0],card=item&&$('#right article.item[data-item="'+item.id+'"]');
+        var panel=self.pdfPanel('worksheet',[page],lesson+'차시 · '+C.stages[view].ko+' '+page+'쪽');
+        if(card){var header=card.querySelector('.item-h');if(header)header.insertAdjacentHTML('afterend',panel);else card.insertAdjacentHTML('afterbegin',panel);}
+        else $('#right').insertAdjacentHTML('beforeend',panel);
+      });
     }
     if(stage===5&&view===5){
       var review=self.me.review||{};
@@ -2001,7 +2007,10 @@
         $('#right').insertAdjacentHTML('beforeend',self.pdfPanel('reflection',[1],'공통 성찰지 · Review 10분 후 공개'));
       }
     }
-    ['worksheet','answer','reflection'].forEach(function(kind){var canvas=$('#pdf-canvas-'+kind);if(!canvas)return;var pages=kind==='worksheet'?({0:[1],1:[2],2:[3,4],3:[5,6,7],4:[8],5:[9]}[view]||[1]):kind==='answer'?(lesson===1?[1,2,3,4,5]:[1,2,3,4,5,6]):[1];var key=kind+':'+stage;var selected=self.pdfPage&&self.pdfPage[key];self.renderPdfPage(kind,pages.indexOf(selected)>=0?selected:pages[0]);});
+    $('.student-pdf-panel [data-pdf-canvas]').forEach(function(canvas){
+      var kind=canvas.getAttribute('data-pdf-kind'),page=Number(canvas.getAttribute('data-pdf-page-number')),key=kind+':'+stage,selected=self.pdfPage&&self.pdfPage[key];
+      self.renderPdfPage(kind,kind==='worksheet'?page:(selected||page),canvas.id);
+    });
     var onPaper=$('#reflection-on-paper');
     if(onPaper){var comp=$('#post-comparison'),keyRef='pq4r:reflection:'+self.me.session.code+':'+self.me.student.code,stored=store(keyRef)||{};
       onPaper.value=(comp&&comp.value)||stored.comparison||'';
