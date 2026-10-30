@@ -1625,11 +1625,56 @@
       $('#post-comparison').oninput=autoReflection;$$('input[name="post-understanding"]').forEach(function(r){r.onchange=autoReflection;});
     }
     if(m==='waiting'||m==='paused'){$$('#right input, #right textarea, #right button').forEach(function(n){n.disabled=true;});$('#right').insertAdjacentHTML('afterbegin','<p class="notice-bar">'+(m==='waiting'?(self.settings().demoSession?'새 시연은 Preview 2분에서 준비되었습니다. 교사가 시연 시작을 누르면 작성과 타이머가 함께 시작됩니다.':'선생님이 수업을 시작하면 작성할 수 있습니다.'):'수업이 일시정지되었습니다. 다시 시작할 때까지 기다려 주세요.')+'</p>');}
-    if(self.view===2&&self.stageIdx()===2&&self.settings().videoUrl){$('#right').insertAdjacentHTML('afterbegin','<button class="btn primary" id="read-video">개념영상 보기</button>');$('#read-video').onclick=function(){self.openVideo();};var seen='pq4r:video:'+self.me.session.code+':'+self.me.student.code;if(m==='running'&&!store(seen)){store(seen,true);self.openVideo();}}
+    if(self.view===2&&self.stageIdx()===2&&self.settings().videoUrl){self.renderReadVideo();}
     if(self.settings().autoTimer)$('#right').insertAdjacentHTML('afterbegin','<p class="notice-bar" role="note">다 쓰지 않아도 시간이 끝나면 자동 이동합니다. 작성 내용은 자동 저장되며, 마지막에 보완 5분을 제공합니다.</p>');
   };
   var originalEditable=Student.editable;
   Student.editable=function(){var m=clockMode(this.me.session);return (m==='legacy'||m==='running')&&originalEditable.call(this);};
+  /* Read inline video: user click starts with sound. After ten seconds try sound-on autoplay; browsers can deny it. */
+  Student.renderReadVideo=function(){
+    var self=this,url=self.settings().videoUrl,u,host,segments,id,source='',type='';
+    try{
+      u=new URL(url,location.origin);host=u.hostname.toLowerCase();segments=u.pathname.split('/').filter(Boolean);
+      if(['youtube.com','www.youtube.com','m.youtube.com','youtu.be','www.youtube-nocookie.com'].includes(host)){
+        id=host==='youtu.be'?segments[0]:(u.searchParams.get('v')||segments[segments.length-1]);
+        if(/^[a-zA-Z0-9_-]{11}$/.test(id)){source='https://www.youtube-nocookie.com/embed/'+id;type='youtube';}
+      }else if(['vimeo.com','www.vimeo.com','player.vimeo.com'].includes(host)){
+        id=segments[segments.length-1];
+        if(/^\d+$/.test(id)){source='https://player.vimeo.com/video/'+id;type='vimeo';}
+      }else if((u.protocol==='https:'||u.protocol==='http:')&&/\.(mp4|webm|ogv)$/i.test(u.pathname)){
+        source=u.href;type='file';
+      }
+    }catch(e){}
+    var root=document.createElement('section');root.className='panel read-video-panel';root.setAttribute('aria-label','Read 개념 강의 영상');
+    root.innerHTML='<h2>개념 강의 영상</h2><p>아래 <b>소리 켜고 재생</b>을 눌러 시청하세요. 누르지 않으면 10초 뒤 소리와 함께 자동 재생을 시도합니다.</p>'+
+      '<div class="read-video-frame" style="position:relative;max-width:100%;aspect-ratio:16/9;background:#111;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center">'+
+      '<div id="read-video-player" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"></div></div>'+
+      '<div class="row" style="margin-top:12px"><button type="button" class="btn primary" id="read-video-play">소리 켜고 재생</button><span id="read-video-status" role="status">10초 후 자동 재생 시도</span></div>'+
+      '<p class="hint small">핵심 개념 메모는 선택입니다. 배운 내용 중 중요하다고 생각한 것을 내 말로 적어 보세요.</p>';
+    $('#right').insertAdjacentElement('afterbegin',root);
+    var player=root.querySelector('#read-video-player'),btn=root.querySelector('#read-video-play'),status=root.querySelector('#read-video-status');
+    if(!source){status.textContent='이 영상 주소는 사이트 안 재생을 지원하지 않습니다. 링크를 확인해 주세요.';btn.disabled=true;return;}
+    self.logEvent('VIDEO_OPEN',null,{material:'READ_VIDEO'});
+    var started=false;
+    function play(fromUser){
+      if(!document.contains(root)||clockMode(self.me.session)!=='running'||started)return;
+      if(type==='file'){
+        var v=player.querySelector('video');
+        if(!v){v=document.createElement('video');v.src=source;v.controls=true;v.playsInline=true;v.preload='metadata';v.style.cssText='width:100%;height:100%';player.appendChild(v);}
+        v.muted=false;v.volume=1;
+        var promise=v.play();
+        if(promise&&promise.then)promise.then(function(){started=true;status.textContent='음성 재생 중';self.logEvent('VIDEO_PLAY',null,{material:'READ_VIDEO',audio:true});}).catch(function(){status.textContent='브라우저가 자동 재생을 차단했습니다. 소리 켜고 재생을 눌러 주세요.';});
+      }else{
+        var sep=source.indexOf('?')>=0?'&':'?';
+        var opts=type==='youtube'?'autoplay=1&mute=0&playsinline=1':'autoplay=1&muted=0';
+        var frame=document.createElement('iframe');frame.src=source+sep+opts;frame.title='Read 개념 강의 영상';frame.allow='autoplay; encrypted-media; fullscreen; picture-in-picture';frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';frame.style.cssText='width:100%;height:100%;border:0';
+        player.replaceChildren(frame);started=true;status.textContent=fromUser?'음성 재생을 요청했습니다.':'자동 재생을 시도했습니다. 소리가 나오지 않으면 영상 안의 재생 버튼을 눌러 주세요.';
+        self.logEvent('VIDEO_PLAY',null,{material:'READ_VIDEO',audio_requested:true,user_initiated:!!fromUser});
+      }
+    }
+    btn.onclick=function(){play(true);};
+    setTimeout(function(){if(!started&&document.contains(root))play(false);},10000);
+  };
   Student.openVideo=function(){
     var self=this,url=self.settings().videoUrl;if(!url)return;
     var prior=$('#video-dialog');if(prior)prior.remove();
