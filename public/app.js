@@ -1978,7 +1978,7 @@
       if(!self.me||self.lesson()!==lesson)return;
       var raw=atob(r.base64),data=new Uint8Array(raw.length);
       for(var i=0;i<raw.length;i++)data[i]=raw.charCodeAt(i);
-      cache[kind]={url:URL.createObjectURL(new Blob([data],{type:'application/pdf'})),filename:r.filename,sha256:r.sha256};
+      cache[kind]={url:URL.createObjectURL(new Blob([data],{type:'application/pdf'})),bytes:data,filename:r.filename,sha256:r.sha256};
     }).catch(function(e){if(self.me&&self.lesson()===lesson)cache[kind]={error:e.message};})
     .then(function(){loading[kind]=false;if(App.screen==='student'&&self.me&&self.lesson()===lesson&&self.me.session.status==='open')self.renderStage();});
   };
@@ -1987,8 +1987,8 @@
     if(this.pdfRendererPromise)return this.pdfRendererPromise;
     this.pdfRendererPromise=new Promise(function(resolve,reject){
       var script=document.createElement('script');
-      script.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-      script.onload=function(){if(!window.pdfjsLib){reject(new Error('PDF 렌더러 로드 실패'));return;}window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';resolve(window.pdfjsLib);};
+      script.src='/vendor/pdf.min.js';
+      script.onload=function(){if(!window.pdfjsLib){reject(new Error('PDF 렌더러 로드 실패'));return;}window.pdfjsLib.GlobalWorkerOptions.workerSrc='/vendor/pdf.worker.min.js';resolve(window.pdfjsLib);};
       script.onerror=function(){reject(new Error('PDF 렌더러 로드 실패'));};
       document.head.appendChild(script);
     }).catch(function(e){Student.pdfRendererPromise=null;throw e;});
@@ -1998,7 +1998,7 @@
     var self=this,asset=self.pdfCache&&self.pdfCache[kind],canvas=$('#'+canvasId),hint=canvas&&canvas.closest('.student-pdf-panel').querySelector('[data-pdf-status]');
     if(!asset||!asset.url||!canvas)return;
     self.loadPdfRenderer().then(function(pdfjs){
-      if(!asset.documentPromise)asset.documentPromise=pdfjs.getDocument({url:asset.url}).promise;
+      if(!asset.documentPromise)asset.documentPromise=pdfjs.getDocument({data:asset.bytes.slice(),disableWorker:true}).promise;
       return asset.documentPromise;
     }).then(function(doc){
       if(page<1||page>doc.numPages)throw new Error('PDF '+page+'쪽이 없습니다.');
@@ -2012,9 +2012,9 @@
     }).catch(function(e){
       if(canvas&&canvas.isConnected){
         canvas.style.display='none';
-        var fallback=document.createElement('embed');fallback.type='application/pdf';fallback.src=asset.url+'#page='+page+'&toolbar=0&navpanes=0&scrollbar=0&view=FitH';fallback.className='student-pdf-embed';canvas.parentElement.insertBefore(fallback,canvas.nextSibling);
+        var fallback=document.createElement('iframe');fallback.title='원본 활동지 '+page+'쪽';fallback.src=asset.url+'#page='+page+'&toolbar=0&navpanes=0&view=FitH';fallback.className='student-pdf-embed';fallback.style.cssText='width:100%;height:850px;border:0;display:block;background:white';canvas.parentElement.insertBefore(fallback,canvas.nextSibling);
       }
-      if(hint&&hint.isConnected)hint.textContent='PDF 그림을 내장 뷰어로 표시합니다. 표시되지 않으면 원본 크게 열기를 이용해 주세요.';
+      if(hint&&hint.isConnected)hint.textContent='PDF 그림을 웹 화면 안에서 표시합니다. 문제가 지속되면 교사에게 알려 주세요. ('+(e&&e.message||'렌더링 오류')+')';
     });
   };
   Student.pdfPanel=function(kind,pages,heading){
