@@ -1480,6 +1480,15 @@
     if(prev){var oldIds=new Set((prev.requests||[]).map(function(q){return q.id;}));self.notifyNew((r.requests||[]).filter(function(q){return !oldIds.has(q.id);}));}
     else document.title='PQ4R 수업 운영';
     self.data.requests.forEach(function(q){if(self.picked[q.id]!==undefined&&self.picked[q.id]!==q.attempt)delete self.picked[q.id];});Object.keys(self.picked).forEach(function(id){if(!r.requests.some(function(q){return q.id===id;}))delete self.picked[id];});self.renderTop();self.renderRoster();if(self.mirrorStudent)self.renderWorksheetModal();var fingerprint=JSON.stringify(r.requests)+r.group+clockMode(r.session);if(fingerprint!==self.queueFingerprint){self.queueFingerprint=fingerprint;self.renderQueue();self.renderBatch();}if(self.sel&&(!prev||JSON.stringify(prev.students)!==JSON.stringify(r.students)))return self.loadDetail();}).catch(function(e){toast(e.message,'warn');});};
+  function downloadRecord(path){
+    api('GET',path).then(function(r){
+      if(!r||!r.base64||!r.filename)throw new Error('다운로드 자료가 없습니다.');
+      var bytes=atob(r.base64),parts=[];
+      for(var i=0;i<bytes.length;i+=8192){var chunk=bytes.slice(i,i+8192),arr=new Uint8Array(chunk.length);for(var j=0;j<chunk.length;j++)arr[j]=chunk.charCodeAt(j);parts.push(arr);}
+      var blob=new Blob(parts,{type:r.mime||'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=r.filename;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},5000);
+      toast('학습 기록 파일을 내려받았습니다.');
+    }).catch(function(e){toast(e.message||'다운로드 실패','warn');});
+  }
   Teacher.renderTop=function(){
     var self=this,s=self.data.session,m=clockMode(s),auto=!!s.settings.autoTimer;
     $('#console-title').textContent=(s.class_name||'수업')+' 수업 · '+(clockLabel(s));
@@ -1520,6 +1529,10 @@
       if(!auto){$('#t-prev').onclick=function(){if(s.stage>0)self.setStage(-1);};$('#t-next').onclick=function(){if(s.stage<5)self.setStage(1);};}
     }
     var restart=$('#t-demo-restart');restart.hidden=!s.settings.demoSession;restart.onclick=function(){if(!confirm('새 시연을 Preview 2분에서 다시 준비할까요? 이전 답안과 기록은 그대로 보존됩니다.'))return;restart.disabled=true;api('POST','staff/new-demo',{class_code:s.class_name,lesson:s.lesson,videoUrl:s.settings.videoUrl||'',replace_session:s.status==='open'?s.code:null}).then(function(r){store('pq4r:teacher-session',r.session.code);Teacher.start(r.session.code);}).catch(function(e){toast(e.message,'warn');restart.disabled=false;});};
+    var bulk=$('#teacher-all-records');
+    if(!bulk){bulk=document.createElement('button');bulk.id='teacher-all-records';bulk.className='btn sm';bulk.textContent='전체 학생 단계별 Word 일괄 다운로드 (ZIP)';var toolbar=$('#clock-actions');if(toolbar)toolbar.appendChild(bulk);}
+    bulk.disabled=!(m==='finished'||s.status!=='open');
+    bulk.onclick=function(){downloadRecord('staff/all-records?session='+encodeURIComponent(self.code));};
     var people=self.data.students,online=people.filter(function(p){return p.last_seen&&nowMs()-Date.parse(p.last_seen)<90000;}).length;
     $('#console-stats').innerHTML='<span>등록 <b>'+people.length+'</b></span><span>접속 <b>'+online+'</b></span><span>도움 요청 <b>'+self.data.requests.length+'</b></span><span>현재 단계 미제출 <b>'+people.filter(function(p){return self.stageItems().some(function(id){return !p.items[id]||!p.items[id].a;});}).length+'</b></span>';
   };
@@ -1756,6 +1769,10 @@
   Student.renderSupplements=function(){
     var self=this,mode=clockMode(self.me.session);var d=$('#video-dialog');if(d)d.remove();
     $('#left').hidden=false;$('#left').innerHTML=mode==='finished'?'<section class="panel"><h2>수업 완료</h2><p>정답·해설과 나의 성찰은 오른쪽에서 계속 확인할 수 있습니다.</p><p>수업 시간에 제출한 답안과 보완본은 그대로 보관됩니다.</p></section>':'<section class="panel"><h2>보완 5분</h2><p>시간 안에 마치지 못한 문항을 보완하세요. 원래 답안은 그대로 보관됩니다.</p><p>정답·해설은 오른쪽 위에서 다시 볼 수 있습니다. 이 시간에는 AI와 교사의 추가 발문이 제공되지 않습니다.</p></section>';$('#layout').classList.remove('noleft');
+    if(mode==='finished'){
+      var btn=document.createElement('button');btn.className='btn primary';btn.textContent='나의 단계별 학습 기록 Word 다운로드';btn.id='my-record-download';
+      $('#left').appendChild(btn);btn.onclick=function(){downloadRecord('me/my-record');};
+    }
     $('#right').innerHTML='<p class="loading">보완할 문항을 불러오는 중…</p>';
     api('GET','me/supplements').then(function(r){if(App.screen!=='student'||!['catchup','finished'].includes(clockMode(self.me.session)))return;
       var disabled=mode==='finished'?' disabled':'';self.supplementLocal=store('pq4r:supplement:'+self.me.session.code+':'+self.me.student.code)||{};
