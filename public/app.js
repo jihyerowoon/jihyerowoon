@@ -492,14 +492,14 @@
           '<div class="panel"><h4>정답과 검증용 풀이 초안</h4><p><b>' + esc(sol.answer) + '</b></p><ol>' + (sol.steps||[]).map(function (line){return '<li>' + fmt(line) + '</li>';}).join('') + '</ol></div></div></div></details>';
       }).join('');
       var ref = data.reflection;
-      var completed = ref ? '<section class="panel"><h3>해설 후 성찰 저장 완료</h3><p><b>이해 정도:</b> ' + esc(confidence[ref.understanding]||'') + '</p><p><b>내 풀이와 비교:</b> ' + esc(ref.comparison) + '</p></section>' :
-        '<section class="panel"><h3>해설 공개 후 이해도 성찰</h3><p class="hint small">문제와 해설을 비교해 봅시다. 내가 실제로 이해한 것과 아직 어려운 부분을 솔직히 적어 주세요.</p>' +
+      var completed = ref ? '<section class="panel review-reflection"><h3>해설 후 성찰 저장 완료</h3><p><b>이해 정도:</b> ' + esc(confidence[ref.understanding]||'') + '</p><p><b>내 풀이와 비교:</b> ' + esc(ref.comparison) + '</p></section>' :
+        '<section class="panel review-reflection"><h3>해설 공개 후 이해도 성찰</h3><p class="hint small">문제와 해설을 비교해 봅시다. 내가 실제로 이해한 것과 아직 어려운 부분을 솔직히 적어 주세요.</p>' +
         '<fieldset><legend>지금 이 풀이를 다른 사람에게 설명할 수 있나요?</legend>' +
         Object.keys(confidence).map(function(k){return '<label class="choice-line"><input type="radio" name="post-understanding" value="'+k+'"><span>'+esc(confidence[k])+'</span></label>';}).join('') + '</fieldset>' +
         '<label style="display:block;margin:10px 0">내 풀이와 해설을 비교하여 새롭게 확인한 조건이나 성질, 또는 아직 이해하지 못한 부분 한 가지<textarea id="post-comparison" rows="2" maxlength="350" placeholder="한두 문장으로 적어 보세요."></textarea></label>' +
         '<p class="hint">2분이 지나도 자동 종료되지 않습니다. 작성한 내용을 제출해 주세요.</p><button type="button" class="btn primary" data-act="review-reflect">성찰 제출</button></section>';
       var reflectUI = ref || canReflect ? completed : '<section class="panel"><h3>6~10분: 정답과 내 풀이 비교</h3><p>풀이에서 무엇이 같고 다른지 확인하세요. 마지막 2분에 짧은 이해도 성찰이 열립니다.</p><p id="review-reflect-count" class="hint small">성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000) + '</p></section>';
-      if(canReflect)return reflectUI+'<details class="panel"><summary>정답과 풀이 다시 보기</summary>'+cards+'</details>';
+      if(canReflect)return '<section class="panel review-answers"><h2>2단계 · 정답과 풀이 확인</h2>'+cards+'</section>'+reflectUI;
       return '<section class="panel"><h2>Review 정답과 풀이 · 6분 후 공개</h2><p>첫 6분의 자기 풀이를 보존했습니다. 다음 4분은 정답 비교, 마지막 2분은 성찰입니다.</p><p class="hint small">두 집단에 동일하게 제공하는 검증용 해설 초안입니다.</p>' + cards + '</section>' + reflectUI;
     },
     loadReviewFeedback: function () {
@@ -1976,7 +1976,11 @@
       canvas.width=Math.ceil(draw.width);canvas.height=Math.ceil(draw.height);canvas.style.width='100%';canvas.style.height='auto';
       return p.render({canvasContext:ctx,viewport:draw}).promise.then(function(){if(hint&&hint.isConnected)hint.textContent=page+'쪽 표시 중 · 화면에 맞게 확대됨';});
     }).catch(function(e){
-      if(hint&&hint.isConnected)hint.textContent='페이지를 그리지 못했습니다: '+e.message+' · 원본 크게 열기로 확인하세요.';
+      if(canvas&&canvas.isConnected){
+        canvas.style.display='none';
+        var fallback=document.createElement('embed');fallback.type='application/pdf';fallback.src=asset.url+'#page='+page+'&toolbar=0&navpanes=0&scrollbar=0&view=FitH';fallback.className='student-pdf-embed';canvas.parentElement.insertBefore(fallback,canvas.nextSibling);
+      }
+      if(hint&&hint.isConnected)hint.textContent='PDF 그림을 내장 뷰어로 표시합니다. 표시되지 않으면 원본 크게 열기를 이용해 주세요.';
     });
   };
   Student.pdfPanel=function(kind,pages,heading){
@@ -2012,13 +2016,25 @@
     }
     if(stage===5&&view===5){
       var review=self.me.review||{};
-      if(review.unlocked&&lesson!==2){
+      if(review.unlocked){
         self.ensureLessonPdf('answer');
         $('#right').insertAdjacentHTML('beforeend',self.pdfPanel('answer',lesson===1?[1,2,3,4,5]:[1,2,3,4,5,6],lesson+'차시 정답지 · Review 6분 후 공개'));
       }
       if(review.reflect_unlocked){
         self.ensureLessonPdf('reflection');
         $('#right').insertAdjacentHTML('beforeend',self.pdfPanel('reflection',[1],'공통 성찰지 · Review 10분 후 공개'));
+      }
+    }
+    if(stage===5&&view===5){
+      var root=$('#right'),answerPane=root&&root.querySelector('.student-pdf-panel:has([data-pdf-kind="answer"])'),reflectPane=root&&root.querySelector('.student-pdf-panel:has([data-pdf-kind="reflection"])');
+      var reflectionForm=root&&root.querySelector('.review-reflection');
+      if(answerPane){var solutionRoot=root.querySelector('.review-answers');if(solutionRoot)solutionRoot.after(answerPane);else{var firstReview=root.querySelector('.review-solution');if(firstReview)firstReview.parentElement.after(answerPane);}}
+      if(reflectionForm&&reflectPane)reflectionForm.before(reflectPane);
+      if(reflectionForm&&answerPane&&!reflectPane)answerPane.after(reflectionForm);
+      if(reflectionForm&&reflectPane){
+        var reflectionEntry=reflectPane.querySelector('.reflection-paper-entry');
+        if(reflectionEntry){var fieldset=reflectionForm.querySelector('fieldset'),compare=reflectionForm.querySelector('label:has(#post-comparison)'),submit=reflectionForm.querySelector('[data-act="review-reflect"]');if(fieldset)reflectionEntry.appendChild(fieldset);if(compare)reflectionEntry.appendChild(compare);if(submit)reflectionEntry.appendChild(submit);}
+        reflectionForm.hidden=true;
       }
     }
     if(lesson>=3&&view===stage&&self.editable()){
