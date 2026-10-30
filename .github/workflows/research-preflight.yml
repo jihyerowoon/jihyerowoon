@@ -20,3 +20,9 @@ jobs:
           node-version: '22'
       - name: Run research classroom preflight
         run: node tests/preflight.test.js
+      - name: Install browser smoke dependencies
+        run: |
+          npm install --no-save playwright@1.55.1
+          npx playwright install --with-deps chromium
+      - name: Click researcher, student and teacher screens in Chromium
+        run: node tests/browser-smoke.test.js
