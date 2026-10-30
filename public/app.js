@@ -894,10 +894,24 @@
     },
     renderDetail: function () {
       var self = this, d = self.detail, s = d.student, n = $('#tdetail');
-      n.innerHTML = '<div class="td-h"><h2>' + esc(s.code) + ' <span class="grp ' + s.group.toLowerCase() + '">' + groupKo(s.group) + '</span></h2></div><div id="td-top"></div>' +
+      n.innerHTML = '<div class="td-h"><h2>' + esc(s.code) + ' <span class="grp ' + s.group.toLowerCase() + '">' + groupKo(s.group) + '</span></h2><button type="button" class="btn sm" id="student-word-export">이 학생 문제·답안 Word 저장</button></div><div id="td-top"></div>' +
         (s.group === 'CONTROL' ? '<div id="td-form"></div><div id="oral-log"></div>' : '<p class="note">이 수업에서는 자동 질문 지원이 제공됩니다. 교사는 수학 내용을 따로 전송하지 않습니다.</p>');
+      $('#student-word-export').onclick=function(){self.downloadStudentWord();};
       self.renderDetailTop();
       if (s.group === 'CONTROL') {self.renderForm();self.renderOralNote();}
+    },
+    downloadStudentWord: function () {
+      if(!this.detail||!this.data)return;
+      var d=this.detail,student=d.student,lesson=this.data.session.lesson;
+      var rows=C.items.filter(function(it){return Number(it.lesson)===Number(lesson)&&!it.archived;}).map(function(it){
+        var rec=d.items[it.id]||{},v=rec.versions&&rec.versions.length?rec.versions[rec.versions.length-1]:null,fields=v&&v.fields||rec.draft||{};
+        var answer=it.fields.map(function(f){return '<p><b>'+esc(plain(f.label))+':</b> '+esc(String(fields[f.key]||'(미작성)'))+'</p>';}).join('');
+        var reason=v&&v.reason?'<p><b>수정한 내용:</b> '+esc(v.reason)+'</p>':'';
+        return '<section style="break-inside:avoid;margin-bottom:24px;border-bottom:1px solid #ccc;padding:10px"><h3>'+esc(it.stage)+' · '+esc(it.id)+'</h3><p><b>문항:</b> '+esc(plain(it.title))+'</p>'+answer+reason+'</section>';
+      }).join('');
+      var html='<!doctype html><html><head><meta charset="utf-8"><title>학생 활동 기록</title><style>body{font-family:Malgun Gothic,Arial,sans-serif;font-size:12pt;line-height:1.6;margin:25mm}h1{color:#173c71}section{page-break-inside:avoid}</style></head><body><h1>수학 PQ4R 활동 기록</h1><p>학생 코드: '+esc(student.code)+' | '+esc(String(lesson))+'차시</p><p>이 문서는 웹에 저장된 문항 제목과 학생 작성 답안을 포함합니다. 원본 PDF 도형은 별도 활동지에서 확인해야 합니다.</p>'+rows+'</body></html>';
+      var blob=new Blob(['\ufeff',html],{type:'application/msword;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+      a.href=url;a.download='PQ4R_'+student.code+'_L'+lesson+'_답안.doc';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},3000);
     },
     renderDetailTop: function () {
       var self = this, d = self.detail, s = d.student, n = $('#td-top'); if (!n) return;
