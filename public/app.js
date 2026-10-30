@@ -594,9 +594,12 @@
       h += '</div>';
       if (editable) {
         h += '<div class="revise" data-revise="' + it.id + '" hidden><label for="rv-' + it.id + '">고친 이유 <small>(선택)</small></label><input id="rv-' + it.id + '" data-reason="' + it.id + '" maxlength="300" autocomplete="off" value="' + esc(rec.reason || '') + '" placeholder="무엇을 왜 고쳤는지 한 줄로"></div>' +
-          '<label class="help-question-label" for="ask-' + it.id + '">궁금하거나 막힌 부분이 있나요? <small>선택 입력 · 먼저 답을 제출해 주세요.</small></label>'+
-          '<input class="help-question-input" id="ask-' + it.id + '" maxlength="280" type="text" data-help-question="' + it.id + '" placeholder="예: 조건이 하나 더 있는지 어떻게 확인하나요?" value="' + esc(rec.question_draft||'') + '">'+
-          '<footer class="item-f"><button type="button" class="btn primary" data-act="submit" data-id="' + it.id + '">내 답 제출하기</button><button type="button" class="btn ghost" data-act="help" data-id="' + it.id + '">질문으로 도움받기</button><span class="busy" data-busy="' + it.id + '" hidden>점검 중…</span></footer>';
+          (it.stage === 'Preview' ? '' :
+            '<label class="help-question-label" for="ask-' + it.id + '">궁금하거나 막힌 부분이 있나요? <small>선택 입력 · 먼저 답을 제출해 주세요.</small></label>'+
+            '<input class="help-question-input" id="ask-' + it.id + '" maxlength="280" type="text" data-help-question="' + it.id + '" placeholder="예: 조건이 하나 더 있는지 어떻게 확인하나요?" value="' + esc(rec.question_draft||'') + '">')+
+          '<footer class="item-f"><button type="button" class="btn primary" data-act="submit" data-id="' + it.id + '">내 답 제출하기</button>' +
+          (it.stage === 'Preview' ? '' : '<button type="button" class="btn ghost" data-act="help" data-id="' + it.id + '">질문으로 도움받기</button>') +
+          '<span class="busy" data-busy="' + it.id + '" hidden>점검 중…</span></footer>';
       }
       return h + '<div class="thread" data-thread="' + it.id + '"></div></article>';
     },
