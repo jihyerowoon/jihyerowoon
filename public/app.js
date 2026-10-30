@@ -550,13 +550,13 @@
       self.markFocus(); self.renderFigSel(); self.renderLeftStage();
     },
     toolbarHTML: function () {
-      var syms = [['△', '삼각형'], ['≡', '합동'], ['∠', '각'], ['∥', '평행'], ['⊥', '수직'], ['=', '같음'], ['°', '도'], ['+', '더하기'], ['−', '빼기'], ['×', '곱하기'], ['÷', '나누기']];
+      var syms = [['△', '삼각형'], ['≡', '합동'], ['∠', '각'], ['∥', '평행'], ['⊥', '수직'], ['=', '같음'], ['≠', '다름'], ['°', '도'], ['+', '더하기'], ['−', '빼기'], ['×', '곱하기'], ['÷', '나누기']];
       var segs = this.lesson() === 1 ? ['AB', 'BC', 'CA', 'DE', 'EF', 'FD', 'AO', 'CO', 'BD'] : ['AB', 'BC', 'CD', 'DA', 'AC', 'BD', 'AO', 'BO', 'CO', 'DO', 'OA', 'OB', 'OC', 'OD', 'AD', 'DC', 'AE', 'BE', 'DE', 'EC', 'EO', 'PC', 'PD', 'PB', 'AP'];
       return '<div class="symbar" role="toolbar" aria-label="수학 기호 입력"><span class="symbar-k">기호</span>' +
         syms.map(function (s) { return '<button type="button" class="sym" data-sym="' + s[0] + '" title="' + s[1] + '">' + s[0] + '</button>'; }).join('') +
         '<span class="segpick"><button type="button" class="sym wide" data-act="segmenu" aria-expanded="false">선분 <span class="seg">AB</span> ▾</button>' +
         '<span class="segmenu" id="segmenu" hidden>' + segs.map(function (s) { return '<button type="button" class="sym" data-segins="' + s + '"><span class="seg">' + s + '</span></button>'; }).join('') + '</span></span>' +
-        '<span class="symbar-hint">마지막으로 누른 칸에 들어가요</span></div>';
+        '<span class="symbar-hint">답안 칸을 누른 후 기호를 선택하세요. 1~8차시 공통</span></div>';
     },
     itemHTML: function (it, editable) {
       var self = this, rec = self.item(it.id), paper=true, source=paperAsset(it,self.group());
@@ -726,10 +726,14 @@
         if (b.getAttribute('data-act') === 'help') { self.help(b.getAttribute('data-id')); return; }
       });
       function insertAt(inp, text) {
+        if(!inp || !inp.isConnected || inp.disabled){
+          var f=self.focus;
+          inp=f?$('#right [data-item="'+f.item+'"][data-field="'+f.field+'"]'):null;
+        }
         if (!inp || inp.disabled) { toast('기호를 넣을 칸을 먼저 눌러 주세요.', 'warn'); return; }
         var s = inp.selectionStart != null ? inp.selectionStart : inp.value.length, e = inp.selectionEnd != null ? inp.selectionEnd : s;
         inp.value = inp.value.slice(0, s) + text + inp.value.slice(e);
-        inp.focus(); try { inp.setSelectionRange(s + text.length, s + text.length); } catch (er) { /* ignore */ }
+        inp.focus();lastInput=inp;try { inp.setSelectionRange(s + text.length, s + text.length); } catch (er) { /* ignore */ }
         inp.dispatchEvent(new Event('input', { bubbles: true }));
       }
     },
