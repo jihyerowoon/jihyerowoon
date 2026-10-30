@@ -2007,7 +2007,7 @@
       onPaper.value=(comp&&comp.value)||stored.comparison||'';
       onPaper.addEventListener('input',function(){if(comp){comp.value=onPaper.value;comp.dispatchEvent(new Event('input',{bubbles:true}));}else{var draft=store(keyRef)||{};draft.comparison=onPaper.value;store(keyRef,draft);}});
     }
-    $('[data-pdf-page]').forEach(function(b){b.onclick=function(){
+    $$('[data-pdf-page]').forEach(function(b){b.onclick=function(){
       var kind=b.getAttribute('data-pdf-kind'),key=kind+':'+self.stageIdx();
       self.pdfPage=self.pdfPage||{};self.pdfPage[key]=Number(b.getAttribute('data-pdf-page'));
       self.renderStage();
