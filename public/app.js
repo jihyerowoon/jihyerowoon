@@ -559,7 +559,7 @@
         '<span class="symbar-hint">마지막으로 누른 칸에 들어가요</span></div>';
     },
     itemHTML: function (it, editable) {
-      var self = this, rec = self.item(it.id), paper=self.group()==='CONTROL', source=paperAsset(it,self.group());
+      var self = this, rec = self.item(it.id), paper=true, source=paperAsset(it,self.group());
       var last = rec.versions.length ? rec.versions[rec.versions.length - 1].fields : {};
       var h = '<article class="item'+(paper?' paper-item':'')+'" data-item="' + it.id + '"><header class="item-h"><div class="item-t">' + (it.mark ? '<span class="mark">' + esc(it.mark) + '</span>' : '') +
         '<h3'+(source?' class="paper-sr"':'')+'>' + fmt(it.title) + '</h3></div><span class="chip-status" data-status="' + it.id + '"></span></header>';
