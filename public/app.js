@@ -2041,9 +2041,9 @@
       var chosenPages=pageMap[view]||[1];
       var stageItems=C.items.filter(function(it){return it.lesson===lesson&&it.stage===C.stages[view].id&&!it.archived;});
       chosenPages.forEach(function(page,index){
-        var item=stageItems[index]||stageItems[0],card=item&&$('#right article.item[data-item="'+item.id+'"]');
+        var item=stageItems[view===1?0:index]||stageItems[0],card=item&&$('#right article.item[data-item="'+item.id+'"]');
         var panel=self.pdfPanel('worksheet',[page],lesson+'차시 · '+(view===1&&page===1?'Preview 그림 다시 보기':C.stages[view].ko+' '+page+'쪽'));
-        if(view===1&&page===1){var head=$('#right .stagehead');if(head)head.insertAdjacentHTML('afterend',panel);else $('#right').insertAdjacentHTML('afterbegin',panel);}
+        if((view===1&&page===1)||(view===4&&page===8)){var head=$('#right .stagehead');if(head)head.insertAdjacentHTML('afterend',panel);else $('#right').insertAdjacentHTML('afterbegin',panel);}
         else if(card){var header=card.querySelector('.item-h');if(header)header.insertAdjacentHTML('afterend',panel);else card.insertAdjacentHTML('afterbegin',panel);}
         else $('#right').insertAdjacentHTML('beforeend',panel);
       });
@@ -2071,24 +2071,16 @@
         if(panel.querySelector('[data-pdf-kind="reflection"]')||/공통 성찰지/.test(panel.querySelector('h3')&&panel.querySelector('h3').textContent||''))panel.remove();
       });
     }
-    if(lesson>=3&&view===stage&&self.editable()){
-      var stageName=C.stages[view].id,stageCards=C.items.filter(function(it){return it.lesson===lesson&&it.stage===stageName&&!it.archived;});
-      stageCards.forEach(function(it,index){
-        var card=$('#right article.item[data-item="'+it.id+'"]'),fields=card&&card.querySelector('.fields');
-        if(!fields)return;
-        var sourceCard=stageName==='Recite'?$('#right article.item[data-item="'+stageCards[0].id+'"]'):card;
-        var paper=sourceCard&&sourceCard.querySelector('.student-pdf-paper');
-        if(!paper)return;
-        var overlay=document.createElement('div');overlay.className='worksheet-input-overlay';
-        if(stageName==='Recite'){
-          overlay.classList.add('worksheet-recite-input');
-          overlay.style.top=(stageCards.length===4?[30,46,62,79][index]:[32,54,77][index])+'%';
-          overlay.style.height=(stageCards.length===4?13:17)+'%';
-        }else{
-          overlay.style.top=(stageName==='Read'?67:stageName==='Review'?72:stageName==='Reflect'?71:stageName==='Question'?46:stageName==='Preview'?70:70)+'%';
-          overlay.style.height=(stageName==='Question'?38:stageName==='Preview'?24:25)+'%';
+    // 원본 PDF 위에 답안칸을 겹쳐놓지 않는다.
+    // 문항별 답변, 이유, 메타인지 도움 요청과 제출은 원본 카드 안에서 각각 처리한다.
+    if(lesson>=3){
+      $$('#right article.item').forEach(function(card){
+        card.classList.add('lesson-independent-question');
+        var help=card.querySelector('[data-act="help"]');
+        if(help){
+          help.textContent='이 문제 질문으로 도움받기';
+          help.setAttribute('aria-label',card.querySelector('h3')&&card.querySelector('h3').textContent+' 질문으로 도움받기');
         }
-        overlay.appendChild(fields);paper.appendChild(overlay);
       });
     }
     $$('[data-pdf-canvas]').forEach(function(canvas){
