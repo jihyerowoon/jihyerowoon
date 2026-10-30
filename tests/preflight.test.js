@@ -20,7 +20,7 @@ test('Never apply forEach to one DOM element',()=>{
 test('Student may enter exact waiting session before or after teacher',()=>{
  const s=read('lib/student.js'),c=read('lib/classroom.js');
  assert.match(s,/const directSession=K\.normCode\(body\.session_code\|\|''\)/);
- assert.match(s,/session\.class_name\)\)\s*!==K\.normCode\(body\.class_code\)/);
+ assert.match(s,/session\.class_name\)\s*!==K\.normCode\(body\.class_code\)/);
  assert.match(c,/tx\.json\(\{mode:'waiting',ready:true\}\)/);
  assert.match(c,/const settings=\{autoTimer:true/);
 });
