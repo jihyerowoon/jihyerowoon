@@ -827,7 +827,7 @@
       var self = this;
       return api('GET', 'staff/overview?session=' + encodeURIComponent(self.code) + (self.data ? '&fp=' + encodeURIComponent(self.data.fp) : '')).then(function (r) {
         if (r.same) return;
-        self.data = r; var tl = $('#tb-lesson'); if (tl) tl.textContent = lessonLabel(r.session.lesson); self.renderTop(); self.renderRoster(); self.renderQueue();
+        self.data = r; var tl = $('#tb-lesson'); if (tl) tl.textContent = lessonLabel(r.session.lesson); self.renderTop(); self.renderRoster(); self.renderQueue(); self.renderBatch();
         if (self.sel) return self.loadDetail();
       }).catch(function (e) { if (e.status === 404) { toast(e.message, 'warn'); store('pq4r:teacher-session', null); Teacher.start(); } });
     },
@@ -1457,7 +1457,7 @@
       else{$('#detail-fold').open=true;self.select(b.getAttribute('data-student'),null);}
     };
     $('#request-item').onchange=function(){self.reqItem=this.value;self.picked={};self.bankId='';self.renderQueue();self.renderBatch();};
-    $('#queue').onclick=function(ev){var pick=ev.target.closest('[data-request-recommend],[data-request-toggle]');if(pick){var rid=pick.getAttribute('data-request-recommend')||pick.getAttribute('data-request-toggle'),req=self.data.requests.find(function(x){return x.id===rid;});if(!req)return;if(pick.hasAttribute('data-request-recommend')){self.picked={};self.picked[rid]=req.attempt;self.bankId=req.recommendation?req.recommendation.id:'';}else if(self.picked[rid]!==undefined)delete self.picked[rid];else self.picked[rid]=req.attempt;self.renderQueue();self.renderBatch();return;}var b=ev.target.closest('[data-request-detail]');if(b){var r=self.data.requests.find(function(x){return x.id===b.getAttribute('data-request-detail');});$('#detail-fold').open=true;self.select(r.code,r.item_id);}};
+    $('#queue').onclick=function(ev){var direct=ev.target.closest('[data-direct-send]');if(direct){var id=direct.getAttribute('data-direct-send'),req=self.data.requests.find(function(q){return q.id===id;}),card=direct.closest('[data-request-card]'),sel=card&&card.querySelector('[data-direct-bank]'),status=card&&card.querySelector('[data-send-status]');if(!req||!sel||!sel.value){toast('발문을 선택해 주세요.','warn');return;}direct.disabled=true;if(status)status.textContent='전송 중…';api('POST','staff/send-batch',{session:self.code,item_id:req.item_id,bank_id:sel.value,targets:[{code:req.code,request_id:req.id,attempt:req.attempt}]}).then(function(r){var result=r.results&&r.results[0];if(result&&result.ok){toast(req.code+' 학생에게 발문을 전송했습니다.');self.picked={};self.queueFingerprint=null;return self.refresh();}var msg=result&&result.error||'전송 결과를 확인하지 못했습니다.';if(status)status.textContent=msg;toast(msg,'warn');direct.disabled=false;}).catch(function(e){if(status)status.textContent=e.message;toast(e.message,'warn');direct.disabled=false;});return;}var pick=ev.target.closest('[data-request-recommend],[data-request-toggle]');if(pick){var rid=pick.getAttribute('data-request-recommend')||pick.getAttribute('data-request-toggle'),req=self.data.requests.find(function(x){return x.id===rid;});if(!req)return;if(pick.hasAttribute('data-request-recommend')){self.picked={};self.picked[rid]=req.attempt;self.bankId=req.recommendation?req.recommendation.id:'';}else if(self.picked[rid]!==undefined)delete self.picked[rid];else self.picked[rid]=req.attempt;self.renderQueue();self.renderBatch();return;}var b=ev.target.closest('[data-request-detail]');if(b){var r=self.data.requests.find(function(x){return x.id===b.getAttribute('data-request-detail');});$('#detail-fold').open=true;self.select(r.code,r.item_id);}};
     $('#queue').onchange=function(ev){var t=ev.target;if(!t.matches('[data-request-pick]'))return;var r=self.data.requests.find(function(x){return x.id===t.getAttribute('data-request-pick');});if(t.checked)self.picked[r.id]=r.attempt;else delete self.picked[r.id];self.renderBatch();};
     $$('[data-notice]').forEach(function(b){b.onclick=function(){api('POST','staff/announce',{session:self.code,key:b.getAttribute('data-notice')}).then(function(){toast('전체 학생에게 안내를 보냈어요.');}).catch(function(e){toast(e.message,'warn');});};});
     every(3000,function(){return self.refresh();},5000);
@@ -1588,12 +1588,26 @@
     content.scrollTop=scroll;
   };
 
-  Teacher.renderQueue=function(){var self=this,qs=self.data.requests;
+  Teacher.renderQueue=function(){
+    var self=this,qs=(self.data.requests||[]),isControl=self.data.group==='CONTROL';
     var ids=Array.from(new Set(qs.map(function(r){return r.item_id;})));
-    if(!ids.includes(self.reqItem)){self.reqItem=ids[0]||'';self.picked={};self.bankId='';} var first=qs.filter(function(r){return r.item_id===self.reqItem;})[0]; if(first&&!Object.keys(self.picked).length){self.picked[first.id]=first.attempt;if(first.recommendation)self.bankId=first.recommendation.id;}
+    if(!ids.includes(self.reqItem)){self.reqItem=ids[0]||'';self.picked={};self.bankId='';}
     $('#request-item').innerHTML=ids.map(function(id){return '<option value="'+esc(id)+'"'+(id===self.reqItem?' selected':'')+'>'+esc(shortOf(id))+' ('+qs.filter(function(r){return r.item_id===id;}).length+'명)</option>';}).join('')||'<option value="">대기 요청 없음</option>';
-    $('#request-title').textContent=self.data.group==='EXPERIMENT'?'AI 지원 현황':'도움 요청';
-    $('#queue').innerHTML=self.data.group==='EXPERIMENT'?'<p class="hint">AI 발문과 학생 재응답은 왼쪽 학생을 눌러 확인하세요. 교사는 수학 발문을 따로 전송하지 않습니다.</p>':qs.filter(function(r){return r.item_id===self.reqItem;}).map(function(r){return '<article class="request-card"><div class="row"><b>'+esc(r.code)+'</b><small>대기 '+mmss((nowMs()-Date.parse(r.at))/1000)+'</small><button class="btn sm" data-request-detail="'+esc(r.id)+'">전체 답안</button></div>'+fieldsView(resolveItem(r.item_id,'CONTROL',self.data.session.settings),r.fields,r.sel||{})+(r.question_text?'<p class="request-student-question"><b>학생의 질문:</b> '+esc(r.question_text)+'</p>':'')+'<div class="request-recommend"><b>추천 발문</b><p>'+fmt(r.recommendation?r.recommendation.text:'아래 발문 목록에서 선택하세요.')+'</p><small>'+esc(r.recommendation?r.recommendation.reason:'')+'</small></div><button class="btn primary" data-request-recommend="'+esc(r.id)+'">이 학생 · 추천 발문 선택</button><button class="btn sm" data-request-toggle="'+esc(r.id)+'">'+(self.picked[r.id]!==undefined?'전송 대상에서 빼기':'함께 보낼 학생에 추가')+'</button></article>';}).join('')||'<p class="hint">기다리는 요청이 없습니다.</p>';
+    $('#request-title').textContent=isControl?'학생 질문 · 교사 발문 전송 ('+qs.length+'건)':'AI 지원 현황';
+    if(!isControl){$('#queue').innerHTML='<p class="hint">AI 발문과 재응답은 학생을 눌러 확인하세요.</p>';return;}
+    var matching=qs.filter(function(r){return r.item_id===self.reqItem;});
+    $('#queue').innerHTML=matching.map(function(r){
+      var entries=((self.bank&&self.bank.bank)||[]).filter(function(b){return b.item===r.item_id&&b.level===1;});
+      var recommended=r.recommendation&&r.recommendation.id;
+      var sorted=entries.slice().sort(function(a,b){return (a.id===recommended?-1:0)-(b.id===recommended?-1:0);});
+      var opts=sorted.map(function(b){return '<option value="'+esc(b.id)+'"'+(b.id===recommended?' selected':'')+'>'+esc(b.text)+'</option>';}).join('');
+      return '<article class="request-card" data-request-card="'+esc(r.id)+'"><div class="row"><b>'+esc(r.code)+' 학생</b><small>대기 '+mmss(Math.max(0,(nowMs()-Date.parse(r.at))/1000))+'</small><button class="btn sm" data-request-detail="'+esc(r.id)+'">전체 답안</button></div>'+
+        '<div class="teacher-question"><strong>학생이 보낸 질문</strong><p>'+esc(r.question_text||'도움을 요청했습니다. 학생의 제출 답안을 함께 확인하세요.')+'</p></div>'+
+        '<details class="teacher-answer"><summary>학생의 제출 답안 보기</summary>'+fieldsView(resolveItem(r.item_id,'CONTROL',self.data.session.settings),r.fields,r.sel||{})+'</details>'+
+        '<label class="teacher-bank-label" for="bank-'+esc(r.id)+'">보낼 메타인지 발문 선택</label>'+
+        '<select class="teacher-bank-select" id="bank-'+esc(r.id)+'" data-direct-bank="'+esc(r.id)+'"><option value="">발문 선택</option>'+opts+'</select>'+
+        '<div class="row teacher-send-row"><button type="button" class="btn primary" data-direct-send="'+esc(r.id)+'"'+(!entries.length||clockMode(self.data.session)!=='running'?' disabled':'')+'>이 학생에게 발문 전송</button><span class="hint small" data-send-status="'+esc(r.id)+'">'+(entries.length?'학생에게만 개별 전송됩니다.':'이 문항의 발문이 아직 등록되지 않았습니다.')+'</span></div></article>';
+    }).join('')||'<p class="hint">현재 문항에 대기 중인 학생 질문이 없습니다.</p>';
   };
   Teacher.renderBatch=function(){var self=this,n=$('#batch-panel'),count=Object.keys(self.picked).length;if(self.data.group==='EXPERIMENT'){n.innerHTML='<h2>수업 학습 상태 관리</h2><p>자동 타이머로 모든 학생이 함께 이동합니다. 학생을 선택하면 답안과 AI 지원 기록을 확인할 수 있습니다.</p><p class="hint">접속 문제나 수업 진행만 안내해 주세요.</p>';return;}
     var list=self.bank.bank.filter(function(b){return b.item===self.reqItem&&b.level===1;});
