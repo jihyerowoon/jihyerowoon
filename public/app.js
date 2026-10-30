@@ -1473,6 +1473,20 @@
     $('#console-title').textContent=(s.class_name||'수업')+' 수업 · '+(clockLabel(s));
     $('#console-sub').textContent=lessonLabel(s.lesson)+' · '+clockLabel(s)+' · '+(self.data.group==='EXPERIMENT'?'학생 학습 상태와 자동 발문 기록을 확인합니다. 교사는 진행과 접속을 관리합니다.':'학생의 답안을 보고 준비된 발문을 개별 전달합니다.');
     var t=$('#timer');if(t)t.innerHTML=timerText(s);var live=$('#teacher-live-timer');if(live)live.innerHTML=timerText(s);var step=$('#stepper');if(step)step.innerHTML=stepperHTML(s.stage,s.stage,{noNav:true,lesson:s.lesson});
+    var nav=$('#teacher-stage-review');
+    if(!nav){nav=document.createElement('section');nav.id='teacher-stage-review';nav.className='rcard teacher-stage-review';var anchor=$('#teacher-entry-note');if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(nav,anchor.nextSibling);}
+    if(nav){
+      var viewed=Number.isInteger(self.reviewStage)?self.reviewStage:s.stage;
+      if(viewed>s.stage||viewed<0)viewed=s.stage;
+      nav.innerHTML='<h3>이전 단계 확인 <small>교사 열람 전용 · 학생의 현재 단계와 시간은 그대로 유지</small></h3><div class="teacher-stage-tabs">'+C.stages.map(function(st,i){return '<button type="button" class="btn sm'+(i===viewed?' primary':'')+'" data-review-stage="'+i+'"'+(i>s.stage?' disabled':'')+'>'+esc(st.id)+'</button>';}).join('')+'</div><div id="teacher-stage-preview"></div>';
+      nav.querySelectorAll('[data-review-stage]').forEach(function(b){b.onclick=function(){self.reviewStage=Number(b.getAttribute('data-review-stage'));self.renderTop();};});
+      var st=C.stages[viewed],ln=Number(s.lesson)||1,items=C.items.filter(function(it){return !it.archived&&it.lesson===ln&&it.stage===st.id;});
+      var pages=WORKSHEETS&&WORKSHEETS.lessons&&WORKSHEETS.lessons[String(ln)]&&WORKSHEETS.lessons[String(ln)][self.data.group]&&WORKSHEETS.lessons[String(ln)][self.data.group][st.id];
+      $('#teacher-stage-preview').innerHTML='<p class="hint">현재 수업: <b>'+esc(C.stages[s.stage].ko)+'</b> · 열람 중: <b>'+esc(st.ko)+'</b> · 읽기 전용</p>'+
+        (Array.isArray(pages)&&pages.length?'<details><summary>활동지 원본 '+pages.length+'쪽 확인</summary>'+pages.filter(function(u){return typeof u==='string'&&u.indexOf('/worksheets/L')===0&&!u.includes('..');}).map(function(u){return '<img loading="lazy" style="display:block;width:100%;max-width:720px;margin:8px auto" src="'+esc(u)+'" alt="활동지">';}).join('')+'</details>':'')+
+        items.map(function(it){var asset=paperAsset(it,self.data.group);return '<details class="teacher-stage-item"><summary>'+esc(shortOf(it.id))+' · '+esc(plain(it.title))+'</summary>'+(asset?paperProblem(it,self.data.group):'<p>'+fmt(it.title)+'</p>'+(it.fig?figHTML(it.fig):'')+choicesHTML(it.choices)+(it.sub?'<p>'+fmt(it.sub)+'</p>':''))+'</details>';}).join('')+
+        (!items.length?'<p class="hint">이 단계의 웹 문항이 등록되어 있지 않습니다.</p>':'');
+    }
     var note=$('#teacher-entry-note');
     if(!auto){note.innerHTML='<b>이전 방식으로 만든 수동 수업입니다.</b> 이 수업에는 자동 시작 버튼이 없습니다. 연구자 화면에서 등록된 반을 선택한 뒤 새 수업이나 시연을 준비해 주세요. <button class="btn sm" id="open-research-setup">연구자 수업 준비로</button>';$('#open-research-setup').onclick=function(){if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{var saved=rememberedStaff('researcher');if(saved){tabStore('pq4r:staff-screen',{screen:'researcher'});restoreStaff(saved);}else renderEntry('researcher');}};}
     else if(m==='waiting'){note.textContent='① 학생들이 반 코드로 먼저 입장합니다. ② 아래 접속 인원을 확인합니다. ③ '+'수업 시작'+'을 누르면 모두 Preview 2분부터 시작합니다. 시작 전에는 시간이 흐르지 않습니다.';
