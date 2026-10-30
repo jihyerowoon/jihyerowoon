@@ -49,7 +49,7 @@ test('1-8 lesson coverage and 560 user-approved prompt entries',()=>{
 });
 test('Review public windows and ongoing reflection',()=>{
  const R=require('../lib/review');
- const start=Date.now(),session={stage:5,lesson:3,stage_opened:{5:new Date(start).toISOString()},clock:{mode:'reflection'}};
+ const start=Date.now(),session={status:'open',stage:5,lesson:3,stage_opened:{5:new Date(start).toISOString()},clock:{mode:'reflection'}};
  for(const [minutes,answer,reflection] of [[0,false,false],[5.999,false,false],[6,true,false],[9.999,true,false],[10,true,true],[12,true,true],[30,true,true]]){
   const s=R.status(session,start+Math.round(minutes*60000));
   assert.equal(s.unlocked,answer,'Answer '+minutes);
