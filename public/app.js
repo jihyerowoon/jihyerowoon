@@ -2007,7 +2007,7 @@
         $('#right').insertAdjacentHTML('beforeend',self.pdfPanel('reflection',[1],'공통 성찰지 · Review 10분 후 공개'));
       }
     }
-    $('.student-pdf-panel [data-pdf-canvas]').forEach(function(canvas){
+    $$('[data-pdf-canvas]').forEach(function(canvas){
       var kind=canvas.getAttribute('data-pdf-kind'),page=Number(canvas.getAttribute('data-pdf-page-number')),key=kind+':'+stage,selected=self.pdfPage&&self.pdfPage[key];
       self.renderPdfPage(kind,kind==='worksheet'?page:(selected||page),canvas.id);
     });
