@@ -291,9 +291,11 @@
     var box = $('#loginbox');
     if (tab === 'student') {
       box.innerHTML = '<form class="login-form" id="lf" autocomplete="off">' +
+        '<label>수업 코드<input id="l-sess" required maxlength="24" value="' + esc(new URLSearchParams(location.search).get('class') || last.classCode || '') + '" autocapitalize="characters" spellcheck="false"></label>' +
         '<label>학생 코드<input id="l-code" required maxlength="20" value="' + esc(last.code || '') + '" autocapitalize="characters" spellcheck="false"></label>' +
+        '<label>PIN<input id="l-pin" required inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" type="password" autocomplete="off"></label>' +
         '<button class="btn primary" type="submit">입장</button><p class="err" id="l-err" role="alert"></p>' +
-        '<p class="hint">학생 코드만 입력하면 등록된 수업으로 연결됩니다. 구글 로그인과 PIN은 필요하지 않습니다.</p></form>';
+        '<p class="hint">수업 코드, 학생 코드, PIN만 입력하세요. 별도의 구글 로그인은 필요하지 않습니다. 차시는 자동 연결됩니다.</p></form>';
     } else {
       box.innerHTML = '<form class="login-form staff" id="lf">' +
         (tab === 'teacher' ? '<label>교사 ID<input id="l-tid" maxlength="20" value="' + esc(last.tid === 'T1' ? 'T01' : (last.tid || 'T01')) + '"></label>' : '') +
@@ -306,9 +308,9 @@
       var btn = $('#lf button[type=submit]'), err = $('#l-err'); err.textContent = ''; btn.disabled = true;
       var p;
       if (tab === 'student') {
-        var sc = (new URLSearchParams(location.search).get('class') || '').trim().toUpperCase(), code = $('#l-code').value.trim().toUpperCase();
+        var sc = $('#l-sess').value.trim().toUpperCase(), code = $('#l-code').value.trim().toUpperCase();
         store('pq4r:last', Object.assign({}, last, { tab: 'student', classCode: sc, code: code }));
-        p = api('POST', 'login/student', { class_code: sc, session_code:linkSession(), student_code: code, ua: navigator.userAgent.slice(0, 160) })
+        p = api('POST', 'login/student', { class_code: sc, session_code:linkSession(), student_code: code, pin: $('#l-pin').value.trim(), ua: navigator.userAgent.slice(0, 160) })
           .then(function (r) { App.tok = r.token; App.role = 'student'; saveAuth({ token: r.token, role: 'student' }); Student.start(r.me); });
       } else {
         var tid = tab === 'teacher' ? $('#l-tid').value.trim().toUpperCase() : null;
@@ -317,10 +319,10 @@
           .then(function (r) { App.tok = r.token; App.role = r.role; App.tid = r.tid; saveAuth({ token: r.token, role: r.role, tid: r.tid }); if (r.role === 'teacher') Teacher.start(linkSession()||null); else Researcher.start(); });
       }
       p.catch(function (e) { err.textContent = e.message;
-        if(e.code==='class_waiting'){clearTimeout(App.loginRetry);var form=$('#lf');App.timers.push(App.loginRetry=setTimeout(function(){if(App.screen==='entry'&&$('#lf')===form&&$('#l-code').value.trim().toUpperCase()===code)form.requestSubmit();},4000));}
+        if(e.code==='class_waiting'){clearTimeout(App.loginRetry);var form=$('#lf'),waitingPin=$('#l-pin').value;App.timers.push(App.loginRetry=setTimeout(function(){if(App.screen==='entry'&&$('#lf')===form&&$('#l-sess').value.trim().toUpperCase()===sc&&$('#l-code').value.trim().toUpperCase()===code&&$('#l-pin').value===waitingPin)form.requestSubmit();},4000));}
       }).then(function () { btn.disabled = false; });
     });
-    var f = $('#l-code') || $('#l-pw'); if (f) f.focus();
+    var f = $('#l-pin') && !$('#l-sess').value ? $('#l-sess') : ($('#l-pin') || $('#l-pw')); if (f) f.focus();
   }
 
   /* =====================================================================
@@ -1382,7 +1384,7 @@
       $('#cl-prepare').onclick=function(){var button=this,lesson=+$('#cl-lesson').value,current=self.sessions.find(function(s){return s.class_name===cls.code&&s.status==='open'&&['running','paused','catchup'].includes(clockMode(s));})||self.sessions.find(function(s){return s.class_name===cls.code&&s.status==='open'&&s.settings.autoTimer&&clockMode(s)==='waiting';});if(current&&!confirm('기존 수업 대신 새 수업을 Preview에서 준비할까요? 이전 기록은 보존됩니다. 기존 수업을 계속하려면 아래 수업 운영을 누르세요.'))return;button.disabled=true;api('POST','staff/new-lesson',{class_code:cls.code,lesson:lesson,videoUrl:$('#cl-video').value,replace_session:current?current.code:null}).then(function(r){return self.loadSessions().then(function(){Teacher.start(r.session.code);});}).catch(function(e){toast(e.message,'warn');button.disabled=false;});};
       $('#cl-newdemo').onclick=function(){var button=this,lesson=+$('#cl-lesson').value,current=self.sessions.find(function(s){return s.class_name===cls.code&&s.status==='open'&&['running','paused','catchup'].includes(clockMode(s));})||self.sessions.find(function(s){return s.class_name===cls.code&&s.lesson===lesson&&s.status==='open';});if(current&&!confirm('기존 수업의 진행을 끝내고 새 시연을 Preview에서 준비할까요? 기존 답안과 기록은 보존됩니다. 실제 수업 중에는 사용하지 마세요.'))return;button.disabled=true;api('POST','staff/new-demo',{class_code:cls.code,lesson:lesson,videoUrl:$('#cl-video').value,replace_session:current?current.code:null}).then(function(r){return self.loadSessions().then(function(){Teacher.start(r.session.code);});}).catch(function(e){toast(e.message,'warn');button.disabled=false;});};
       $$('[data-cl-open]').forEach(function(b){b.onclick=function(){Teacher.start(b.getAttribute('data-cl-open'));};});
-      $$('[data-cl-test]').forEach(function(b){b.onclick=function(){window.open('/?class='+encodeURIComponent(cls.code)+'#login-student','_blank','noopener');toast('새 창에서 학생 코드만 입력해 입장하는지 확인하세요.');};});
+      $$('[data-cl-test]').forEach(function(b){b.onclick=function(){window.open('/?class='+encodeURIComponent(cls.code)+'#login-student','_blank','noopener');toast('새 창에서 수업 코드, 학생 코드, PIN으로 입장해 확인하세요.');};});
     }).catch(function(e){toast(e.message,'warn');});
   };
   function clockLabel(s){return ({waiting:'시작 대기',running:'진행 중',paused:'일시정지',catchup:'보완 시간',reflection:'성찰 작성 중',finished:'완료'})[clockMode(s)]||'수동 진행';}
