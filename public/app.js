@@ -430,7 +430,7 @@
       }
       if (sid === 'Recite') h += '<div class="panel cover"><p class="k">가린 내용</p><p>Recite 동안은 앞 단계의 답과 개념 정리를 가려요. 먼저 내 말로 설명해 보세요.</p></div>';
       n.innerHTML = h;
-      var fc = $('#figcard'); if (fc) fc.hidden = !self.hasTool(sid);
+      var fc = $('#figcard'); if (fc) fc.hidden = self.lesson()===2 || !self.hasTool(sid);
       var lay = $('#layout'); if (lay) lay.classList.toggle('noleft', !h && !(fc && !fc.hidden));
     },
     bindLeft: function () {
@@ -1504,8 +1504,21 @@
     else if(m==='waiting'){note.textContent='① 학생들이 반 코드로 먼저 입장합니다. ② 아래 접속 인원을 확인합니다. ③ '+'수업 시작'+'을 누르면 모두 Preview 2분부터 시작합니다. 시작 전에는 시간이 흐르지 않습니다.';
       if(!s.clock.ready&&self.readyAttempt!==s.code){self.readyAttempt=s.code;api('POST','staff/ready',{session:s.code}).then(function(){return self.refresh();}).catch(function(e){toast(e.message,'warn');note.textContent=e.message;});}
     }else if(m==='paused')note.textContent='현재 단계와 남은 시간, 학생 답안이 보존되어 있습니다. 이어서 진행을 누르면 이 지점부터 학생들과 함께 재개합니다. 새 수업을 만들 필요가 없습니다.';else if(m==='reflection')note.textContent='성찰지 작성 중입니다. Review 마지막 2분이 지나도 자동 종료되지 않습니다. 모든 학생의 성찰 제출을 확인한 뒤 직접 종료하세요.';else note.textContent='교사 시작 시각을 기준으로 모든 학생이 함께 진행합니다. 시간이 끝나면 자동으로 다음 단계로 이동합니다.';
-    var actions=auto?(m==='running'&&s.settings.demoSession&&s.stage<5?'<button class="btn primary" data-clock="demo-next">시연 · 다음 단계 즉시 이동</button><button class="btn" data-clock="pause">긴급 일시정지</button>':m==='waiting'?'<button class="btn primary" data-clock="start">'+'수업 시작'+'</button>':['running','catchup'].includes(m)?'<button class="btn" data-clock="pause">긴급 일시정지</button>':m==='reflection'?'<button class="btn primary" data-clock="finish">성찰 확인 후 수업 종료</button>':m==='paused'?'<button class="btn primary" data-clock="resume">이어서 진행</button>':'<span class="pill">수업 완료</span>'):'<button class="btn" id="t-prev">이전 단계</button><button class="btn primary" id="t-next">다음 단계</button>';
-    if($('#clock-actions').innerHTML!==actions){$('#clock-actions').innerHTML=actions;$$('[data-clock]').forEach(function(b){b.onclick=function(){if(b.getAttribute('data-clock')==='demo-next'&&!confirm('시연을 다음 단계로 넘길까요? 현재 단계의 미제출 답안은 미완료로 기록되고 학생들도 즉시 다음 단계로 이동합니다.'))return;if(b.getAttribute('data-clock')==='finish'&&!confirm('학생들의 성찰 제출을 확인했습니까? 종료하면 성찰을 추가 저장할 수 없습니다.'))return;b.disabled=true;api('POST','staff/clock',{session:self.code,action:b.getAttribute('data-clock')}).then(function(){self.queueFingerprint=null;return self.refresh();}).catch(function(e){toast(e.message,'warn');self.refresh();});};});if(!auto){$('#t-prev').onclick=function(){if(s.stage>0)self.setStage(-1);};$('#t-next').onclick=function(){if(s.stage<5)self.setStage(1);};}}
+    var navActions=(m==='running'&&auto)?'<button class="btn" data-clock="manual-prev"'+(s.stage===0?' disabled':'')+'>← 이전 단계</button><button class="btn primary" data-clock="manual-next"'+(s.stage===5?' disabled':'')+'>다음 단계 →</button>':'';
+    var otherActions=auto?(m==='waiting'?'<button class="btn primary" data-clock="start">수업 시작</button>':['running','catchup'].includes(m)?'<button class="btn" data-clock="pause">긴급 일시정지</button>':m==='reflection'?'<button class="btn primary" data-clock="finish">성찰 확인 후 수업 종료</button>':m==='paused'?'<button class="btn primary" data-clock="resume">이어서 진행</button>':'<span class="pill">수업 완료</span>'):'<button class="btn" id="t-prev">이전 단계</button><button class="btn primary" id="t-next">다음 단계</button>';
+    var actions=navActions+otherActions;
+    if($('#clock-actions').innerHTML!==actions){
+      $('#clock-actions').innerHTML=actions;
+      $$('[data-clock]').forEach(function(b){b.onclick=function(){
+        var action=b.getAttribute('data-clock');
+        if(action==='manual-next'&&!confirm('다음 단계로 이동할까요? 현재 단계의 미제출 답안은 미완료 처리되며 수업 진행 로그에 교사 조작으로 기록됩니다.'))return;
+        if(action==='manual-prev'&&!confirm('이전 단계로 돌아갈까요? 학생 화면도 이전 단계로 이동하고 새 타이머가 시작됩니다. 수업 진행 로그에 교사 조작으로 기록됩니다.'))return;
+        if(action==='finish'&&!confirm('학생들의 성찰 제출을 확인했습니까? 종료하면 성찰을 추가 저장할 수 없습니다.'))return;
+        b.disabled=true;
+        api('POST','staff/clock',{session:self.code,action:action}).then(function(){self.queueFingerprint=null;self.reviewStage=null;return self.refresh();}).catch(function(e){toast(e.message,'warn');self.refresh();});
+      };});
+      if(!auto){$('#t-prev').onclick=function(){if(s.stage>0)self.setStage(-1);};$('#t-next').onclick=function(){if(s.stage<5)self.setStage(1);};}
+    }
     var restart=$('#t-demo-restart');restart.hidden=!s.settings.demoSession;restart.onclick=function(){if(!confirm('새 시연을 Preview 2분에서 다시 준비할까요? 이전 답안과 기록은 그대로 보존됩니다.'))return;restart.disabled=true;api('POST','staff/new-demo',{class_code:s.class_name,lesson:s.lesson,videoUrl:s.settings.videoUrl||'',replace_session:s.status==='open'?s.code:null}).then(function(r){store('pq4r:teacher-session',r.session.code);Teacher.start(r.session.code);}).catch(function(e){toast(e.message,'warn');restart.disabled=false;});};
     var people=self.data.students,online=people.filter(function(p){return p.last_seen&&nowMs()-Date.parse(p.last_seen)<90000;}).length;
     $('#console-stats').innerHTML='<span>등록 <b>'+people.length+'</b></span><span>접속 <b>'+online+'</b></span><span>도움 요청 <b>'+self.data.requests.length+'</b></span><span>현재 단계 미제출 <b>'+people.filter(function(p){return self.stageItems().some(function(id){return !p.items[id]||!p.items[id].a;});}).length+'</b></span>';
