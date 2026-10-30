@@ -2037,13 +2037,14 @@
     var self=this,lesson=self.lesson(),stage=self.stageIdx(),view=self.view;
     if(lesson>=3){
       self.ensureLessonPdf('worksheet');
-      var pageMap={0:[1],1:[2],2:[3,4],3:[5,6,7],4:[8],5:[9]};
+      var pageMap={0:[1],1:[1,2],2:[3,4],3:[5,6,7],4:[8],5:[9]};
       var chosenPages=pageMap[view]||[1];
       var stageItems=C.items.filter(function(it){return it.lesson===lesson&&it.stage===C.stages[view].id&&!it.archived;});
       chosenPages.forEach(function(page,index){
         var item=stageItems[index]||stageItems[0],card=item&&$('#right article.item[data-item="'+item.id+'"]');
-        var panel=self.pdfPanel('worksheet',[page],lesson+'차시 · '+C.stages[view].ko+' '+page+'쪽');
-        if(card){var header=card.querySelector('.item-h');if(header)header.insertAdjacentHTML('afterend',panel);else card.insertAdjacentHTML('afterbegin',panel);}
+        var panel=self.pdfPanel('worksheet',[page],lesson+'차시 · '+(view===1&&page===1?'Preview 그림 다시 보기':C.stages[view].ko+' '+page+'쪽'));
+        if(view===1&&page===1){var head=$('#right .stagehead');if(head)head.insertAdjacentHTML('afterend',panel);else $('#right').insertAdjacentHTML('afterbegin',panel);}
+        else if(card){var header=card.querySelector('.item-h');if(header)header.insertAdjacentHTML('afterend',panel);else card.insertAdjacentHTML('afterbegin',panel);}
         else $('#right').insertAdjacentHTML('beforeend',panel);
       });
     }
