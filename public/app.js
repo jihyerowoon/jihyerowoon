@@ -2007,7 +2007,27 @@
         $('#right').insertAdjacentHTML('beforeend',self.pdfPanel('reflection',[1],'공통 성찰지 · Review 10분 후 공개'));
       }
     }
-    $$('[data-pdf-canvas]').forEach(function(canvas){
+    if(lesson>=3&&view===stage&&self.editable()){
+      var stageName=C.stages[view].id,stageCards=C.items.filter(function(it){return it.lesson===lesson&&it.stage===stageName&&!it.archived;});
+      stageCards.forEach(function(it,index){
+        var card=$('#right article.item[data-item="'+it.id+'"]'),fields=card&&card.querySelector('.fields');
+        if(!fields)return;
+        var sourceCard=stageName==='Recite'?$('#right article.item[data-item="'+stageCards[0].id+'"]'):card;
+        var paper=sourceCard&&sourceCard.querySelector('.student-pdf-paper');
+        if(!paper)return;
+        var overlay=document.createElement('div');overlay.className='worksheet-input-overlay';
+        if(stageName==='Recite'){
+          overlay.classList.add('worksheet-recite-input');
+          overlay.style.top=(stageCards.length===4?[30,46,62,79][index]:[32,54,77][index])+'%';
+          overlay.style.height=(stageCards.length===4?13:17)+'%';
+        }else{
+          overlay.style.top=(stageName==='Read'?67:stageName==='Review'?72:stageName==='Reflect'?71:stageName==='Question'?46:stageName==='Preview'?70:70)+'%';
+          overlay.style.height=(stageName==='Question'?38:stageName==='Preview'?24:25)+'%';
+        }
+        overlay.appendChild(fields);paper.appendChild(overlay);
+      });
+    }
+    $('[data-pdf-canvas]').forEach(function(canvas){
       var kind=canvas.getAttribute('data-pdf-kind'),page=Number(canvas.getAttribute('data-pdf-page-number')),key=kind+':'+stage,selected=self.pdfPage&&self.pdfPage[key];
       self.renderPdfPage(kind,kind==='worksheet'?page:(selected||page),canvas.id);
     });
