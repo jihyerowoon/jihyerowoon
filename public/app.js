@@ -534,7 +534,7 @@
       var mats = lessonMaterials(ln);
       var h = '<div class="stagehead ' + key + '"><p class="stage-k"><span class="sdot"></span>' + (self.view + 1) + '. ' + st.id.toUpperCase() + '<span class="ko">' + st.ko + '</span><span class="min">' + stageMin(ln, self.view) + '분</span></p>' +
         '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (editable ? '' : self.view===5&&self.me.review&&self.me.review.unlocked?'<p class="closed-note">문제 풀이 작성 시간은 끝났습니다. 해설을 확인하고 아래에서 성찰을 작성하세요.</p>':'<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') + '</div>';
-      if (editable) h += '<p class="student-simple-tip">① 답을 적고 제출하세요. ② 어렵다면 <b>질문으로 도움받기</b>를 누르세요. Review에서는 첫 제출 전에도 질문할 수 있습니다.</p>';
+      if (editable && st.id !== 'Preview' && st.id !== 'Read') h += '<p class="student-simple-tip">① 답을 적고 제출하세요. ② 어렵다면 <b>질문으로 도움받기</b>를 누르세요. Review에서는 첫 제출 전에도 질문할 수 있습니다.</p>';
       if(g!=='CONTROL')h += worksheetPane(ln,g,st.id);
       if (editable) h += self.toolbarHTML();
       if(!(self.view===5 && self.reviewFeedback))items.forEach(function (it) { h += self.itemHTML(it, editable); });
@@ -1700,7 +1700,7 @@
       if(confidence){
         var bottom=document.createElement('section');bottom.className='panel review-confidence-bottom';
         bottom.innerHTML='<h3>정답 공개 전, 내 판단의 확신도</h3><p class="hint small">답과 풀이를 적은 뒤 마지막으로 표시하세요. 별도 질문이나 AI 발문은 필요하지 않습니다.</p>';
-        bottom.appendChild(confidence);$('#right').appendChild(bottom);
+        bottom.appendChild(confidence);var rvCard=$('#right article.item[data-item="L'+self.lesson()+'RV01"]');if(rvCard)rvCard.after(bottom);else $('#right').appendChild(bottom);
       }
     }
     if(self.view===2&&self.stageIdx()===2&&self.settings().videoUrl){self.renderReadVideo();}
@@ -2028,9 +2028,7 @@
          return '<button type="button" class="btn sm'+(n===page?' primary':'')+'" data-pdf-page="'+n+'" data-pdf-kind="'+kind+'">'+n+'쪽</button>';
        }).join('')+'</nav>':'')+
       '<div class="student-pdf-paper"><canvas id="pdf-canvas-'+kind+'-'+page+'" data-pdf-canvas data-pdf-kind="'+kind+'" data-pdf-page-number="'+page+'" aria-label="'+esc(heading)+' '+page+'쪽"></canvas>'+
-      ''+
-+
-      '</div><p id="pdf-status-'+kind+'" class="hint small">선택한 '+page+'쪽을 크게 불러오는 중…</p></section>';
+      '</div><p data-pdf-status class="hint small">선택한 '+page+'쪽을 크게 불러오는 중…</p></section>';
   };
   var beforePdfStage=Student.renderStage;
   Student.renderStage=function(){
