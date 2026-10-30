@@ -551,7 +551,7 @@
     },
     toolbarHTML: function () {
       var syms = [['△', '삼각형'], ['≡', '합동'], ['∠', '각'], ['∥', '평행'], ['⊥', '수직'], ['=', '같음'], ['°', '도'], ['+', '더하기'], ['−', '빼기'], ['×', '곱하기'], ['÷', '나누기']];
-      var segs = this.lesson() === 1 ? ['AB', 'BC', 'CA', 'DE', 'EF', 'FD', 'AO', 'CO', 'BD'] : ['AB', 'BC', 'CD', 'DA', 'AC', 'BD', 'AO', 'OC', 'BO', 'OD', 'AE', 'EO'];
+      var segs = this.lesson() === 1 ? ['AB', 'BC', 'CA', 'DE', 'EF', 'FD', 'AO', 'CO', 'BD'] : ['AB', 'BC', 'CD', 'DA', 'AC', 'BD', 'AO', 'BO', 'CO', 'DO', 'OA', 'OB', 'OC', 'OD', 'AD', 'DC', 'AE', 'BE', 'DE', 'EC', 'EO', 'PC', 'PD', 'PB', 'AP'];
       return '<div class="symbar" role="toolbar" aria-label="수학 기호 입력"><span class="symbar-k">기호</span>' +
         syms.map(function (s) { return '<button type="button" class="sym" data-sym="' + s[0] + '" title="' + s[1] + '">' + s[0] + '</button>'; }).join('') +
         '<span class="segpick"><button type="button" class="sym wide" data-act="segmenu" aria-expanded="false">선분 <span class="seg">AB</span> ▾</button>' +
