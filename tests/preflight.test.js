@@ -17,6 +17,21 @@ test('Never apply forEach to one DOM element',()=>{
  assert.match(source,/\$\$\('\[data-grid-mode\]'\)\.forEach/);
  assert.match(source,/\$\$\('\[data-itab\]', n\)\.forEach/);
 });
+test('All eight lessons have Preview Recite Review and consistent help and worksheet rendering',()=>{
+ const C=require('../lib/content'),src=read('public/app.js');
+ for(let n=1;n<=8;n++){
+  for(const stage of ['Preview','Recite','Review'])assert.ok(C.ITEMS.some(it=>it.lesson===n&&it.stage===stage&&!it.archived),n+' missing '+stage);
+  assert.ok(C.BANK.some(b=>b.item==='L'+n+'RV01'),n+' missing Review prompts');
+  assert.ok(C.BANK.some(b=>b.item==='L'+n+'RC01'),n+' missing Recite prompts');
+ }
+ assert.match(src,/it\.stage === 'Preview' \|\| it\.kind === 'memo'/);
+ assert.match(src,/ITEM\[id\]\.stage !== 'Review'/);
+ assert.match(src,/rvCard\.after\(bottom\)/);
+ assert.match(src,/data-pdf-status class="hint small"/);
+ assert.doesNotMatch(src,/''\+\s*\+\s*'<\/div>/);
+ assert.doesNotMatch(src,/pdfPanel\('reflection'/);
+ assert.match(src,/review-reflection/);
+});
 test('Student may enter exact waiting session before or after teacher',()=>{
  const s=read('lib/student.js'),c=read('lib/classroom.js');
  assert.match(s,/const directSession=K\.normCode\(body\.session_code\|\|''\)/);
