@@ -534,7 +534,7 @@
       var mats = lessonMaterials(ln);
       var h = '<div class="stagehead ' + key + '"><p class="stage-k"><span class="sdot"></span>' + (self.view + 1) + '. ' + st.id.toUpperCase() + '<span class="ko">' + st.ko + '</span><span class="min">' + stageMin(ln, self.view) + '분</span></p>' +
         '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (editable ? '' : self.view===5&&self.me.review&&self.me.review.unlocked?'<p class="closed-note">문제 풀이 작성 시간은 끝났습니다. 해설을 확인하고 아래에서 성찰을 작성하세요.</p>':'<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') + '</div>';
-      if (editable && st.id !== 'Review') h += '<p class="student-simple-tip">① 답을 적고 <b>내 답 제출하기</b>를 누르세요. ② 어렵다면 제출 후 <b>질문으로 도움받기</b>를 누르세요.</p>';
+      if (editable) h += '<p class="student-simple-tip">① 답을 적고 제출하세요. ② 어렵다면 <b>질문으로 도움받기</b>를 누르세요. Review에서는 첫 제출 전에도 질문할 수 있습니다.</p>';
       if(g!=='CONTROL')h += worksheetPane(ln,g,st.id);
       if (editable) h += self.toolbarHTML();
       if(!(self.view===5 && self.reviewFeedback))items.forEach(function (it) { h += self.itemHTML(it, editable); });
@@ -620,7 +620,7 @@
       if (sb) {
         sb.textContent = r.attempts ? '수정한 답 저장·제출하기' : '내 답 제출하기';
         sb.disabled = !!self.busy[id] || self.isEmpty(id) || r.status === 'incomplete' || !self.editable();
-        var hb = $('[data-act="help"][data-id="' + id + '"]'); if (hb) hb.disabled = !!self.busy[id] || !r.attempts || r.status === 'incomplete' || !self.editable();
+        var hb = $('[data-act="help"][data-id="' + id + '"]'); if (hb) hb.disabled = !!self.busy[id] || (!r.attempts && ITEM[id].stage !== 'Review') || r.status === 'incomplete' || !self.editable();
       }
       var rv = $('[data-revise="' + id + '"]'); if (rv) rv.hidden = !(r.attempts > 0 && r.status !== 'incomplete');
       var bz = $('[data-busy="' + id + '"]'); if (bz) bz.hidden = !self.busy[id];
