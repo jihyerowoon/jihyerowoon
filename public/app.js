@@ -2027,7 +2027,7 @@
         overlay.appendChild(fields);paper.appendChild(overlay);
       });
     }
-    $('[data-pdf-canvas]').forEach(function(canvas){
+    $$('[data-pdf-canvas]').forEach(function(canvas){
       var kind=canvas.getAttribute('data-pdf-kind'),page=Number(canvas.getAttribute('data-pdf-page-number')),key=kind+':'+stage,selected=self.pdfPage&&self.pdfPage[key];
       self.renderPdfPage(kind,kind==='worksheet'?page:(selected||page),canvas.id);
     });
