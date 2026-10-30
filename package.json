@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "node dev/server.js",
     "test": "bash tests/run-local.sh",
-    "test:engine": "node tests/engine.test.js lib"
+    "test:engine": "node tests/engine.test.js lib",
+    "test:preflight": "node tests/preflight.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.131.0",
