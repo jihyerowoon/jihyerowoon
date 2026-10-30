@@ -2024,7 +2024,8 @@
          return '<button type="button" class="btn sm'+(n===page?' primary':'')+'" data-pdf-page="'+n+'" data-pdf-kind="'+kind+'">'+n+'쪽</button>';
        }).join('')+'</nav>':'')+
       '<div class="student-pdf-paper"><canvas id="pdf-canvas-'+kind+'-'+page+'" data-pdf-canvas data-pdf-kind="'+kind+'" data-pdf-page-number="'+page+'" aria-label="'+esc(heading)+' '+page+'쪽"></canvas>'+
-      (kind==='reflection'?'<div class="reflection-paper-entry"><label for="reflection-on-paper">성찰지 작성</label><textarea id="reflection-on-paper" rows="4" maxlength="350" placeholder="내 풀이에서 수정하거나 새롭게 알게 된 내용을 적어 보세요."></textarea><p class="hint small">이곳에서 작성한 내용은 아래 성찰 제출란과 연결됩니다.</p></div>':'')+
+      ''+
++
       '</div><p id="pdf-status-'+kind+'" class="hint small">선택한 '+page+'쪽을 크게 불러오는 중…</p></section>';
   };
   var beforePdfStage=Student.renderStage;
@@ -2061,6 +2062,12 @@
       }
       if(reflectionForm&&answerPane)answerPane.after(reflectionForm);
     }
+    // Review 성찰은 단일 웹 입력폼만 사용한다. 과거 버전의 중복 PDF 패널이 있으면 제거한다.
+    if(stage===5&&view===5){
+      $('.student-pdf-panel').forEach(function(panel){
+        if(panel.querySelector('[data-pdf-kind="reflection"]')||/공통 성찰지/.test(panel.querySelector('h3')&&panel.querySelector('h3').textContent||''))panel.remove();
+      });
+    }
     if(lesson>=3&&view===stage&&self.editable()){
       var stageName=C.stages[view].id,stageCards=C.items.filter(function(it){return it.lesson===lesson&&it.stage===stageName&&!it.archived;});
       stageCards.forEach(function(it,index){
@@ -2085,11 +2092,6 @@
       var kind=canvas.getAttribute('data-pdf-kind'),page=Number(canvas.getAttribute('data-pdf-page-number')),key=kind+':'+stage,selected=self.pdfPage&&self.pdfPage[key];
       self.renderPdfPage(kind,kind==='worksheet'?page:(selected||page),canvas.id);
     });
-    var onPaper=$('#reflection-on-paper');
-    if(onPaper){var comp=$('#post-comparison'),keyRef='pq4r:reflection:'+self.me.session.code+':'+self.me.student.code,stored=store(keyRef)||{};
-      onPaper.value=(comp&&comp.value)||stored.comparison||'';
-      onPaper.addEventListener('input',function(){if(comp){comp.value=onPaper.value;comp.dispatchEvent(new Event('input',{bubbles:true}));}else{var draft=store(keyRef)||{};draft.comparison=onPaper.value;store(keyRef,draft);}});
-    }
     $$('[data-pdf-page]').forEach(function(b){b.onclick=function(){
       var kind=b.getAttribute('data-pdf-kind'),key=kind+':'+self.stageIdx();
       self.pdfPage=self.pdfPage||{};self.pdfPage[key]=Number(b.getAttribute('data-pdf-page'));
