@@ -2020,22 +2020,16 @@
         self.ensureLessonPdf('answer');
         $('#right').insertAdjacentHTML('beforeend',self.pdfPanel('answer',lesson===1?[1,2,3,4,5]:[1,2,3,4,5,6],lesson+'차시 정답지 · Review 6분 후 공개'));
       }
-      if(review.reflect_unlocked){
-        self.ensureLessonPdf('reflection');
-        $('#right').insertAdjacentHTML('beforeend',self.pdfPanel('reflection',[1],'공통 성찰지 · Review 10분 후 공개'));
-      }
     }
     if(stage===5&&view===5){
-      var root=$('#right'),answerPane=root&&root.querySelector('.student-pdf-panel:has([data-pdf-kind="answer"])'),reflectPane=root&&root.querySelector('.student-pdf-panel:has([data-pdf-kind="reflection"])');
+      var root=$('#right'),answerPane=root&&root.querySelector('.student-pdf-panel:has([data-pdf-kind="answer"])');
       var reflectionForm=root&&root.querySelector('.review-reflection');
-      if(answerPane){var solutionRoot=root.querySelector('.review-answers');if(solutionRoot)solutionRoot.after(answerPane);else{var firstReview=root.querySelector('.review-solution');if(firstReview)firstReview.parentElement.after(answerPane);}}
-      if(reflectionForm&&reflectPane)reflectionForm.before(reflectPane);
-      if(reflectionForm&&answerPane&&!reflectPane)answerPane.after(reflectionForm);
-      if(reflectionForm&&reflectPane){
-        var reflectionEntry=reflectPane.querySelector('.reflection-paper-entry');
-        if(reflectionEntry){var fieldset=reflectionForm.querySelector('fieldset'),compare=reflectionForm.querySelector('label:has(#post-comparison)'),submit=reflectionForm.querySelector('[data-act="review-reflect"]');if(fieldset)reflectionEntry.appendChild(fieldset);if(compare)reflectionEntry.appendChild(compare);if(submit)reflectionEntry.appendChild(submit);}
-        reflectionForm.hidden=true;
+      if(answerPane){
+        var solutionRoot=root.querySelector('.review-answers');
+        if(solutionRoot)solutionRoot.after(answerPane);
+        else {var reviewCards=root.querySelectorAll('.review-solution');if(reviewCards.length)reviewCards[reviewCards.length-1].parentElement.after(answerPane);}
       }
+      if(reflectionForm&&answerPane)answerPane.after(reflectionForm);
     }
     if(lesson>=3&&view===stage&&self.editable()){
       var stageName=C.stages[view].id,stageCards=C.items.filter(function(it){return it.lesson===lesson&&it.stage===stageName&&!it.archived;});
