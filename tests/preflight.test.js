@@ -31,6 +31,16 @@ test('Lesson 3-8 worksheet pages precede independent per-question cards',()=>{
    }
  }
 });
+test('Lesson 3-8 field help buttons exclude Preview and concept memo while 1-2 remain intact',()=>{
+ const app=read('public/app.js'),C=require('../lib/content');
+ assert.match(app,/self\.lesson\(\)>=3 && it\.stage!=='Preview' && it\.kind!=='memo'/);
+ assert.match(app,/data-help-field/);
+ assert.match(app,/self\.lesson\(\)>=3\) \? ''/);
+ for(let n=3;n<=8;n++)for(const stage of ['Read','Reflect','Recite','Review']){
+  const items=C.ITEMS.filter(it=>it.lesson===n&&it.stage===stage&&!it.archived);
+  assert.ok(items.length>0,n+' '+stage);
+ }
+});
 test('All eight lessons have Preview Recite Review and consistent help and worksheet rendering',()=>{
  const C=require('../lib/content'),src=read('public/app.js');
  for(let n=1;n<=8;n++){
