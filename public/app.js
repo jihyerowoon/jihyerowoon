@@ -573,7 +573,7 @@
         var src = self.item(it.recall), txt = src.versions.length ? src.versions[0].fields.text : (src.draft.text || '');
         h += '<blockquote class="recall"><span>처음 생각 (Preview)</span>' + (txt ? esc(txt) : '<i>기록 없음</i>') + '</blockquote>';
       }
-      if(editable && it.id==='L2RC03') h += self.toolbarHTML();
+      if(editable && it.id==='L2RC03') h += self.toolbarHTML().replace(/data-sym=/g, 'data-target-field="in-L2RC03-text" data-sym=').replace(/data-segins=/g, 'data-target-field="in-L2RC03-text" data-segins=');
       h += '<div class="fields' + (it.fields.some(function (f) { return f.narrow; }) ? ' has-narrow' : '') + '">';
       it.fields.forEach(function (f) {
         var val = rec.draft[f.key] != null ? rec.draft[f.key] : (last[f.key] || '');
@@ -728,7 +728,7 @@
         var b = ev.target.closest('button'); if (!b) return;
         if (b.hasAttribute('data-sym')) { insertAt(b.hasAttribute('data-target-field')?document.getElementById(b.getAttribute('data-target-field')):lastInput, b.getAttribute('data-sym')); return; }
         if (b.getAttribute('data-act') === 'segmenu') { var m = $('#segmenu'); m.hidden = !m.hidden; b.setAttribute('aria-expanded', String(!m.hidden)); return; }
-        if (b.hasAttribute('data-segins')) { insertAt(lastInput, b.getAttribute('data-segins').split('').map(function (ch) { return ch + '̅'; }).join('')); $('#segmenu').hidden = true; return; }
+        if (b.hasAttribute('data-segins')) { insertAt(b.hasAttribute('data-target-field')?document.getElementById(b.getAttribute('data-target-field')):lastInput, b.getAttribute('data-segins').split('').map(function (ch) { return ch + '̅'; }).join('')); $('#segmenu').hidden = true; return; }
         if (b.hasAttribute('data-unsel')) { var p = b.getAttribute('data-unsel').split(':'), arr = self.item(p[0]).draft_sel[p[1]] || [], el = p[2] + ':' + p[3], i = arr.indexOf(el); if (i >= 0) arr.splice(i, 1); self.renderSelRow(p[0], p[1]); self.renderFigSel(); self.saveDraft(p[0]); return; }
         if (b.hasAttribute('data-openmat')) { self.openMaterial(+b.getAttribute('data-openmat')); return; }
         if (b.getAttribute('data-act') === 'review-reflect') { self.submitReviewReflection(); return; }
