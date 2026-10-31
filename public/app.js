@@ -629,7 +629,7 @@
       if (sb) {
         sb.textContent = r.attempts ? '수정한 답 저장·제출하기' : '내 답 제출하기';
         sb.disabled = !!self.busy[id] || self.isEmpty(id) || r.status === 'incomplete' || !self.editable();
-        $('[data-act="help"][data-id="' + id + '"]').forEach(function(hb){hb.disabled = !!self.busy[id] || (!r.attempts && ITEM[id].stage !== 'Review') || r.status === 'incomplete' || !self.editable();});
+        $$('[data-act="help"][data-id="' + id + '"]').forEach(function(hb){hb.disabled = !!self.busy[id] || (!r.attempts && ITEM[id].stage !== 'Review') || r.status === 'incomplete' || !self.editable();});
       }
       var rv = $('[data-revise="' + id + '"]'); if (rv) rv.hidden = !(r.attempts > 0 && r.status !== 'incomplete');
       var bz = $('[data-busy="' + id + '"]'); if (bz) bz.hidden = !self.busy[id];
