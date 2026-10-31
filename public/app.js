@@ -2003,27 +2003,75 @@
     }).catch(function(e){Student.pdfRendererPromise=null;throw e;});
     return this.pdfRendererPromise;
   };
-  Student.renderPdfPage=function(kind,page,canvasId){
-    var self=this,asset=self.pdfCache&&self.pdfCache[kind],canvas=$('#'+canvasId),hint=canvas&&canvas.closest('.student-pdf-panel').querySelector('[data-pdf-status]');
-    if(!asset||!asset.url||!canvas)return;
+  /* 3~8차시 PDF 원본(540×780)의 문제·도형 영역만 추출한다.
+     각 쪽의 종이 답란을 제외하도록 실제 최신 학생용 원본 6종, 총 54쪽을 대조한 좌표. */
+  var LESSON_PROBLEM_CROPS={"3":{"1":[18,206,522,528],"3":[18,144,522,778],"4":[18,204,522,531],"5":[18,203,522,525],"6":[18,203,522,522],"7":[18,203,522,509],"9":[18,205,522,512]},"4":{"1":[18,206,522,528],"3":[18,144,522,778],"4":[18,204,522,531],"5":[18,203,522,509],"6":[18,203,522,548],"7":[18,203,522,509],"9":[18,205,522,512]},"5":{"1":[18,206,522,540],"3":[18,144,522,778],"4":[18,204,522,531],"5":[18,203,522,509],"6":[18,203,522,509],"7":[18,203,522,509],"9":[18,205,522,512]},"6":{"1":[18,206,522,561],"3":[18,144,522,778],"4":[18,204,522,531],"5":[18,203,522,509],"6":[18,203,522,509],"7":[18,203,522,509],"9":[18,205,522,512]},"7":{"1":[18,206,522,528],"3":[18,144,522,778],"4":[18,204,522,585],"5":[18,203,522,509],"6":[18,203,522,509],"7":[18,203,522,509],"9":[18,205,522,505]},"8":{"1":[18,206,522,528],"3":[18,144,522,778],"4":[18,204,522,558],"5":[18,203,522,509],"6":[18,203,522,509],"7":[18,203,522,541],"9":[18,205,522,512]}};
+  Student.problemCropSpec=function(page){
+    var perLesson=LESSON_PROBLEM_CROPS[this.lesson()]||{};
+    return perLesson[Number(page)]||null;
+  };
+  Student.problemPanel=function(page,heading){
+    var asset=this.pdfCache&&this.pdfCache.worksheet;
+    if(!asset)return '<section class="panel student-problem-loading" role="status">원본 문제 이미지를 불러오는 중…</section>';
+    if(asset.error)return '<section class="panel student-problem-error" role="alert">원본 문제 파일이 등록되지 않았거나 읽을 수 없습니다: '+esc(asset.error)+'</section>';
+    return '<figure class="student-pdf-panel student-problem-image" data-problem-page="'+page+'">'+
+      '<figcaption class="paper-caption">'+esc(heading)+'</figcaption>'+
+      '<div class="student-pdf-paper"><canvas id="problem-canvas-worksheet-'+page+'" data-pdf-canvas data-pdf-crop="problem" data-pdf-kind="worksheet" data-pdf-page-number="'+page+'" aria-label="'+esc(heading)+'" role="img"></canvas></div>'+
+      '<p data-pdf-status class="hint small" role="status">문제 이미지를 표시하는 중…</p></figure>';
+  };
+  Student.renderPdfPage=function(kind,page,canvasId,crop){
+    var self=this,asset=self.pdfCache&&self.pdfCache[kind],canvas=$('#'+canvasId);
+    var panel=canvas&&canvas.closest('.student-pdf-panel'),hint=panel&&panel.querySelector('[data-pdf-status]');
+    if(!asset||!asset.bytes||!canvas)return;
     self.loadPdfRenderer().then(function(pdfjs){
       if(!asset.documentPromise)asset.documentPromise=pdfjs.getDocument({data:asset.bytes.slice(),disableWorker:true}).promise;
       return asset.documentPromise;
     }).then(function(doc){
-      if(page<1||page>doc.numPages)throw new Error('PDF '+page+'쪽이 없습니다.');
+      if(page<1||page>doc.numPages)throw new Error('PDF '+page+'쪽이 없습니다. 실제 등록된 원본 페이지를 확인하세요.');
       return doc.getPage(page);
     }).then(function(p){
       if(!canvas.isConnected)return;
-      var viewport=p.getViewport({scale:1}),width=Math.max(320,Math.min(1100,canvas.parentElement.clientWidth||760)),scale=width/viewport.width;
-      var draw=p.getViewport({scale:scale*1.6}),ctx=canvas.getContext('2d');
-      canvas.width=Math.ceil(draw.width);canvas.height=Math.ceil(draw.height);canvas.style.width='100%';canvas.style.height='auto';
-      return p.render({canvasContext:ctx,viewport:draw}).promise.then(function(){if(hint&&hint.isConnected)hint.textContent=page+'쪽 표시 중 · 화면에 맞게 확대됨';});
+      var full=p.getViewport({scale:1}),ctx=canvas.getContext('2d');
+      if(!ctx)throw new Error('이미지 캔버스에 접근할 수 없습니다.');
+      if(crop){
+        // Crop values are from the verified 540×780 source PDFs.
+        var x=crop[0]/540*full.width,y=crop[1]/780*full.height;
+        var w=(crop[2]-crop[0])/540*full.width,h=(crop[3]-crop[1])/780*full.height;
+        var width=Math.max(260,Math.min(1000,canvas.parentElement.clientWidth||760));
+        var scale=width/w*1.65,viewport=p.getViewport({scale:scale});
+        canvas.width=Math.ceil(w*scale);canvas.height=Math.ceil(h*scale);
+        canvas.style.width='100%';canvas.style.height='auto';
+        return p.render({canvasContext:ctx,viewport:viewport,transform:[1,0,0,1,-x*scale,-y*scale]}).promise.then(function(){
+          if(!canvas.isConnected)return;
+          // As with lessons 1-2, learners ultimately see a plain image rather than a full PDF viewer.
+          var img=document.createElement('img');
+          img.src=canvas.toDataURL('image/png');
+          img.alt=canvas.getAttribute('aria-label')||'활동지 문제와 수학 도형';
+          img.className='original-problem-img';
+          img.style.cssText='display:block;width:100%;height:auto;max-width:100%';
+          canvas.replaceWith(img);
+          if(hint&&hint.isConnected)hint.remove();
+        });
+      }
+      var widthAll=Math.max(320,Math.min(1100,canvas.parentElement.clientWidth||760));
+      var viewportAll=p.getViewport({scale:widthAll/full.width*1.6});
+      canvas.width=Math.ceil(viewportAll.width);canvas.height=Math.ceil(viewportAll.height);
+      canvas.style.width='100%';canvas.style.height='auto';
+      return p.render({canvasContext:ctx,viewport:viewportAll}).promise.then(function(){
+        if(hint&&hint.isConnected)hint.textContent=page+'쪽 표시 중';
+      });
     }).catch(function(e){
       if(canvas&&canvas.isConnected){
         canvas.style.display='none';
-        var fallback=document.createElement('iframe');fallback.title='원본 활동지 '+page+'쪽';fallback.src=asset.url+'#page='+page+'&toolbar=0&navpanes=0&view=FitH';fallback.className='student-pdf-embed';fallback.style.cssText='width:100%;height:850px;border:0;display:block;background:white';canvas.parentElement.insertBefore(fallback,canvas.nextSibling);
+        if(!panel.querySelector('.student-pdf-embed')){
+          var fallback=document.createElement('iframe');
+          fallback.title='원본 PDF '+page+'쪽';fallback.src=asset.url+'#page='+page+'&toolbar=0&navpanes=0&view=FitH';
+          fallback.className='student-pdf-embed';
+          fallback.style.cssText='width:100%;height:680px;border:0;display:block;background:white';
+          canvas.parentElement.insertBefore(fallback,canvas.nextSibling);
+        }
       }
-      if(hint&&hint.isConnected)hint.textContent='PDF 그림을 웹 화면 안에서 표시합니다. 문제가 지속되면 교사에게 알려 주세요. ('+(e&&e.message||'렌더링 오류')+')';
+      if(hint&&hint.isConnected)hint.textContent='문제 이미지 표시 오류: '+(e&&e.message||'원인을 확인할 수 없습니다.')+' (원본 PDF 내장 보기로 전환)';
     });
   };
   Student.pdfPanel=function(kind,pages,heading){
