@@ -536,7 +536,7 @@
         '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (editable ? '' : self.view===5&&self.me.review&&self.me.review.unlocked?'<p class="closed-note">문제 풀이 작성 시간은 끝났습니다. 해설을 확인하고 아래에서 성찰을 작성하세요.</p>':'<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') + '</div>';
       if (editable && st.id !== 'Preview' && st.id !== 'Read') h += '<p class="student-simple-tip">① 답을 적고 제출하세요. ② 어렵다면 <b>질문으로 도움받기</b>를 누르세요. Review에서는 첫 제출 전에도 질문할 수 있습니다.</p>';
       if(g!=='CONTROL')h += worksheetPane(ln,g,st.id);
-      if (editable) h += self.toolbarHTML();
+      if (editable && ln<=2) h += self.toolbarHTML();
       if(!(self.view===5 && self.reviewFeedback))items.forEach(function (it) { h += self.itemHTML(it, editable); });
       if (self.view === 5 && self.stageIdx() === 5) h += self.reviewPanel();
       h += '<p class="savestate" id="savestate"></p>';
@@ -584,6 +584,11 @@
             return '<label class="opt"><input type="' + (f.kind === 'multi' ? 'checkbox' : 'radio') + '" name="' + id + '" value="' + o.v + '" data-item="' + it.id + '" data-field="' + f.key + '"' + (on.indexOf(o.v) >= 0 ? ' checked' : '') + dis + '><span>' + fmt(o.label) + '</span></label>';
           }).join('') + '</div></fieldset>';
         } else {
+          if(editable && self.lesson()>=3){
+            h+='<div class="field-math-toolbar" role="toolbar" aria-label="'+esc(f.label)+' 수학 기호 입력">'+
+              ['△','≡','∠','∥','⊥','=','≠','°','+','−','×','÷'].map(function(sym){return '<button type="button" class="sym" data-sym="'+sym+'" data-target-field="'+id+'">'+sym+'</button>';}).join('')+
+              '<button type="button" class="sym" data-sym="AB ∥ CD" data-target-field="'+id+'">AB ∥ CD</button></div>';
+          }
           h += '<label for="' + id + '">' + fmt(f.label) + (f.unit ? ' <small>(' + esc(f.unit) + ')</small>' : '') + '</label>';
           if (f.kind === 'long') h += '<textarea id="' + id + '" rows="' + (f.rows || 3) + '" maxlength="3000" data-item="' + it.id + '" data-field="' + f.key + '"' + dis + '>' + esc(val) + '</textarea>';
           else h += '<input id="' + id + '" type="text" maxlength="300" autocomplete="off" data-item="' + it.id + '" data-field="' + f.key + '" value="' + esc(val) + '"' + dis + '>';
@@ -716,7 +721,7 @@
       right.addEventListener('mousedown', function (ev) { if (ev.target.closest('.sym')) ev.preventDefault(); });
       right.addEventListener('click', function (ev) {
         var b = ev.target.closest('button'); if (!b) return;
-        if (b.hasAttribute('data-sym')) { insertAt(lastInput, b.getAttribute('data-sym')); return; }
+        if (b.hasAttribute('data-sym')) { insertAt(b.hasAttribute('data-target-field')?document.getElementById(b.getAttribute('data-target-field')):lastInput, b.getAttribute('data-sym')); return; }
         if (b.getAttribute('data-act') === 'segmenu') { var m = $('#segmenu'); m.hidden = !m.hidden; b.setAttribute('aria-expanded', String(!m.hidden)); return; }
         if (b.hasAttribute('data-segins')) { insertAt(lastInput, b.getAttribute('data-segins').split('').map(function (ch) { return ch + '̅'; }).join('')); $('#segmenu').hidden = true; return; }
         if (b.hasAttribute('data-unsel')) { var p = b.getAttribute('data-unsel').split(':'), arr = self.item(p[0]).draft_sel[p[1]] || [], el = p[2] + ':' + p[3], i = arr.indexOf(el); if (i >= 0) arr.splice(i, 1); self.renderSelRow(p[0], p[1]); self.renderFigSel(); self.saveDraft(p[0]); return; }
