@@ -17,9 +17,17 @@ test('Never apply forEach to one DOM element',()=>{
  assert.match(source,/\$\$\('\[data-grid-mode\]'\)\.forEach/);
  assert.match(source,/\$\$\('\[data-itab\]', n\)\.forEach/);
 });
-test('Lesson 3-8 worksheet pages precede independent per-question cards',()=>{
+test('Lesson 3-8 verified crops render as image inside independent cards',()=>{
  const app=read('public/app.js');
- assert.match(app,/insertAfter\.insertAdjacentHTML\('afterend',panel\)/);
+ assert.match(app,/header\.insertAdjacentHTML\('afterend',panel\)/);
+ assert.match(app,/var LESSON_PROBLEM_CROPS=/);
+ assert.match(app,/Student\.problemPanel=function/);
+ assert.match(app,/data-pdf-crop="problem"/);
+ assert.match(app,/canvas\.toDataURL\('image\/png'\)/);
+ assert.match(app,/pageMap=\{0:\[1\],1:\[1\],2:\[3,4\],3:\[5,6,7\],4:\[\],5:\[9\]\}/);
+ assert.match(app,/header\.insertAdjacentHTML\('afterend',panel\)/);
+ assert.match(app,/self\.problemCropSpec\(page\)/);
+ assert.doesNotMatch(app,/self\.pdfPanel\('worksheet'/);
  assert.doesNotMatch(app,/overlay\.appendChild\(fields\)/);
  assert.match(app,/card\.classList\.add\('lesson-independent-question'\)/);
  for(let lesson=3;lesson<=8;lesson++){
