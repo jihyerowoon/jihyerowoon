@@ -17,6 +17,20 @@ test('Never apply forEach to one DOM element',()=>{
  assert.match(source,/\$\$\('\[data-grid-mode\]'\)\.forEach/);
  assert.match(source,/\$\$\('\[data-itab\]', n\)\.forEach/);
 });
+test('Lesson 3-8 worksheet pages precede independent per-question cards',()=>{
+ const app=read('public/app.js');
+ assert.match(app,/card\.insertAdjacentHTML\('beforebegin',panel\)/);
+ assert.doesNotMatch(app,/overlay\.appendChild\(fields\)/);
+ assert.match(app,/card\.classList\.add\('lesson-independent-question'\)/);
+ for(let lesson=3;lesson<=8;lesson++){
+   const C=require('../lib/content');
+   for(const stage of ['Question','Reflect','Recite','Review']){
+    const rows=C.ITEMS.filter(it=>it.lesson===lesson&&it.stage===stage&&!it.archived);
+    assert.ok(rows.length>=1,lesson+':'+stage);
+    assert.ok(rows.every(it=>it.id&&it.fields.length>=1),lesson+':'+stage+' fields');
+   }
+ }
+});
 test('All eight lessons have Preview Recite Review and consistent help and worksheet rendering',()=>{
  const C=require('../lib/content'),src=read('public/app.js');
  for(let n=1;n<=8;n++){
