@@ -536,7 +536,7 @@
         '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (editable ? '' : self.view===5&&self.me.review&&self.me.review.unlocked?'<p class="closed-note">문제 풀이 작성 시간은 끝났습니다. 해설을 확인하고 아래에서 성찰을 작성하세요.</p>':'<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') + '</div>';
       if (editable && st.id !== 'Preview' && st.id !== 'Read') h += '<p class="student-simple-tip">① 답을 적고 제출하세요. ② 어렵다면 <b>질문으로 도움받기</b>를 누르세요. Review에서는 첫 제출 전에도 질문할 수 있습니다.</p>';
       if(g!=='CONTROL')h += worksheetPane(ln,g,st.id);
-      if (editable && ln<=2) h += self.toolbarHTML();
+      if (editable && ln<=2 && !(ln===2 && st.id==='Recite')) h += self.toolbarHTML();
       if(!(self.view===5 && self.reviewFeedback))items.forEach(function (it) { h += self.itemHTML(it, editable); });
       if (self.view === 5 && self.stageIdx() === 5) h += self.reviewPanel();
       h += '<p class="savestate" id="savestate"></p>';
@@ -573,6 +573,7 @@
         var src = self.item(it.recall), txt = src.versions.length ? src.versions[0].fields.text : (src.draft.text || '');
         h += '<blockquote class="recall"><span>처음 생각 (Preview)</span>' + (txt ? esc(txt) : '<i>기록 없음</i>') + '</blockquote>';
       }
+      if(editable && it.id==='L2RC03') h += self.toolbarHTML();
       h += '<div class="fields' + (it.fields.some(function (f) { return f.narrow; }) ? ' has-narrow' : '') + '">';
       it.fields.forEach(function (f) {
         var val = rec.draft[f.key] != null ? rec.draft[f.key] : (last[f.key] || '');
