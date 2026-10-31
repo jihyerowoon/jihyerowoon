@@ -2040,19 +2040,20 @@
       var pageMap={0:[1],1:[1,2],2:[3,4],3:[5,6,7],4:[8],5:[9]};
       var chosenPages=pageMap[view]||[1];
       var stageItems=C.items.filter(function(it){return it.lesson===lesson&&it.stage===C.stages[view].id&&!it.archived;});
-      chosenPages.forEach(function(page,index){
-        var item=stageItems[view===1?0:index]||stageItems[0];
-        var card=item&&$('#right article.item[data-item="'+item.id+'"]');
+      // 3~8차시 공통 순서: 단계 제목 → 원본 활동지 모든 쪽 → 개별 답안 카드.
+      // 마지막으로 밀리는 원인인 문항 ID별 삽입과 하단 추가를 사용하지 않는다.
+      var stageHeading=$('#right .stagehead'),insertAfter=stageHeading;
+      chosenPages.forEach(function(page){
         var label=view===1&&page===1?'Preview 원본 그림 다시 보기':lesson+'차시 '+C.stages[view].ko+' 원본 '+page+'쪽';
         var panel=self.pdfPanel('worksheet',[page],label);
-        var heading=$('#right .stagehead');
-        // 원본 자료는 문제카드 내부가 아닌 바로 앞의 독립 영역에 배치한다.
-        if(view===1&&page===1){
-          if(heading)heading.insertAdjacentHTML('afterend',panel);
-          else $('#right').insertAdjacentHTML('afterbegin',panel);
-        }else if(card){
-          card.insertAdjacentHTML('beforebegin',panel);
-        }else $('#right').insertAdjacentHTML('beforeend',panel);
+        if(insertAfter){
+          insertAfter.insertAdjacentHTML('afterend',panel);
+          insertAfter=insertAfter.nextElementSibling;
+        }else {
+          var firstCard=$('#right article.item');
+          if(firstCard){firstCard.insertAdjacentHTML('beforebegin',panel);insertAfter=firstCard.previousElementSibling;}
+          else {$('#right').insertAdjacentHTML('beforeend',panel);insertAfter=$('#right').lastElementChild;}
+        }
       });
     }
     if(stage===5&&view===5){
