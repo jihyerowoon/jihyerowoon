@@ -565,6 +565,7 @@
         '<h3'+(source?' class="paper-sr"':'')+'>' + fmt(it.title) + '</h3></div><span class="chip-status" data-status="' + it.id + '"></span></header>';
       if(source)h+=paperProblem(it,self.group());
       if (!source && (it.fig || it.choices)) h += '<div class="probblock">' + figHTML(it.fig) + choicesHTML(it.choices) + '</div>';
+      if(it.id==='L3RF03')h+='<p class="math-nowrap" style="white-space:nowrap;overflow-x:auto;font-weight:600">선분 AB ∥ 선분 CD</p>';
       if (it.fixedAI && !source) h += '<div class="aiout"><p class="aiout-k">검토할 풀이 설명 <small>두 집단 공통 검토자료</small></p><p>' + fmt(it.fixedAI.text) + '</p></div>';
       if (it.sub && !source) h += '<p class="item-sub">' + fmt(it.sub) + '</p>';
       if (it.hint) h += '<p class="item-hint">' + fmt(it.hint) + '</p>';
