@@ -1,6 +1,6 @@
 {
   "name": "pq4r-tutor-mvp",
-  "version": "0.4.1",
+  "version": "0.6.5",
   "private": true,
   "description": "PQ4R 튜터 1차시 연구용 MVP (Vercel + Postgres: Neon 또는 Supabase)",
   "license": "UNLICENSED",
@@ -10,10 +10,13 @@
   "scripts": {
     "dev": "node dev/server.js",
     "test": "bash tests/run-local.sh",
-    "test:engine": "node tests/engine.test.js lib"
+    "test:engine": "node tests/engine.test.js lib",
+    "test:preflight": "node scripts/prepare-pdfjs.js && node tests/preflight.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.131.0",
-    "postgres": "3.4.9"
+    "postgres": "3.4.9",
+    "fflate": "0.8.2",
+    "pdfjs-dist": "3.11.174"
   }
 }

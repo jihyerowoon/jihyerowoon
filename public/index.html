@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>PQ4R 튜터 1차시</title>
+<title>PQ4R 튜터</title>
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -377,6 +377,19 @@ tr:last-child td { border-bottom: 0; }
 .modal-card { background: var(--surface); border-radius: var(--r); padding: 18px; width: min(100%, 720px); display: grid; gap: 10px; }
 .modal-card textarea { font-family: var(--mono); font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.worksheet-panel{margin:15px 0;border:1px solid #b4c6db;border-radius:12px;background:#f9fbff;padding:12px}
+.worksheet-panel summary{font-weight:700;cursor:pointer}
+.worksheet-pages{display:flex;gap:10px;overflow-x:auto;padding:12px 0}
+.worksheet-pages figure{flex:0 0 min(82vw,520px);margin:0}
+.worksheet-pages img{display:block;width:100%;height:auto;border:1px solid #d3dce6;background:white;border-radius:8px}
+.worksheet-pages figcaption{font-size:12px;color:#5c6679;padding-top:5px}
+@media (max-width:700px){.worksheet-pages figure{flex-basis:96%}}
+
+
+.teacher-question{border:2px solid #235cab;background:#edf5ff;border-radius:12px;padding:14px 16px;margin:14px 0}.teacher-question strong{display:block;color:#153b75;font-size:16px}.teacher-question p{font-size:23px;font-weight:750;line-height:1.65;color:#14233c;margin:8px 0;white-space:pre-wrap;overflow-wrap:anywhere}.teacher-answer{margin:10px 0 14px;border:1px solid #c5d1df;padding:10px 14px;border-radius:9px}.teacher-answer summary{font-weight:700;cursor:pointer}.teacher-bank-label{display:block;font-size:17px;font-weight:750;color:#16365f;margin:12px 0 7px}.teacher-bank-select{display:block;width:100%;min-height:58px;padding:11px;font-size:18px;line-height:1.4;border:2px solid #6a92ca;border-radius:10px;background:#fff;color:#16243b}.teacher-send-row{margin:14px 0 4px;align-items:center;flex-wrap:wrap}.teacher-send-row .btn{min-height:52px;font-size:18px;font-weight:750}.request-card{margin-bottom:16px}
+.student-pdf-panel{max-width:100%;overflow:hidden}.student-pdf-paper{position:relative;width:100%;max-width:1000px;margin:12px auto;background:white;box-shadow:0 1px 8px #0002;border:1px solid #d2d9e4}.student-pdf-paper canvas{display:block;width:100%;height:auto}.student-pdf-nav{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.student-pdf-nav .btn{min-height:40px}.reflection-paper-entry{position:relative;background:#f5f9ff;border-top:2px solid #2360a6;margin:0;padding:14px}.reflection-paper-entry label{font-size:18px;font-weight:700;display:block;margin-bottom:8px}.reflection-paper-entry textarea{width:100%;min-height:120px;font-size:17px;padding:12px;border:2px solid #859dc4;border-radius:8px;box-sizing:border-box}.student-pdf-frame{display:none}
+.worksheet-input-overlay{position:absolute;left:8%;width:84%;z-index:3;box-sizing:border-box;background:rgba(255,255,255,.90);border:1px solid #85a9d0;border-radius:8px;padding:3px 7px;overflow:auto}.worksheet-input-overlay .fields{display:flex;flex-direction:column;gap:4px;margin:0;padding:0}.worksheet-input-overlay .field{margin:0;padding:0;border:0}.worksheet-input-overlay .field label,.worksheet-input-overlay .field legend{font-size:11px;line-height:1.15;margin:0}.worksheet-input-overlay textarea{display:block;box-sizing:border-box;width:100%;min-height:30px;height:50px;max-height:80px;font-size:14px;line-height:1.3;padding:4px;background:rgba(255,255,255,.97)}.worksheet-input-overlay input[type=text]{width:100%;box-sizing:border-box;min-height:30px;padding:4px}.worksheet-recite-input textarea{min-height:38px;height:48px}.worksheet-input-overlay fieldset{padding:2px;margin:0}.worksheet-input-overlay .choice-line{display:inline-flex;margin-right:8px}.worksheet-input-overlay .selrow{display:none}
+.student-pdf-embed{display:block;width:100%;height:75vh;min-height:580px;border:0;background:white}.reflection-paper-entry fieldset{margin:12px 0}.reflection-paper-entry label:has(#post-comparison){display:block;margin:12px 0}.reflection-paper-entry #post-comparison{width:100%;min-height:110px}.reflection-paper-entry [data-act='review-reflect']{width:100%;min-height:50px;font-weight:700}.review-answers{margin:14px 0}.review-reflection{margin:14px 0}
 </style>
 <style>
 /* MVP 추가: 로그인, 연구자 관리 화면 */
@@ -406,6 +419,212 @@ tr:last-child td { border-bottom: 0; }
 .checklist li small { grid-column: 2; color: var(--muted); }
 .roster-in { font-family: var(--mono); font-size: 13px; }
 .empty-pad { padding: 24px; }
+
+/* 쉬운 사용 화면: 고급 기능과 전체 학생 현황은 사용자가 펼칠 때 표시 */
+.simple-help,.student-simple-tip,.teacher-simple-tip{margin:12px auto 0;max-width:1230px;padding:12px 16px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2);font-size:14px;line-height:1.6}
+.student-simple-tip{margin:0 0 12px}
+.teacher-simple-tip{margin:14px 16px 0}
+.rtabs{align-items:center;flex-wrap:wrap;overflow:visible;padding-block:6px}
+.rtabs>.rtab{font-size:15px;padding:12px 18px}
+.r-advanced{margin-left:auto;max-width:100%;position:relative}
+.r-advanced summary,.r-settings-more summary,.teacher-roster-more summary,.log-more summary{cursor:pointer;font-weight:600;color:var(--ink);padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
+.r-advanced[open]{width:100%}
+.r-advanced-list{display:flex;flex-wrap:wrap;gap:8px;padding:10px 0}
+.r-advanced-list .rtab{border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px}
+.r-settings-more,.teacher-roster-more{display:block;width:100%}
+.r-settings-more[open],.teacher-roster-more[open]{border-top:1px solid var(--line);padding-top:8px}
+.r-settings-more h3,.r-settings-more .tog,.teacher-roster-more .tablewrap,.teacher-roster-more .legend{margin-top:10px}
+.log-more{display:inline-block}.log-more[open]{width:100%}.log-more .btn{margin:8px 6px 4px 0}
+.is-teacher .tlayout{grid-template-columns:minmax(230px,320px) minmax(0,1fr)}
+.is-teacher .tleft{grid-column:1;grid-row:1}
+.is-teacher .tdetail{grid-column:2;grid-row:1;min-height:170px}
+.is-teacher .tmain{grid-column:1/-1;grid-row:2}
+@media(max-width:900px){
+.is-teacher .tlayout{grid-template-columns:minmax(0,1fr)}
+.is-teacher .tleft{grid-column:1;grid-row:1}
+.is-teacher .tdetail{grid-column:1;grid-row:2}
+.is-teacher .tmain{grid-column:1;grid-row:3}
+.rtabs>.rtab{font-size:13px;padding:10px}
+.simple-help,.student-simple-tip,.teacher-simple-tip{font-size:13px}
+}
+
+/* 연구자 승인 2026-10-27 통합 관리 */
+.class-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:20px}.class-layout>.rcard{align-content:start}.class-layout .sesslist{align-content:start}.class-layout .sessrow{min-height:80px}.class-main{display:grid;gap:18px}.class-layout .sessrow small{display:block;margin-top:8px}.class-layout .rcard h2{display:flex;justify-content:space-between;gap:10px;align-items:center}.upload-inline,.session-action{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0;padding:14px;background:#f1f6ff;border-radius:10px}.video-url{flex:1;min-width:230px}.teacher-console{max-width:1760px;margin:auto;padding:20px}.console-header{display:flex;justify-content:space-between;gap:20px;align-items:center}.console-header h1{font-size:23px}.console-grid{display:grid;grid-template-columns:minmax(320px,1.1fr) minmax(300px,1fr) minmax(310px,1fr);gap:16px;align-items:start}.console-grid>.rcard{min-width:0}.student-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin-top:18px}.student-tile{border:1px solid #cad7ed;border-radius:9px;background:#e8f1ff;min-height:85px;padding:10px 5px;display:grid;gap:5px;cursor:pointer;color:#173253}.student-tile span{font-size:12px}.student-tile small{font-size:11px}.student-tile.need-help{background:#fff0c9;border-color:#d49120}.student-tile.submitted{background:#e1f5e7;border-color:#71b585}.student-tile.offline{background:#eef0f4;color:#606979}.console-stats{display:flex;gap:14px;margin:16px 0;flex-wrap:wrap}.console-stats>span{background:#e8f1ff;padding:12px 20px;border-radius:10px}.console-stats b{font-size:23px;margin-left:10px}.request-card{border:1px solid #cdd9ee;padding:12px;border-radius:9px;margin-top:12px}.request-card .fv{font-size:13px}.request-card dd{white-space:pre-wrap;overflow-wrap:anywhere;max-height:180px;overflow:auto}.notice-bar{padding:12px 18px;background:#eaf2ff;border:1px solid #bad1fa;border-radius:9px;margin:12px 0;line-height:1.6}.clock-digits{font-size:34px;font-variant-numeric:tabular-nums;letter-spacing:1px}.clock-urgent{color:#b42318}.batch-send{width:100%;margin-top:14px}.choice-line,.bankopt{display:flex!important;align-items:flex-start;gap:10px;margin:12px 0}.choice-line input[type=radio],.choice-line input[type=checkbox],.bankopt input[type=radio]{width:18px!important;height:18px!important;min-height:18px!important;padding:0!important;min-width:18px;flex:0 0 18px;margin:3px 0 0!important}.choice-line span{flex:1}.video-dialog{width:min(900px,94vw);max-height:92vh;overflow:auto;border:1px solid #cbd7ea;border-radius:14px;padding:24px}.video-dialog::backdrop{background:#142441aa}.video-dialog .row{justify-content:space-between}.video-dialog iframe,.video-dialog video{width:100%;aspect-ratio:16/9;border:0}.supplement-item textarea{display:block;width:100%;margin:8px 0 18px}.console-grid #tdetail{position:static;width:auto;padding:0;max-height:none;border:0}.console-grid details{margin-top:15px}.console-grid h2{font-size:19px}#batch-results:empty{display:none}.upload-inline input{max-width:280px}#cl-preview textarea{width:100%}
+@media(max-width:1150px){.console-grid{grid-template-columns:1fr 1fr}.console-grid>.rcard:last-child{grid-column:1/-1}.class-layout{grid-template-columns:190px minmax(0,1fr)}}
+@media(max-width:720px){.class-layout,.console-grid{grid-template-columns:1fr}.console-header{display:block}.student-grid{grid-template-columns:repeat(5,minmax(0,1fr))}.teacher-console{padding:10px}.clock-digits{font-size:27px}.class-layout>.rcard .sesslist{display:flex;overflow:auto}.class-layout .sessrow{min-width:160px}.console-grid>.rcard:last-child{grid-column:auto}}
+
+</style>
+<style>
+.class-main>section:nth-child(2){border:2px solid #637bb4;background:#f7faff}.class-main .tablewrap{max-height:340px;overflow:auto}.class-main .tablewrap thead{position:sticky;top:0;background:white;z-index:1}.teacher-live-timer{padding:14px 20px;border-radius:12px;background:#eaf2ff;white-space:nowrap;font-size:15px}.teacher-live-timer .clock-digits{display:block;font-size:44px;line-height:1.15}.console-header #clock-actions .btn.primary{font-size:18px;min-height:52px;padding:12px 24px}.staff-view-nav{margin:12px 0}.console-header>div{min-width:0}@media(max-width:720px){.teacher-live-timer{margin:12px 0}.teacher-live-timer .clock-digits{display:inline-block;margin-left:10px}.console-header #clock-actions .btn.primary{width:100%}.console-header>.row{display:flex;flex-wrap:wrap}}
+
+/* 교사: 답안과 추천 질문을 큰 두 열로 배치 */
+.console-grid{grid-template-columns:minmax(0,1.25fr) minmax(340px,1fr);align-items:start}.console-grid>.rcard:first-child{grid-column:1/-1}.console-grid>.rcard:last-child{grid-column:auto}.request-card{padding:20px;border:2px solid #9db5dc;background:#fff}.request-card>.row>b{font-size:24px}.request-card .fv{font-size:17px}.request-card .fv dt{font-size:15px;color:#42516b;margin-top:16px}.request-card .fv dd{font-size:22px;line-height:1.65;background:#fff5d8;border-left:5px solid #e1a226;padding:14px;margin:6px 0 16px;max-height:none;color:#16243b;font-weight:600}.request-recommend{padding:16px;background:#eaf5ff;border:1px solid #8eb9ee;border-radius:10px;margin:16px 0}.request-recommend>b{color:#154c99;font-size:18px}.request-recommend p{font-size:19px;line-height:1.65}.request-recommend small{color:#53647e}.request-card>.btn{margin:6px 8px 0 0}.bankopt{padding:14px;border:1px solid #c6d4eb;border-radius:8px;font-size:17px;line-height:1.6}.bankopt:has(input:checked){background:#eaf5ff;border:2px solid #2563eb}.console-grid #tdetail .fv dd{font-size:19px;line-height:1.7;background:#fff5d8;padding:12px}.console-grid #tdetail .fv dt{font-size:15px}.student-grid{grid-template-columns:repeat(10,minmax(0,1fr))} @media(max-width:850px){.console-grid{grid-template-columns:1fr}.console-grid>.rcard{grid-column:1!important}.student-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+
+@font-face{font-family:'Worksheet Myeongjo';src:url('/fonts/NanumMyeongjo-Regular.woff2') format('woff2');font-display:swap;font-weight:400}
+body.is-student #layout{max-width:1420px;margin-inline:auto;grid-template-columns:minmax(320px,.85fr) minmax(560px,1.45fr);align-items:start}body.is-student #layout.noleft{grid-template-columns:minmax(0,900px);justify-content:center}body.is-student #right{min-width:0}.paper-item{font-family:'Worksheet Myeongjo','나눔명조','Batang',serif;background:#fff;border:2px solid #263d76;border-radius:14px;padding:22px;gap:18px;box-shadow:0 3px 0 #d9e8fb}.paper-item .item-h{border-bottom:2px solid #d5e5f9;padding-bottom:10px}.paper-item .item-t h3{font-size:21px;line-height:1.65;font-weight:600}.paper-item .mark{font-family:'Malgun Gothic',sans-serif;background:#d8e9ff;color:#16376e;font-size:17px;padding:5px 12px;border-radius:8px}.paper-problem{margin:0;width:100%;background:white}.paper-problem img{display:block;width:100%;height:auto;max-height:none;object-fit:contain}.paper-sr{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.paper-item .fields{gap:18px}.paper-item .field{border:1.5px solid #9dc7f0;border-radius:10px;padding:15px;background:#fff}.paper-item .field>label,.paper-item legend{font-size:18px;font-weight:600;color:#173565;line-height:1.7}.paper-item textarea,.paper-item input[type=text]{font-family:inherit;font-size:20px;line-height:1.8;border:1px solid #d2e3f8;background:#fff;min-height:56px;margin-top:10px}.paper-item textarea{min-height:145px}.paper-item .choices{display:flex;flex-wrap:wrap;gap:10px 14px}.paper-item .opt{display:flex;align-items:center;font-size:19px;line-height:1.6;padding:10px 12px;min-height:48px;border:1px solid #d3e2f6;background:#f7fbff;border-radius:7px;gap:9px}.paper-item .opt:has(input:checked){border:2px solid #1d5bc8;background:#e7f0ff}.paper-item .opt input{position:static;opacity:1;width:20px;height:20px;flex:0 0 20px;margin:0}.paper-item .opt>span{font-size:19px;border:0;border-radius:0;padding:0;color:#183565}.paper-item .opt input:checked+span{background:transparent;color:#123a7d}.paper-item .opt input:disabled+span{opacity:.8}.paper-item .paper-option-text{font-size:17px}.paper-item .item-f,.paper-item .revise,.paper-item .thread{font-family:'Malgun Gothic',sans-serif}.paper-item .aiout{font-size:19px;line-height:1.8}.paper-item .probfig img{max-height:none;width:auto;max-width:100%}.paper-material{display:block;width:100%;padding:0;border:0;background:#fff;cursor:zoom-in}.paper-material img{display:block;width:100%;height:auto}.paper-material span{display:block;padding:10px;color:#23529a;font-size:15px}body.is-student .panel.material{padding:12px}body.is-student .symbar{position:static}body.is-student .notice-bar{font-size:14px;padding:8px 14px}
+@media(max-width:1050px){body.is-student #layout{grid-template-columns:minmax(0,1fr)}body.is-student #left:has(.material){max-width:740px;margin:auto}body.is-student #right{max-width:900px;width:100%;margin:auto}.paper-item{padding:16px}}@media(max-width:560px){.paper-item{padding:10px;gap:12px}.paper-item .field{padding:10px}.paper-item .opt{font-size:17px;padding:8px}.paper-item .paper-option-text{font-size:16px}}
+
+.end-review{border:2px solid #2c5795;background:#fff;padding:22px}.end-review>h2{font-size:25px;color:#173d73}.completed-solutions{display:grid;gap:12px;margin-top:16px}.end-review .review-solution{border:1px solid #b8cdec;border-radius:9px;padding:14px}.end-review summary{font-size:18px;line-height:1.7;cursor:pointer}.completed-solution-body{padding-top:16px;font-size:18px;line-height:1.8}.completed-solution-body h3{margin-top:18px;color:#17477d}.completed-solution-body .fv dd{font-size:18px;white-space:pre-wrap}.completed-answer{padding:14px;background:#e8f4eb;font-weight:700}.completed-reflection{border-top:2px solid #c7d8ef;margin-top:24px;padding-top:20px;font-size:18px;white-space:pre-wrap}
+
+/* 교사 30명 관찰 강화: 5열 6행, 현재 문제와 임시 답안은 작은 글씨가 아닌 읽을 수 있는 카드로 */
+.is-teacher .student-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:11px}
+.is-teacher .student-tile{min-height:138px;padding:12px;text-align:left;align-content:start;gap:8px;background:#f7faff;transition:border-color .15s,background-color .15s}
+.is-teacher .student-tile:hover,.is-teacher .student-tile:focus-visible,.is-teacher .student-tile.selected{border:2px solid #245bb2;background:#eaf3ff}
+.is-teacher .student-tile.need-help{border:2px solid #c57908;background:#fff0cd}
+.is-teacher .student-tile.submitted{background:#eaf7ee;border-color:#71ad84}
+.is-teacher .student-tile.offline{background:#f0f1f4;border-color:#d1d6df}
+.is-teacher .student-tile .tile-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px}
+.is-teacher .student-tile .tile-head b{font-size:18px;letter-spacing:.03em}
+.is-teacher .student-tile .tile-head strong{font-size:12px;line-height:1.25;text-align:right}
+.is-teacher .student-tile .tile-item{display:block;font-size:15px;font-weight:700;color:#153c72}
+.is-teacher .student-tile .tile-preview{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:13px;line-height:1.45;min-height:36px;word-break:break-word;color:#293b56}
+.is-teacher .student-tile small{font-size:11.5px;color:#54647c}
+.is-teacher .teacher-worksheet-fig img{max-width:100%;max-height:260px;object-fit:contain}
+.is-teacher .live-draft{border:2px solid #2b75bb;border-radius:12px;background:#eef6ff;padding:16px;margin:12px 0}
+.is-teacher .live-draft>b{font-size:17px}
+.time-warning{position:relative;max-width:1420px;margin:12px auto;border-left:6px solid #cb720b;border-radius:9px;background:#fff1cf;color:#6a3d00;padding:15px 18px;font-weight:800;font-size:18px;line-height:1.5;box-shadow:0 2px 8px #0000000b}
+.is-teacher .time-warning{max-width:none;margin:10px 0}
+.is-student .paper-item .item-f{display:flex;align-items:stretch;gap:12px;flex-wrap:wrap}
+.is-student .paper-item .item-f .btn{min-height:52px;font-size:17px;padding:12px 20px}
+.is-student .paper-item .item-f [data-act="help"]{background:#fff6df;border:2px solid #c28a17;color:#614006;font-weight:800}
+.is-student .paper-item .item-f [data-act="submit"]{border:2px solid #244e9c;font-weight:800}
+.is-student .paper-item textarea:focus,.is-student .paper-item input[type=text]:focus{outline:3px solid #2762b2;outline-offset:2px;background:#f6faff}
+.is-student .paper-item .thread:not([hidden]){border:2px solid #d3a546;background:#fffbef;border-radius:12px;padding:14px;margin-top:12px}
+.is-student .paper-item .thread .msg.ai,.is-student .paper-item .thread .msg.teacher{font-size:18px;line-height:1.7}
+.is-student .paper-item .thread .next{font-weight:800;font-size:17px;color:#7c3900}
+.is-student .paper-item .thread .who{font-weight:800}
+.is-student #savestate{font-size:13px;font-weight:600}
+@media(max-width:1450px){.is-teacher .student-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:1050px){.is-teacher .student-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:720px){.is-teacher .student-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.is-teacher .student-tile{min-height:135px}.is-student .paper-item .item-f .btn{width:100%}.time-warning{font-size:16px;margin-inline:8px}}
+@media(prefers-reduced-motion:reduce){.is-teacher .student-tile{transition:none}}
+
+
+/* 학생의 궁금한 점은 활동지에 붙이고, 별도 팝업을 띄우지 않는다 */
+.help-question-label{display:block;font-size:15px;font-weight:700;color:#294365;margin:14px 0 5px}
+.help-question-label small{font-size:12px;font-weight:400;color:#687b92}
+.help-question-input{display:block;width:100%;border:1.5px solid #b2c7e2;border-radius:8px;min-height:44px;font-size:16px;padding:11px 12px;background:#fbfdff;margin-bottom:12px}
+.help-question-input:focus{outline:3px solid #2866b6;outline-offset:2px}
+.student-question-history{border:1px solid #b9d2e7;border-radius:10px;padding:14px;margin:16px 0;background:#f0f7ff}
+.student-question-history p{white-space:pre-wrap;font-size:15px;padding:8px 0;border-bottom:1px solid #dce9f6}
+.student-question-history small{font-size:12px;color:#52687b}
+.request-student-question{background:#fff5d7;border-left:5px solid #bf8613;padding:12px 15px;font-size:17px;line-height:1.6;margin:12px 0}
+
+/* 30명 읽기 전용 활동지: 5열 x 6행, 선택 후 실제 입력 내용 확대 */
+#teacher-wall .worksheet-wall-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#teacher-wall .worksheet-wall-title h2{margin:0}
+#teacher-wall .worksheet-view-controls{margin:12px 0}
+.is-teacher .student-grid.worksheet-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;align-items:stretch}
+.is-teacher .worksheet-tile{min-width:0;min-height:248px;max-height:290px;display:flex;flex-direction:column;align-items:stretch;gap:5px;padding:9px;border:2px solid #b7c9e2;background:#f8fbff;text-align:left;overflow:hidden}
+.is-teacher .worksheet-tile.need-help{border-color:#bb6a08;background:#fff5dc}
+.is-teacher .worksheet-tile .tile-head{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.is-teacher .worksheet-tile .tile-head>b{font-size:16px}
+.is-teacher .worksheet-tile .tile-head>strong{font-size:11.5px}
+.is-teacher .worksheet-tile .tile-live-item{font-size:12px;font-weight:800;color:#1d4c86}
+.is-teacher .worksheet-tile .mini-mirror{display:block;flex:1;min-height:0;overflow:hidden;position:relative}
+.is-teacher .worksheet-tile .mini-mirror::after{content:"";position:absolute;bottom:0;left:0;right:0;height:15px;background:linear-gradient(transparent,#f8fbff);pointer-events:none}
+.is-teacher .worksheet-tile.need-help .mini-mirror::after{background:linear-gradient(transparent,#fff5dc)}
+.is-teacher .worksheet-tile small{font-size:11px}
+.mirror-sheet{background:white;border:1px solid #c4d3e7;border-radius:5px;color:#1f2d42;padding:8px;font-family:'Malgun Gothic',sans-serif;line-height:1.35;overflow:hidden}
+.mirror-sheet-head{display:flex;justify-content:space-between;font-size:10px;color:#42628b;border-bottom:1px solid #d9e4f2;padding-bottom:4px;margin-bottom:5px}
+.mirror-problem-title{font-size:12px;font-weight:700;line-height:1.45;margin:0 0 6px}
+.mirror-figure{display:flex;justify-content:center;max-height:78px;overflow:hidden;margin-bottom:6px}
+.mirror-figure-img{display:block;width:auto;max-width:100%;height:auto;max-height:76px;object-fit:contain}
+.mirror-answer-fields{display:grid;gap:5px}
+.mirror-field{display:grid;gap:2px;border:1px solid #d7e1ef;border-radius:4px;padding:5px;background:#fafcff;min-width:0}
+.mirror-field.focused{border:2px solid #3a70c8;background:#eaf3ff}
+.mirror-field-name{font-size:10px;font-weight:700;line-height:1.4}
+.mirror-field-value{font-size:11px;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;line-height:1.45;max-height:58px;overflow:hidden}
+.mirror-field-value i{color:#718099}
+.mirror-field-selections{font-size:10px;color:#3d5e81;line-height:1.3}
+.mirror-sheet-foot{display:flex;justify-content:space-between;gap:6px;font-size:10px;color:#506783;border-top:1px solid #d7e1ef;margin-top:6px;padding-top:5px}
+.teacher-worksheet-dialog{width:min(1100px,96vw);max-width:96vw;height:min(94vh,1080px);max-height:96vh;padding:0;border:1px solid #b7c9de;border-radius:12px;box-shadow:0 18px 60px #0003}
+.teacher-worksheet-dialog::backdrop{background:rgba(12,28,53,.72)}
+.worksheet-zoom-shell{height:100%;display:flex;flex-direction:column;min-height:0}
+.worksheet-zoom-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 20px;background:#eaf3ff;border-bottom:1px solid #c6d7ed}
+.worksheet-zoom-header h2{margin:0;font-size:23px;color:#153868}
+.worksheet-zoom-header .hint{font-size:13px;margin:5px 0 0}
+.worksheet-zoom-actions{display:flex;gap:6px;flex-wrap:wrap}
+.worksheet-zoom-content{flex:1;min-height:0;overflow-y:auto;background:#e9eff7;padding:20px}
+.worksheet-zoom-caption{padding:9px 20px;margin:0;background:#fff;color:#56647a;font-size:12px;line-height:1.5}
+.worksheet-zoom-content .mirror-sheet-large{max-width:890px;margin:auto;padding:28px;border-radius:8px;box-shadow:0 2px 10px #0000000a}
+.mirror-sheet-large .mirror-sheet-head{font-size:15px;padding-bottom:10px;margin-bottom:14px}
+.mirror-sheet-large .mirror-problem-title{font-size:22px;line-height:1.6}
+.mirror-sheet-large .mirror-figure{max-height:none;margin:16px auto;overflow:visible}
+.mirror-sheet-large .mirror-figure-img{max-height:380px;max-width:100%;object-fit:contain}
+.mirror-sheet-large .mirror-problem .choicelist{font-size:16px;line-height:1.7}
+.mirror-sheet-large .mirror-fixed-explanation{padding:14px;background:#f4f7fd;font-size:16px}
+.mirror-sheet-large .mirror-answer-fields{gap:14px;margin:16px 0}
+.mirror-sheet-large .mirror-field{padding:14px 17px;border-radius:9px}
+.mirror-sheet-large .mirror-field-name{font-size:16px}
+.mirror-sheet-large .mirror-field-value{font-size:19px;line-height:1.7;max-height:none;min-height:42px}
+.mirror-sheet-large .mirror-field-selections{font-size:15px}
+.mirror-sheet-large .mirror-sheet-foot{font-size:14px;margin-top:18px;padding-top:12px}
+.worksheet-zoom-help{max-width:890px;margin:16px auto 8px;background:#fff4d8;border:2px solid #cb9f3d;border-radius:8px;padding:18px;line-height:1.6}
+.worksheet-zoom-help h3{font-size:18px;margin:0 0 10px}
+.worksheet-zoom-help p{font-size:16px;white-space:pre-wrap}
+#teacher-wall:fullscreen{background:#edf3fc;padding:12px;display:flex;flex-direction:column;overflow:hidden;width:100vw;height:100vh;border-radius:0}
+#teacher-wall:fullscreen .worksheet-wall-title{flex:none}
+#teacher-wall:fullscreen .worksheet-view-controls{flex:none;margin:5px 0}
+#teacher-wall:fullscreen .student-grid.worksheet-grid{flex:1;min-height:0;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,1fr));gap:6px;overflow:hidden;margin-top:5px}
+#teacher-wall:fullscreen .worksheet-tile{min-height:0;max-height:none;height:100%;padding:5px;gap:2px}
+#teacher-wall:fullscreen .worksheet-tile .tile-head>b{font-size:14px}
+#teacher-wall:fullscreen .worksheet-tile .tile-head>strong{font-size:10px}
+#teacher-wall:fullscreen .worksheet-tile .tile-live-item{font-size:10px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-sheet{padding:4px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-problem-title{font-size:10px;margin-bottom:2px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-figure{max-height:38px;margin-bottom:2px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-figure-img{max-height:36px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-field{padding:3px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-field-value{font-size:9px;max-height:26px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-field-name{font-size:9px}
+#teacher-wall:fullscreen .worksheet-tile .mirror-sheet-foot{font-size:9px}
+#teacher-wall:fullscreen .worksheet-tile>small{display:none}
+#teacher-wall:fullscreen .teacher-worksheet-dialog{width:min(1100px,95vw)}
+@media(max-width:1200px){.is-teacher .student-grid.worksheet-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:740px){.is-teacher .student-grid.worksheet-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.worksheet-zoom-header{padding:10px;align-items:flex-start}.worksheet-zoom-content{padding:8px}.worksheet-zoom-content .mirror-sheet-large{padding:13px}.mirror-sheet-large .mirror-problem-title{font-size:18px}}
+@media(prefers-reduced-motion:reduce){.teacher-worksheet-dialog{scroll-behavior:auto}}
+
+
+/* A01/T01 고정 수업 운영. 일반 사용자에게 데이터베이스 반 구분을 요구하지 않는다. */
+.fixed-setup{max-width:1320px;margin:auto;display:grid;gap:16px}
+.fixed-setup>h1{margin:0;font-size:27px}
+.fixed-setup-head{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;border:2px solid #b7c9e6}
+.fixed-setup-head h2{margin:0 0 7px}
+.fixed-setup-head p{margin:0;line-height:1.7}
+.fixed-setup-head .btn{min-height:54px;font-size:16px;padding:12px 22px}
+.fixed-class-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.fixed-class-card{border:1.5px solid #c5d5e8;display:grid;align-content:start;gap:13px}
+.fixed-class-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.fixed-class-head h2{font-size:23px;margin:4px 0 0}
+.fixed-code{font-size:14px;color:#50719d;font-weight:800}
+.fixed-class-card p{margin:0;line-height:1.7}
+.fixed-class-actions{display:flex;align-items:end;gap:9px;flex-wrap:wrap}
+.fixed-class-actions label{display:grid;gap:5px;font-size:13px;font-weight:700}
+.fixed-class-actions select{min-width:200px}
+.fixed-class-actions .btn{min-height:44px}
+@media(max-width:850px){.fixed-class-grid{grid-template-columns:1fr}.fixed-setup-head .btn{width:100%}}
+
+.fixed-video-options{font-size:13px;border-top:1px solid #dfe6f0;padding-top:8px}
+.fixed-video-options summary{cursor:pointer;font-weight:700;color:#344b6b}
+.fixed-video-options label{display:grid;gap:5px;margin-top:9px}
+.fixed-video-options input{width:100%}
+
+/* 연구용 3~8차시 원본 활동지 PDF 및 공통 정답·성찰지 */
+.pdf-upload-drop{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;min-height:90px;background:#eaf2ff;border:2px dashed #779ccc;border-radius:12px;padding:18px;font-weight:800;color:#19416f;cursor:pointer}
+.pdf-upload-drop input{font-size:13px;max-width:100%}
+#pdf-upload-progress{padding:12px 0;min-height:28px;overflow-wrap:anywhere;font-weight:700}
+.lesson-pdf-status{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.pdf-status-row{display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:8px 10px;background:#f6f9fe;border:1px solid #d7e1ee;border-radius:8px;font-size:13px}
+.pdf-status-row strong{width:45px}
+.student-pdf-panel{margin:14px 0 18px;background:#f8fbff;border:2px solid #c4d5eb;border-radius:11px;padding:15px}
+.student-pdf-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.student-pdf-head h3{margin:0;color:#15366e;font-size:19px}
+.student-pdf-panel .hint{font-size:13px;margin:7px 0 10px}
+.student-pdf-nav{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
+.student-pdf-frame{display:block;width:100%;min-height:590px;height:65vh;border:1px solid #9eb4d0;border-radius:7px;background:white}
+@media(max-width:800px){.lesson-pdf-status{grid-template-columns:1fr}.student-pdf-frame{height:60vh;min-height:380px}}
+
 </style>
 </head>
 <body>
@@ -413,6 +632,6 @@ tr:last-child td { border-bottom: 0; }
 <div id="toasts" aria-live="polite"></div>
 <div class="netbar" id="netbar" hidden>연결이 끊겼어요 · 다시 연결하는 중</div>
 <noscript>이 페이지는 자바스크립트가 필요해요.</noscript>
-<script src="app.js"></script>
+<script src="app.js?v=0.6.5-recitev3"></script>
 </body>
 </html>

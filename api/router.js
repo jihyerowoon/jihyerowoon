@@ -5,6 +5,9 @@ const A = require('../lib/auth');
 const S = require('../lib/student');
 const T = require('../lib/staff');
 const D = require('../lib/db');
+const Room = require('../lib/classroom');
+const Assets = require('../lib/assets');
+const Records = require('../lib/record-download');
 const { HttpError, readBody, send, sendText } = require('../lib/util');
 
 /* 브라우저로 보내는 공개분. 정답(KEYS)·정답 기준(RUBRIC)·발문 은행(BANK)·AI 설명의 정오 판단(FIXED_AI.type/ok)은 보내지 않는다 */
@@ -19,6 +22,26 @@ function publicContent() {
 
 const STUDENT = ['student'], STAFF = ['teacher', 'researcher'], RESEARCHER = ['researcher'];
 const routes = {
+  'GET me/my-record': {roles:STUDENT,fn:async ctx=>Records.mine(ctx.tok)},
+  'GET staff/all-records': {roles:STAFF,fn:async ctx=>Records.all(ctx.tok,ctx.query)},
+  'POST staff/new-lesson': { roles: STAFF, body: true, fn: async function(ctx){return Room.newLesson(ctx.tok,ctx.body);} },
+  'POST staff/ready': { roles: STAFF, body: true, fn: async function(ctx){return Room.ready(ctx.tok,ctx.body);} },
+  'POST login/staff/refresh': { roles: STAFF, noDb: true, fn: async function(ctx){return T.refreshLogin(ctx.tok);} },
+  'POST staff/new-demo': { roles: STAFF, body: true, fn: async function(ctx){return Room.newDemo(ctx.tok,ctx.body);} },
+  'POST me/reflection-draft': { roles: STUDENT, body: true, fn: async function(ctx){return S.reflectionDraft(ctx.tok,ctx.body);} },
+  'GET admin/classes': { roles: RESEARCHER, fn: async function(){return Room.classes();} },
+  'GET admin/lesson-assets': { roles: RESEARCHER, fn: async function(){return Assets.manifest();} },
+  'POST admin/lesson-asset': { roles: RESEARCHER, body: true, fn: async function(ctx){return Assets.upload(ctx.tok,ctx.body);} },
+  'GET me/lesson-asset': { roles: STUDENT, fn: async function(ctx){return Assets.student(ctx.tok,ctx.query);} },
+  'POST admin/class': { roles: RESEARCHER, body: true, fn: async function(ctx){return Room.saveClass(ctx.tok,ctx.body);} },
+  'POST admin/fixed-codes': { roles: RESEARCHER, body: true, fn: async function(ctx){return Room.setupFixedCodes(ctx.tok);} },
+  'POST admin/class-roster': { roles: RESEARCHER, body: true, fn: async function(ctx){return Room.roster(ctx.tok,ctx.body);} },
+  'POST staff/send-batch': { roles: STAFF, body: true, fn: async function(ctx){return Room.batchSend(ctx.tok,ctx.body);} },
+  'POST staff/clock': { roles: STAFF, body: true, fn: async function(ctx){return Room.clock(ctx.tok,ctx.body);} },
+  'POST staff/announce': { roles: STAFF, body: true, fn: async function(ctx){return Room.announce(ctx.tok,ctx.body);} },
+  'GET me/supplements': { roles: STUDENT, fn: async function(ctx){return S.supplements(ctx.tok);} },
+  'POST me/supplement': { roles: STUDENT, body: true, fn: async function(ctx){return S.supplement(ctx.tok,ctx.body);} },
+
   'GET health': { noDb: true, fn: async function () { return { ok: true, version: C.VERSIONS.app }; } },
   'GET content': { noDb: true, fn: async function () { return publicContent(); } },
   'POST login/student': { body: true, fn: async function (ctx) { return S.login(ctx.body); } },
@@ -26,18 +49,22 @@ const routes = {
 
   'GET me': { roles: STUDENT, fn: async function (ctx) { return S.me(ctx.tok); } },
   'GET me/sync': { roles: STUDENT, fn: async function (ctx) { return S.sync(ctx.tok, ctx.query); } },
+  'POST me/focus': { roles: STUDENT, body: true, fn: async function(ctx){return S.focus(ctx.tok,ctx.body);} },
   'POST me/draft': { roles: STUDENT, body: true, fn: async function (ctx) { return S.saveDraft(ctx.tok, ctx.body); } },
   'POST me/submit': { roles: STUDENT, body: true, fn: async function (ctx) { return S.submit(ctx.tok, ctx.body); } },
   'POST me/help': { roles: STUDENT, body: true, fn: async function (ctx) { return S.help(ctx.tok, ctx.body); } },
+  'GET me/review-feedback': { roles: STUDENT, fn: async function (ctx) { return S.reviewFeedback(ctx.tok); } },
+  'POST me/review-reflection': { roles: STUDENT, body: true, fn: async function (ctx) { return S.reviewReflect(ctx.tok, ctx.body); } },
   'POST me/event': { roles: STUDENT, body: true, fn: async function (ctx) { return S.clientEvent(ctx.tok, ctx.body); } },
   'POST me/stage': { roles: STUDENT, body: true, fn: async function (ctx) { return S.demoStage(ctx.tok, ctx.body); } },
 
-  'GET staff/sessions': { roles: STAFF, fn: async function () { return T.sessions(); } },
+  'GET staff/sessions': { roles: STAFF, fn: async function (ctx) { return Room.sessions(ctx.tok); } },
   'GET staff/content': { roles: STAFF, fn: async function () { return T.staffContent(); } },
-  'GET staff/overview': { roles: STAFF, fn: async function (ctx) { return T.overview(ctx.query); } },
+  'GET staff/overview': { roles: STAFF, fn: async function (ctx) { return Room.overview(ctx.tok, ctx.query); } },
   'GET staff/student': { roles: STAFF, fn: async function (ctx) { return T.studentDetail(ctx.query); } },
   'POST staff/stage': { roles: STAFF, body: true, fn: async function (ctx) { return T.stage(ctx.tok, ctx.body); } },
   'POST staff/send': { roles: STAFF, body: true, fn: async function (ctx) { return T.send(ctx.tok, ctx.body); } },
+  'POST staff/oral-note': { roles: STAFF, body: true, fn: async function(ctx){await Room.access(ctx.tok,ctx.body.session);return T.oralNote(ctx.tok,ctx.body);} },
 
   'POST admin/session': { roles: RESEARCHER, body: true, fn: async function (ctx) { return T.createSession(ctx.tok, ctx.body); } },
   'POST admin/session/update': { roles: RESEARCHER, body: true, fn: async function (ctx) { return T.updateSession(ctx.tok, ctx.body); } },
@@ -72,6 +99,7 @@ module.exports = async function handler(req, res) {
     if (route.roles) ctx.tok = A.requireRole(req, route.roles);
     if (!route.noDb) await D.ensureSchema();
     if (route.body) ctx.body = await readBody(req);
+    if (route.roles && route.roles.includes('teacher') && ctx.tok && (ctx.body && ctx.body.session || ctx.query.session)) await Room.access(ctx.tok,ctx.body && ctx.body.session || ctx.query.session);
     const out = await route.fn(ctx);
     if (route.file) { sendText(res, 200, out.text, out.type, out.filename); return; }
     send(res, 200, out);

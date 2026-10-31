@@ -1,0 +1,28 @@
+name: Research web app preflight
+on:
+  push:
+    branches:
+      - research-20261023-single-level-a
+  pull_request:
+    branches:
+      - research-20261023-single-level-a
+  workflow_dispatch:
+jobs:
+  preflight:
+    name: JavaScript and lesson integrity
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run research classroom preflight
+        run: node tests/preflight.test.js
+      - name: Install browser smoke dependencies
+        run: |
+          npm install --no-save playwright@1.55.1
+          npx playwright install --with-deps chromium
+      - name: Click researcher, student and teacher screens in Chromium
+        run: node tests/browser-smoke.test.js
