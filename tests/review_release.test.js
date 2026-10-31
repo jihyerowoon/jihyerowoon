@@ -21,13 +21,18 @@ for(const lesson of [1,2]){
 const t=Date.parse('2026-10-23T00:00:00.000Z');
 const sess={stage:5,status:'open',stage_opened:{5:new Date(t).toISOString()}};
 ok(!R.status(sess,t+359999).unlocked,'6분 전 정답 비공개');
-ok(R.status(sess,t+360000).unlocked,'6분부터 해설 공개');
-ok(!R.status(sess,t+599999).reflect_unlocked,'10분 전 성찰 입력 차단');
-ok(R.status(sess,t+600000).reflect_unlocked,'10분부터 성찰 입력 허용');
+ok(R.status(sess,t+360000).release_ready,'6분부터 교사 공개 버튼 활성화');
+ok(!R.status(sess,t+360000).unlocked,'6분 경과만으로 해설 자동 공개 금지');
+const approved={...sess,review_feedback_released_at:new Date(t+360000).toISOString()};
+ok(!R.status(approved,t+359999).unlocked,'교사가 승인했더라도 6분 전에는 비공개');
+ok(R.status(approved,t+360000).unlocked,'6분 후 교사가 승인하면 해설 공개');
+ok(!R.status(approved,t+599999).reflect_unlocked,'10분 전 성찰 입력 차단');
+ok(!R.status(sess,t+600000).reflect_unlocked,'공개 승인 없으면 10분 후에도 성찰 차단');
+ok(R.status(approved,t+600000).reflect_unlocked,'교사 공개 승인 후 10분부터 성찰 입력 허용');
 ok(R.status(sess,t).delay_seconds===360&&R.status(sess,t).reflect_seconds===120,'6분 공개와 2분 성찰 설정');
 ok(R.status(sess,t+1).release_at===new Date(t+360000).toISOString(),'서버 절대 시각 공개');
-ok(!R.status({...sess,stage:4},t+500000).unlocked,'Recite 단계 정답 비공개');
-ok(!R.status({...sess,status:'closed'},t+500000).unlocked,'수업 종료 후 신규 응답 불가');
+ok(!R.status({...approved,stage:4},t+500000).unlocked,'Recite 단계 정답 비공개');
+ok(!R.status({...approved,status:'closed'},t+500000).unlocked,'수업 종료 후 신규 응답 불가');
 ok(R.normalizeReflection({focus_item:'L1RF01',understanding:'uncertain',comparison:'이해 안 됨',next_step:'다시 확인'}).understanding==='uncertain','이해 안 됨도 성찰로 인정');
 for (const x of ['explain','partial','uncertain']) ok(R.normalizeReflection({focus_item:'L2RF03',understanding:x,comparison:'a',next_step:'b'}).understanding===x,'세 자기평가 선택지');
 try {R.normalizeReflection({focus_item:'L1RV01',understanding:'no',comparison:'a',next_step:'b'});throw new Error('미승인 응답 통과');} catch(e){ok(e.message!=='미승인 응답 통과','미승인 응답 차단');}
