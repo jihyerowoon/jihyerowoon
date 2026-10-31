@@ -595,6 +595,9 @@
           else h += '<input id="' + id + '" type="text" maxlength="300" autocomplete="off" data-item="' + it.id + '" data-field="' + f.key + '" value="' + esc(val) + '"' + dis + '>';
           h += '<div class="selrow" data-selrow="' + it.id + ':' + f.key + '"></div>';
         }
+        if(editable && self.lesson()>=3 && it.stage!=='Preview' && it.kind!=='memo' && f.key!=='pre_confidence'){
+          h+='<div class="field-support"><button type="button" class="btn ghost" data-act="help" data-id="'+it.id+'" data-help-field="'+esc(f.key)+'" data-help-label="'+esc(f.label)+'">이 소문제 질문으로 도움받기</button></div>';
+        }
         h += '</div>';
       });
       h += '</div>';
@@ -602,7 +605,7 @@
         h += '<div class="revise" data-revise="' + it.id + '" hidden><label for="rv-' + it.id + '">무엇을 수정했나요? <small>(수정해서 다시 제출할 때 작성)</small></label><input id="rv-' + it.id + '" data-reason="' + it.id + '" maxlength="300" autocomplete="off" value="' + esc(rec.reason || '') + '" placeholder="처음 답에서 바꾼 부분과 그 이유를 적어 보세요."></div>' +
           
           '<footer class="item-f"><button type="button" class="btn primary" data-act="submit" data-id="' + it.id + '">내 답 제출하기</button>' +
-          ((it.stage === 'Preview' || it.kind === 'memo') ? '' : '<button type="button" class="btn ghost" data-act="help" data-id="' + it.id + '">질문으로 도움받기</button>') +
+          ((it.stage === 'Preview' || it.kind === 'memo' || self.lesson()>=3) ? '' : '<button type="button" class="btn ghost" data-act="help" data-id="' + it.id + '">질문으로 도움받기</button>') +
           '<span class="busy" data-busy="' + it.id + '" hidden>점검 중…</span></footer>';
       }
       return h + '<div class="thread" data-thread="' + it.id + '"></div></article>';
@@ -626,7 +629,7 @@
       if (sb) {
         sb.textContent = r.attempts ? '수정한 답 저장·제출하기' : '내 답 제출하기';
         sb.disabled = !!self.busy[id] || self.isEmpty(id) || r.status === 'incomplete' || !self.editable();
-        var hb = $('[data-act="help"][data-id="' + id + '"]'); if (hb) hb.disabled = !!self.busy[id] || (!r.attempts && ITEM[id].stage !== 'Review') || r.status === 'incomplete' || !self.editable();
+        $('[data-act="help"][data-id="' + id + '"]').forEach(function(hb){hb.disabled = !!self.busy[id] || (!r.attempts && ITEM[id].stage !== 'Review') || r.status === 'incomplete' || !self.editable();});
       }
       var rv = $('[data-revise="' + id + '"]'); if (rv) rv.hidden = !(r.attempts > 0 && r.status !== 'incomplete');
       var bz = $('[data-busy="' + id + '"]'); if (bz) bz.hidden = !self.busy[id];
@@ -729,7 +732,7 @@
         if (b.hasAttribute('data-openmat')) { self.openMaterial(+b.getAttribute('data-openmat')); return; }
         if (b.getAttribute('data-act') === 'review-reflect') { self.submitReviewReflection(); return; }
         if (b.getAttribute('data-act') === 'submit') { self.submit(b.getAttribute('data-id')); return; }
-        if (b.getAttribute('data-act') === 'help') { self.help(b.getAttribute('data-id')); return; }
+        if (b.getAttribute('data-act') === 'help') { self.help(b.getAttribute('data-id'),b.getAttribute('data-help-label')); return; }
       });
       function insertAt(inp, text) {
         if(!inp || !inp.isConnected || inp.disabled){
@@ -771,11 +774,11 @@
         })
         .then(function () { self.busy[id] = false; self.refreshItem(id); });
     },
-    help: function (id) {
+    help: function (id, fieldLabel) {
       var self = this; if (self.busy[id] || !self.editable()) return;
       self.busy[id] = true; self.refreshItem(id);
       var send = self.pending[id] ? self.flushDraft(id) : Promise.resolve();
-      send.then(function () { return api('POST', 'me/help', { item_id: id, question:self.item(id).question_draft||'', client_ts: new Date().toISOString() }); })
+      send.then(function () { return api('POST', 'me/help', { item_id: id, question:fieldLabel?('['+fieldLabel+'] '+(self.item(id).question_draft||'질문으로 도움받기')):(self.item(id).question_draft||''), client_ts: new Date().toISOString() }); })
         .then(function (res) { self.applyResult(res); if (res.duplicate) toast('이미 도움을 요청했어요. 선생님을 기다려 주세요.'); })
         .catch(function (e) { toast(e.message, 'warn'); })
         .then(function () { self.busy[id] = false; self.refreshItem(id); });
