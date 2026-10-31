@@ -19,7 +19,7 @@ test('Never apply forEach to one DOM element',()=>{
 });
 test('Lesson 3-8 worksheet pages precede independent per-question cards',()=>{
  const app=read('public/app.js');
- assert.match(app,/card\.insertAdjacentHTML\('beforebegin',panel\)/);
+ assert.match(app,/insertAfter\.insertAdjacentHTML\('afterend',panel\)/);
  assert.doesNotMatch(app,/overlay\.appendChild\(fields\)/);
  assert.match(app,/card\.classList\.add\('lesson-independent-question'\)/);
  for(let lesson=3;lesson<=8;lesson++){
