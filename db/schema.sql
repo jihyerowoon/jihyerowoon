@@ -33,6 +33,8 @@ create table if not exists sessions (
   status text not null default 'open' check (status in ('open', 'closed')),
   created_at timestamptz not null default now()
 );
+-- Review 6분 경과 후 교사가 정답지 공개를 승인한 실제 시각
+alter table sessions add column if not exists review_feedback_released_at timestamptz;
 
 -- 수업에 들어온 학생
 create table if not exists participants (

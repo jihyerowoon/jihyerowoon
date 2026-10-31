@@ -340,7 +340,7 @@
       every(4000, function () { return self.poll(); }, 15000);
       App.timers.push(setInterval(function () {
         var t = $('#timer'); if (t) t.innerHTML = timerText(self.me.session);
-        if (self.view === 5 && self.stageIdx() === 5) { var due = self.me.review && self.me.review.release_at; var reflectAt = self.me.review && self.me.review.reflection_at; var count = $('#review-release-count'); if (count && due) count.textContent = '해설까지 ' + mmss((Date.parse(due)-nowMs())/1000); if (due && nowMs() >= Date.parse(due)) self.loadReviewFeedback(); var rc = $('#review-reflect-count'); if (rc && reflectAt) rc.textContent = '성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000); if (reflectAt && nowMs() >= Date.parse(reflectAt) && self.reviewFeedback && !self.reviewReflectionShown) { self.reviewReflectionShown = true; self.renderStage(); } }
+        if (self.view === 5 && self.stageIdx() === 5) { var due = self.me.review && self.me.review.release_at; var reflectAt = self.me.review && self.me.review.reflection_at; var count = $('#review-release-count'); if (count && due) count.textContent = nowMs()>=Date.parse(due) ? '6분 경과 · 선생님의 정답 공개를 기다립니다.' : '공개 버튼 활성화까지 ' + mmss((Date.parse(due)-nowMs())/1000); if (due && self.me.review && self.me.review.unlocked) self.loadReviewFeedback(); var rc = $('#review-reflect-count'); if (rc && reflectAt) rc.textContent = '성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000); if (reflectAt && nowMs() >= Date.parse(reflectAt) && self.reviewFeedback && !self.reviewReflectionShown) { self.reviewReflectionShown = true; self.renderStage(); } }
         $$('.waiting[data-at]').forEach(function (n) { n.textContent = '도움 요청 보냄 · ' + mmss((nowMs() - Date.parse(n.getAttribute('data-at'))) / 1000) + ' 기다리는 중'; });
       }, 1000));
     },
@@ -470,18 +470,17 @@
       }
     },
     editable: function () {
-      var due = this.me.review && this.me.review.release_at;
       return this.view === this.stageIdx() && this.me.session.status === 'open' &&
-        !(this.stageIdx() === 5 && due && nowMs() >= Date.parse(due));
+        !(this.stageIdx() === 5 && this.me.review && this.me.review.unlocked);
     },
     reviewPanel: function () {
       var due = this.me.review && this.me.review.release_at, data = this.reviewFeedback, self = this;
       if (!due) return '';
-      if (nowMs() < Date.parse(due)) return '<section class="panel"><h3>Review 첫 6분 · 문제 풀이</h3><p>정답 없이 문제를 풀고 풀이 근거를 작성해 제출해 주세요.</p><p id="review-release-count" class="hint small">정답 공개까지 ' + mmss((Date.parse(due)-nowMs())/1000) + '</p><p class="small">6분 뒤 두 집단에 정답과 풀이를 동시에 공개합니다. 작성한 답변은 보존됩니다.</p></section>';
+      if (!this.me.review.unlocked) return '<section class="panel"><h3>Review · 개별 풀이</h3><p>정답을 보지 않고 문제를 풀어 풀이 근거를 제출하세요. 선생님이 공개하면 작성 내용은 고정됩니다.</p><p id="review-release-count" class="hint small">' + (nowMs()<Date.parse(due) ? '공개 버튼 활성화까지 ' + mmss((Date.parse(due)-nowMs())/1000) : '6분 경과 · 선생님의 정답 공개를 기다립니다.') + '</p><p class="small">정답지는 Review 시작 6분 후 선생님이 공개 버튼을 누른 경우에만 두 집단에 동시에 공개됩니다.</p></section>';
       if (!data) return '<section class="panel"><h3>해설 공개 시간</h3><p>나의 답변을 보존하고 정답과 해설을 불러오는 중입니다.</p></section>';
       var confidence = {explain:'충분히 설명할 수 있다',partial:'일부 이해했다',uncertain:'아직 어렵다'};
       var solutionName = function(x) { var id=x.item_id||''; return id.indexOf('RV')>=0?'Review 다시 풀기':id.indexOf('RD')>=0?'Read 개념확인':'Reflect 문제 '+id.slice(-1); };
-      var reflectAt=this.me.review&&this.me.review.reflection_at, canReflect=reflectAt&&nowMs()>=Date.parse(reflectAt);
+      var reflectAt=this.me.review&&this.me.review.reflection_at, canReflect=!!(this.me.review&&this.me.review.reflect_unlocked);
       var cards = (data.solutions || []).map(function (sol,i) {
         var p = sol.problem || {}, a = (data.answers || []).filter(function (v) {return v.item_id === sol.item_id;})[0] || {}, ans = a.pre_response || {};
         var own = Object.keys(ans).filter(function(k) {return String(ans[k]||'').trim();}).map(function (k) {return '<p><b>' + esc(k) + ':</b> ' + fmt(String(ans[k])) + '</p>';}).join('') || '<p class="muted">작성된 답안이 없습니다.</p>';
@@ -505,7 +504,7 @@
     loadReviewFeedback: function () {
       var self=this, due=self.me.review && self.me.review.release_at;
       if(['catchup','finished'].includes(clockMode(self.me.session)))return;
-      if (!due || self.stageIdx()!==5 || self.view!==5 || self.reviewFeedback || self.reviewLoading || nowMs()<Date.parse(due)) return;
+      if (!due || !self.me.review.unlocked || self.stageIdx()!==5 || self.view!==5 || self.reviewFeedback || self.reviewLoading) return;
       if (Date.now()-self.lastReviewFetch<3500) return;
       self.lastReviewFetch=Date.now(); self.reviewLoading=true;
       api('GET','me/review-feedback').then(function(r){
@@ -1486,7 +1485,7 @@
     $('#queue').onchange=function(ev){var t=ev.target;if(!t.matches('[data-request-pick]'))return;var r=self.data.requests.find(function(x){return x.id===t.getAttribute('data-request-pick');});if(t.checked)self.picked[r.id]=r.attempt;else delete self.picked[r.id];self.renderBatch();};
     $$('[data-notice]').forEach(function(b){b.onclick=function(){api('POST','staff/announce',{session:self.code,key:b.getAttribute('data-notice')}).then(function(){toast('전체 학생에게 안내를 보냈어요.');}).catch(function(e){toast(e.message,'warn');});};});
     every(3000,function(){return self.refresh();},5000);
-    App.timers.push(setInterval(function(){if(self.data){var t=$('#timer');if(t)t.innerHTML=timerText(self.data.session);var live=$('#teacher-live-timer');if(live)live.innerHTML=timerText(self.data.session);countdownNotice(self,self.data.session);}},1000));
+    App.timers.push(setInterval(function(){if(self.data){var t=$('#timer');if(t)t.innerHTML=timerText(self.data.session);var live=$('#teacher-live-timer');if(live)live.innerHTML=timerText(self.data.session);countdownNotice(self,self.data.session);self.updateReviewReleaseGate();}},1000));
     self.refresh();
   };
   Teacher.refresh=function(){var self=this,requestSession=self.code;return api('GET','staff/overview?session='+encodeURIComponent(requestSession)).then(function(r){if(App.screen!=='teacher'||self.code!==requestSession)return;if(self.data&&r.session.stage_rev<self.data.session.stage_rev)return;var prev=self.data;self.data=r;
@@ -1502,6 +1501,13 @@
       toast('학습 기록 파일을 내려받았습니다.');
     }).catch(function(e){toast(e.message||'다운로드 실패','warn');});
   }
+  Teacher.updateReviewReleaseGate=function(){
+    var s=this.data&&this.data.session,b=$('[data-clock="review-release"]'),hint=$('#teacher-review-wait');
+    if(!s||!b||!s.review)return;
+    var due=s.review.release_at,ready=!!(due&&nowMs()>=Date.parse(due)),mode=clockMode(s);
+    b.disabled=!!s.review.unlocked||!ready||!['running','reflection'].includes(mode);
+    if(hint)hint.textContent=ready?'Review 6분 경과 · 공개 가능':'정답 공개까지 '+mmss((Date.parse(due)-nowMs())/1000);
+  };
   Teacher.renderTop=function(){
     var self=this,s=self.data.session,m=clockMode(s),auto=!!s.settings.autoTimer;
     $('#console-title').textContent=(s.class_name||'수업')+' 수업 · '+(clockLabel(s));
@@ -1528,7 +1534,9 @@
     }else if(m==='paused')note.textContent='현재 단계와 남은 시간, 학생 답안이 보존되어 있습니다. 이어서 진행을 누르면 이 지점부터 학생들과 함께 재개합니다. 새 수업을 만들 필요가 없습니다.';else if(m==='reflection')note.textContent='성찰지 작성 중입니다. Review 마지막 2분이 지나도 자동 종료되지 않습니다. 모든 학생의 성찰 제출을 확인한 뒤 직접 종료하세요.';else note.textContent='교사 시작 시각을 기준으로 모든 학생이 함께 진행합니다. 시간이 끝나면 자동으로 다음 단계로 이동합니다.';
     var navActions=(m==='running'&&auto)?'<button class="btn" data-clock="manual-prev"'+(s.stage===0?' disabled':'')+'>← 이전 단계</button><button class="btn primary" data-clock="manual-next"'+(s.stage===5?' disabled':'')+'>다음 단계 →</button>':'';
     var otherActions=auto?(m==='waiting'?'<button class="btn primary" data-clock="start">수업 시작</button>':['running','catchup'].includes(m)?'<button class="btn" data-clock="pause">긴급 일시정지</button>':m==='reflection'?'<button class="btn primary" data-clock="finish">성찰 확인 후 수업 종료</button>':m==='paused'?'<button class="btn primary" data-clock="resume">이어서 진행</button>':'<span class="pill">수업 완료</span>'):'<button class="btn" id="t-prev">이전 단계</button><button class="btn primary" id="t-next">다음 단계</button>';
-    var actions=navActions+otherActions;
+    var review=s.review||{},releaseOpen=!!review.unlocked,releaseDue=review.release_at&&nowMs()>=Date.parse(review.release_at);
+    var reviewActions=auto&&s.stage===5&&['running','reflection','paused'].includes(m)?'<button class="btn primary" type="button" data-clock="review-release"'+(releaseOpen||!releaseDue||m==='paused'?' disabled':'')+'>'+(releaseOpen?'정답지 공개 완료':'정답지 공개 단계로 →')+'</button>'+(releaseOpen?'<span class="hint small">공개 시각 기록 완료</span>':'<span class="hint small" id="teacher-review-wait">'+(releaseDue?'Review 6분 경과 · 공개 가능':'Review 시작 6분 후 활성화')+'</span>'):'';
+    var actions=navActions+reviewActions+otherActions;
     if($('#clock-actions').innerHTML!==actions){
       $('#clock-actions').innerHTML=actions;
       $$('[data-clock]').forEach(function(b){b.onclick=function(){
@@ -1536,11 +1544,13 @@
         if(action==='manual-next'&&!confirm('다음 단계로 이동할까요? 현재 단계의 미제출 답안은 미완료 처리되며 수업 진행 로그에 교사 조작으로 기록됩니다.'))return;
         if(action==='manual-prev'&&!confirm('이전 단계로 돌아갈까요? 학생 화면도 이전 단계로 이동하고 새 타이머가 시작됩니다. 수업 진행 로그에 교사 조작으로 기록됩니다.'))return;
         if(action==='finish'&&!confirm('학생들의 성찰 제출을 확인했습니까? 종료하면 성찰을 추가 저장할 수 없습니다.'))return;
+        if(action==='review-release'&&!confirm('Review 시작 6분이 지났습니다. 학생 답안을 고정하고 실험집단과 통제집단 모두에게 정답지를 공개할까요?'))return;
         b.disabled=true;
         api('POST','staff/clock',{session:self.code,action:action}).then(function(){self.queueFingerprint=null;self.reviewStage=null;return self.refresh();}).catch(function(e){toast(e.message,'warn');self.refresh();});
       };});
       if(!auto){$('#t-prev').onclick=function(){if(s.stage>0)self.setStage(-1);};$('#t-next').onclick=function(){if(s.stage<5)self.setStage(1);};}
     }
+    self.updateReviewReleaseGate();
     var restart=$('#t-demo-restart');restart.hidden=!s.settings.demoSession;restart.onclick=function(){if(!confirm('새 시연을 Preview 2분에서 다시 준비할까요? 이전 답안과 기록은 그대로 보존됩니다.'))return;restart.disabled=true;api('POST','staff/new-demo',{class_code:s.class_name,lesson:s.lesson,videoUrl:s.settings.videoUrl||'',replace_session:s.status==='open'?s.code:null}).then(function(r){store('pq4r:teacher-session',r.session.code);Teacher.start(r.session.code);}).catch(function(e){toast(e.message,'warn');restart.disabled=false;});};
     var bulk=$('#teacher-all-records');
     if(!bulk){bulk=document.createElement('button');bulk.id='teacher-all-records';bulk.className='btn sm';bulk.textContent='전체 학생 단계별 Word 일괄 다운로드 (ZIP)';var toolbar=$('#clock-actions');if(toolbar)toolbar.appendChild(bulk);}
