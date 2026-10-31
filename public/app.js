@@ -2041,11 +2041,18 @@
       var chosenPages=pageMap[view]||[1];
       var stageItems=C.items.filter(function(it){return it.lesson===lesson&&it.stage===C.stages[view].id&&!it.archived;});
       chosenPages.forEach(function(page,index){
-        var item=stageItems[view===1?0:index]||stageItems[0],card=item&&$('#right article.item[data-item="'+item.id+'"]');
-        var panel=self.pdfPanel('worksheet',[page],lesson+'차시 · '+(view===1&&page===1?'Preview 그림 다시 보기':C.stages[view].ko+' '+page+'쪽'));
-        if((view===1&&page===1)||(view===4&&page===8)){var head=$('#right .stagehead');if(head)head.insertAdjacentHTML('afterend',panel);else $('#right').insertAdjacentHTML('afterbegin',panel);}
-        else if(card){var header=card.querySelector('.item-h');if(header)header.insertAdjacentHTML('afterend',panel);else card.insertAdjacentHTML('afterbegin',panel);}
-        else $('#right').insertAdjacentHTML('beforeend',panel);
+        var item=stageItems[view===1?0:index]||stageItems[0];
+        var card=item&&$('#right article.item[data-item="'+item.id+'"]');
+        var label=view===1&&page===1?'Preview 원본 그림 다시 보기':lesson+'차시 '+C.stages[view].ko+' 원본 '+page+'쪽';
+        var panel=self.pdfPanel('worksheet',[page],label);
+        var heading=$('#right .stagehead');
+        // 원본 자료는 문제카드 내부가 아닌 바로 앞의 독립 영역에 배치한다.
+        if(view===1&&page===1){
+          if(heading)heading.insertAdjacentHTML('afterend',panel);
+          else $('#right').insertAdjacentHTML('afterbegin',panel);
+        }else if(card){
+          card.insertAdjacentHTML('beforebegin',panel);
+        }else $('#right').insertAdjacentHTML('beforeend',panel);
       });
     }
     if(stage===5&&view===5){
@@ -2076,6 +2083,10 @@
     if(lesson>=3){
       $$('#right article.item').forEach(function(card){
         card.classList.add('lesson-independent-question');
+        var title=card.querySelector('.item-h h3');
+        if(title&&title.textContent.indexOf('원본 활동지')>=0){
+          title.setAttribute('aria-label','해당 원본 활동지에 연결된 개별 문제');
+        }
         var help=card.querySelector('[data-act="help"]');
         if(help){
           help.textContent='이 문제 질문으로 도움받기';
