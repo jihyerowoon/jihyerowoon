@@ -2094,24 +2094,24 @@
     var self=this,lesson=self.lesson(),stage=self.stageIdx(),view=self.view;
     if(lesson>=3){
       self.ensureLessonPdf('worksheet');
-      var pageMap={0:[1],1:[1,2],2:[3,4],3:[5,6,7],4:[8],5:[9]};
-      var chosenPages=pageMap[view]||[1];
+      // Source PDF: Preview 1, Question reuses 1, Read concept 3/problem 4,
+      // Reflect separate problems 5/6/7, Recite text-only, Review problem 9.
+      var pageMap={0:[1],1:[1],2:[3,4],3:[5,6,7],4:[],5:[9]};
+      var chosenPages=pageMap[view]||[];
       var stageItems=C.items.filter(function(it){return it.lesson===lesson&&it.stage===C.stages[view].id&&!it.archived;});
-      // Preview 및 Question은 원본을 단계 상단에, Read/Reflect/Review는 해당 문제카드 안에 배치한다.
-      // 개별 질문과 제출 버튼은 같은 문제카드에 남겨 각각 별도 기록으로 연결한다.
-      var stageHeading=$('#right .stagehead'),insertAfter=stageHeading;
       chosenPages.forEach(function(page,index){
-        var label=view===1&&page===1?'Preview 원본 그림 다시 보기':lesson+'차시 '+C.stages[view].ko+' 원본 문제 '+page+'쪽';
-        var panel=self.pdfPanel('worksheet',[page],label);
         var card=stageItems[index]&&$('#right article.item[data-item="'+stageItems[index].id+'"]');
-        if(view>=2&&card){
+        var caption=page===3?'핵심 개념 원본 그림':view===1?'Preview 원본 문제 다시 보기':'원본 문제 · '+(index+1);
+        var panel=self.problemPanel(page,caption);
+        if(card){
           var header=card.querySelector('.item-h');
           if(header)header.insertAdjacentHTML('afterend',panel);
           else card.insertAdjacentHTML('afterbegin',panel);
-        }else if(insertAfter){
-          insertAfter.insertAdjacentHTML('afterend',panel);
-          insertAfter=insertAfter.nextElementSibling;
-        }else $('#right').insertAdjacentHTML('afterbegin',panel);
+        }else{
+          var heading=$('#right .stagehead');
+          if(heading)heading.insertAdjacentHTML('afterend',panel);
+          else $('#right').insertAdjacentHTML('afterbegin',panel);
+        }
       });
     }
     if(stage===5&&view===5){
@@ -2155,7 +2155,7 @@
     }
     $$('[data-pdf-canvas]').forEach(function(canvas){
       var kind=canvas.getAttribute('data-pdf-kind'),page=Number(canvas.getAttribute('data-pdf-page-number')),key=kind+':'+stage,selected=self.pdfPage&&self.pdfPage[key];
-      self.renderPdfPage(kind,kind==='worksheet'?page:(selected||page),canvas.id);
+      self.renderPdfPage(kind,kind==='worksheet'?page:(selected||page),canvas.id,canvas.getAttribute('data-pdf-crop')==='problem'?self.problemCropSpec(page):null);
     });
     $$('[data-pdf-page]').forEach(function(b){b.onclick=function(){
       var kind=b.getAttribute('data-pdf-kind'),key=kind+':'+self.stageIdx();
