@@ -2045,20 +2045,21 @@
       var pageMap={0:[1],1:[1,2],2:[3,4],3:[5,6,7],4:[8],5:[9]};
       var chosenPages=pageMap[view]||[1];
       var stageItems=C.items.filter(function(it){return it.lesson===lesson&&it.stage===C.stages[view].id&&!it.archived;});
-      // 3~8차시 공통 순서: 단계 제목 → 원본 활동지 모든 쪽 → 개별 답안 카드.
-      // 마지막으로 밀리는 원인인 문항 ID별 삽입과 하단 추가를 사용하지 않는다.
+      // Preview 및 Question은 원본을 단계 상단에, Read/Reflect/Review는 해당 문제카드 안에 배치한다.
+      // 개별 질문과 제출 버튼은 같은 문제카드에 남겨 각각 별도 기록으로 연결한다.
       var stageHeading=$('#right .stagehead'),insertAfter=stageHeading;
-      chosenPages.forEach(function(page){
-        var label=view===1&&page===1?'Preview 원본 그림 다시 보기':lesson+'차시 '+C.stages[view].ko+' 원본 '+page+'쪽';
+      chosenPages.forEach(function(page,index){
+        var label=view===1&&page===1?'Preview 원본 그림 다시 보기':lesson+'차시 '+C.stages[view].ko+' 원본 문제 '+page+'쪽';
         var panel=self.pdfPanel('worksheet',[page],label);
-        if(insertAfter){
+        var card=stageItems[index]&&$('#right article.item[data-item="'+stageItems[index].id+'"]');
+        if(view>=2&&card){
+          var header=card.querySelector('.item-h');
+          if(header)header.insertAdjacentHTML('afterend',panel);
+          else card.insertAdjacentHTML('afterbegin',panel);
+        }else if(insertAfter){
           insertAfter.insertAdjacentHTML('afterend',panel);
           insertAfter=insertAfter.nextElementSibling;
-        }else {
-          var firstCard=$('#right article.item');
-          if(firstCard){firstCard.insertAdjacentHTML('beforebegin',panel);insertAfter=firstCard.previousElementSibling;}
-          else {$('#right').insertAdjacentHTML('beforeend',panel);insertAfter=$('#right').lastElementChild;}
-        }
+        }else $('#right').insertAdjacentHTML('afterbegin',panel);
       });
     }
     if(stage===5&&view===5){
