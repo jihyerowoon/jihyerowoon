@@ -1128,6 +1128,7 @@
       $('#r-prev').onclick = function () { stageGo(-1); }; $('#r-next').onclick = function () { stageGo(1); };
       $('#r-teacher').onclick = function () { Teacher.start(s.code); };
       $('#r-past-word').onclick = function () { downloadRecord('staff/all-records?session='+encodeURIComponent(s.code)); };
+      $('#r-past-pdf').onclick = function () { printRecord('staff/all-records-pdf?session='+encodeURIComponent(s.code)); };
       $('#r-close').onclick = function () {
         var to = s.status === 'open' ? 'closed' : 'open';
         if (to === 'closed' && !window.confirm('수업을 끝낼까요? 학생은 더 이상 들어오거나 제출할 수 없어요.')) return;
@@ -1504,6 +1505,7 @@
       toast('학습 기록 파일을 내려받았습니다.');
     }).catch(function(e){toast(e.message||'다운로드 실패','warn');});
   }
+  function printRecord(path){api('GET',path).then(function(r){if(!r||!r.html)throw Error('PDF 인쇄 자료가 없습니다.');var url=URL.createObjectURL(new Blob([r.html],{type:'text/html;charset=utf-8'}));var a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();toast('열린 기록 화면에서 PDF로 저장을 누르세요.');setTimeout(function(){URL.revokeObjectURL(url);},120000);}).catch(function(e){toast(e.message||'PDF 열기 실패','warn');});}
   Teacher.renderTop=function(){
     var self=this,s=self.data.session,m=clockMode(s),auto=!!s.settings.autoTimer;
     $('#console-title').textContent=(s.class_name||'수업')+' 수업 · '+(clockLabel(s));
@@ -1786,7 +1788,7 @@
     $('#left').hidden=false;$('#left').innerHTML=mode==='finished'?'<section class="panel"><h2>수업 완료</h2><p>정답·해설과 나의 성찰은 오른쪽에서 계속 확인할 수 있습니다.</p><p>수업 시간에 제출한 답안과 보완본은 그대로 보관됩니다.</p></section>':'<section class="panel"><h2>보완 5분</h2><p>시간 안에 마치지 못한 문항을 보완하세요. 원래 답안은 그대로 보관됩니다.</p><p>정답·해설은 오른쪽 위에서 다시 볼 수 있습니다. 이 시간에는 AI와 교사의 추가 발문이 제공되지 않습니다.</p></section>';$('#layout').classList.remove('noleft');
     if(mode==='finished'){
       var btn=document.createElement('button');btn.className='btn primary';btn.textContent='나의 단계별 학습 기록 Word 다운로드';btn.id='my-record-download';
-      $('#left').appendChild(btn);btn.onclick=function(){downloadRecord('me/my-record');};
+      $('#left').appendChild(btn);btn.onclick=function(){downloadRecord('me/my-record');};var pdfBtn=document.createElement('button');pdfBtn.className='btn';pdfBtn.textContent='내 수업 기록 PDF 저장';$('#left').appendChild(pdfBtn);pdfBtn.onclick=function(){printRecord('me/my-record-pdf');};
     }
     $('#right').innerHTML='<p class="loading">보완할 문항을 불러오는 중…</p>';
     api('GET','me/supplements').then(function(r){if(App.screen!=='student'||!['catchup','finished'].includes(clockMode(self.me.session)))return;
