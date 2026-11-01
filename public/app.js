@@ -1865,8 +1865,8 @@
       }).join('');
       body.innerHTML='<div class="fixed-setup"><h1>수업 준비</h1>'+
         '<p>학생은 수업 코드, 학생 코드, PIN만 입력합니다. 내부 등록 작업은 여기서 한 번만 진행합니다.</p>'+
-        '<section class="rcard fixed-setup-head"><div><h2>학생 60명 코드 설정</h2><p>수업 코드 A01과 T01 · 학생 A01 ~ A30, T01 ~ T30 · 교사 ID T01 · 공통 PIN 1111</p></div>'+
-        '<button class="btn primary" id="fixed-setup-submit">학생 60명 등록 또는 확인</button></section>'+
+        '<section class="rcard fixed-setup-head"><div><h2>학생 62명 코드 설정</h2><p>수업 코드 A01과 T01 · 학생 A01 ~ A31, T01 ~ T31 · 교사 ID T01 · 공통 PIN 1111</p></div>'+
+        '<button class="btn primary" id="fixed-setup-submit">학생 62명 등록 또는 확인</button></section>'+
         '<p class="hint">이전 수업에 연결된 학생도 지정한 코드로 재배정합니다. 이전 시험 기록은 보존하며 새 수업 기록과 분리합니다. 공통 PIN은 분실 시 구분이 어려우므로 실제 연구에서는 보안에 주의하세요.</p>'+
         '<div class="fixed-class-grid">'+cards+'</div>'+
         '<section class="rcard" id="lesson-pdf-manager"><h2>활동지 · 정답지 · 성찰지 PDF 등록</h2>'+
@@ -1952,12 +1952,12 @@
         }finally{this.disabled=false;}
       };
       $('#fixed-setup-submit').onclick=function(){
-        if(!confirm('학생 60명의 코드를 A01~A30, T01~T30으로 등록하고, 교사 ID는 T01, 기존 해당 학생의 PIN도 모두 1111로 맞추시겠습니까? 기존 답안 기록은 삭제하지 않습니다.'))return;
+        if(!confirm('학생 62명의 코드를 A01~A31, T01~T31으로 등록하고, 교사 ID는 T01, 기존 해당 학생의 PIN도 모두 1111로 맞추시겠습니까? 기존 답안 기록은 삭제하지 않습니다.'))return;
         var b=this;b.disabled=true;b.textContent='등록 중…';
         api('POST','admin/fixed-codes',{}).then(function(r){
           toast('등록 완료: 새 학생 '+r.created+'명, 기존 학생 재배정 '+r.reassigned+'명, 기타 업데이트 '+r.updated+'명, 유지 '+r.unchanged+'명.');
           return self.loadSessions().then(function(){return self.renderClasses();});
-        }).catch(function(e){toast(e.message,'warn');b.disabled=false;b.textContent='학생 60명 등록 또는 확인';});
+        }).catch(function(e){toast(e.message,'warn');b.disabled=false;b.textContent='학생 62명 등록 또는 확인';});
       };
       $$('[data-fixed-open]').forEach(function(b){b.onclick=function(){Teacher.start(b.getAttribute('data-fixed-open'));};});
       $$('[data-share-student],[data-share-teacher]').forEach(function(b){b.onclick=function(){
