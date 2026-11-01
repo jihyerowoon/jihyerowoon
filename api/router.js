@@ -23,6 +23,8 @@ function publicContent() {
 const STUDENT = ['student'], STAFF = ['teacher', 'researcher'], RESEARCHER = ['researcher'];
 const routes = {
   'GET me/my-record': {roles:STUDENT,fn:async ctx=>Records.mine(ctx.tok)},
+  'GET me/my-record-pdf': {roles:STUDENT,fn:async ctx=>Records.minePdf(ctx.tok)},
+  'GET staff/all-records-pdf': {roles:STAFF,fn:async ctx=>Records.allPdf(ctx.tok,ctx.query)},
   'GET staff/all-records': {roles:STAFF,fn:async ctx=>Records.all(ctx.tok,ctx.query)},
   'POST staff/new-lesson': { roles: STAFF, body: true, fn: async function(ctx){return Room.newLesson(ctx.tok,ctx.body);} },
   'POST staff/ready': { roles: STAFF, body: true, fn: async function(ctx){return Room.ready(ctx.tok,ctx.body);} },
