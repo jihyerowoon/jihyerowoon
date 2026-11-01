@@ -1105,7 +1105,7 @@
         '<p class="hint small">반을 적으면 그 반 명단의 학생만 들어올 수 있어요. 수업 코드는 학생에게 알려 주는 입장 코드예요.</p></section>' +
         (s ? '<section class="rcard"><h2>' + esc(s.code) + ' 진행 <small>' + esc(lessonLabel(s.lesson)) + ' · ' + (s.status === 'open' ? '열림' : '끝남') + '</small></h2><p>현재 단계: <b>' + (s.stage + 1) + '. ' + C.stages[s.stage].id + ' ' + C.stages[s.stage].ko + '</b> · <span class="mono">' + timerText(s) + '</span></p>' +
           '<div class="row"><button class="btn sm" id="r-prev"' + (s.stage === 0 || s.status !== 'open' ? ' disabled' : '') + '>이전 단계</button><button class="btn sm primary" id="r-next"' + (s.stage === 5 || s.status !== 'open' ? ' disabled' : '') + '>다음 단계 열기</button><button class="btn sm" id="r-teacher">교사 화면으로</button>' +
-          '<button class="btn sm ghost" id="r-close">' + (s.status === 'open' ? '수업 끝내기' : '다시 열기') + '</button><button class="btn sm primary" id="r-past-word" type="button">이 수업 학생별 전체 기록 받기 (ZIP)</button></div>' +
+          '<button class="btn sm ghost" id="r-close">' + (s.status === 'open' ? '수업 끝내기' : '다시 열기') + '</button><button class="btn sm primary" id="r-past-word" type="button">이 수업 학생별 전체 기록 받기 (ZIP)</button><button class="btn sm" id="r-past-pdf" type="button">지난 수업 학생별 기록 PDF 저장</button></div>' +
           '<p class="hint">단계를 열면 이전 단계는 학생 화면에서 보기 전용이 되고, 제출하지 않은 답은 미완료로 기록돼요. Recite 동안은 앞 단계가 가려집니다.</p>' +
           '<details class="r-settings-more"><summary>연구 설정 보기 (실험 중 변경하지 마세요)</summary><h3>이 수업 설정 <small>바꾸면 기록에 남아요</small></h3>' +
           tog('aiJudge', 'AI 판정 사용', '서술형 답을 학생 상태 9가지 중 하나로 분류해요(실험집단만). API 키가 없으면 규칙 판정만 써요.') +
