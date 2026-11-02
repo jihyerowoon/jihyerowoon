@@ -1496,16 +1496,31 @@
     if(prev){var oldIds=new Set((prev.requests||[]).map(function(q){return q.id;}));self.notifyNew((r.requests||[]).filter(function(q){return !oldIds.has(q.id);}));}
     else document.title='PQ4R 수업 운영';
     self.data.requests.forEach(function(q){if(self.picked[q.id]!==undefined&&self.picked[q.id]!==q.attempt)delete self.picked[q.id];});Object.keys(self.picked).forEach(function(id){if(!r.requests.some(function(q){return q.id===id;}))delete self.picked[id];});self.renderTop();self.renderRoster();if(self.mirrorStudent)self.renderWorksheetModal();var fingerprint=JSON.stringify(r.requests)+r.group+clockMode(r.session);if(fingerprint!==self.queueFingerprint){self.queueFingerprint=fingerprint;self.renderQueue();self.renderBatch();}if(self.sel&&(!prev||JSON.stringify(prev.students)!==JSON.stringify(r.students)))return self.loadDetail();}).catch(function(e){toast(e.message,'warn');});};
+  function retryRecordApi(path,n){
+    return api('GET',path).catch(function(e){
+      if(n<=0||(!(e.network||e.status>=500||e.status===429)))throw e;
+      return new Promise(function(resolve){setTimeout(resolve,800);}).then(function(){return retryRecordApi(path,n-1);});
+    });
+  }
   function downloadRecord(path){
-    api('GET',path).then(function(r){
-      if(!r||!r.base64||!r.filename)throw new Error('다운로드 자료가 없습니다.');
+    retryRecordApi(path,2).then(function(r){
+      if(!r||!r.base64||!r.filename)throw new Error('내려받을 서버 기록이 확인되지 않았습니다.');
       var bytes=atob(r.base64),parts=[];
       for(var i=0;i<bytes.length;i+=8192){var chunk=bytes.slice(i,i+8192),arr=new Uint8Array(chunk.length);for(var j=0;j<chunk.length;j++)arr[j]=chunk.charCodeAt(j);parts.push(arr);}
-      var blob=new Blob(parts,{type:r.mime||'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=r.filename;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},5000);
+      var blob=new Blob(parts,{type:r.mime||'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=r.filename;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},15000);
       toast('학습 기록 파일을 내려받았습니다.');
-    }).catch(function(e){toast(e.message||'다운로드 실패','warn');});
+    }).catch(function(e){toast('기록을 내려받지 못했습니다. 원본 기록은 보존되며 다시 시도할 수 있습니다. '+(e.message||''),'warn');});
   }
-  function printRecord(path){api('GET',path).then(function(r){if(!r||!r.html)throw Error('PDF 인쇄 자료가 없습니다.');var url=URL.createObjectURL(new Blob([r.html],{type:'text/html;charset=utf-8'}));var a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();toast('열린 기록 화면에서 PDF로 저장을 누르세요.');setTimeout(function(){URL.revokeObjectURL(url);},120000);}).catch(function(e){toast(e.message||'PDF 열기 실패','warn');});}
+  function printRecord(path){
+    var popup=window.open('','_blank');
+    if(popup)popup.document.write('<!doctype html><html lang="ko"><meta charset="utf-8"><title>학습 기록 준비 중</title><body style="font-family:sans-serif;padding:32px">저장된 기록을 불러오고 있습니다.</body></html>');
+    retryRecordApi(path,2).then(function(r){
+      if(!r||!r.html)throw new Error('PDF 인쇄 자료가 없습니다.');
+      if(popup&&!popup.closed){popup.document.open();popup.document.write(r.html);popup.document.close();popup.focus();}
+      else{var url=URL.createObjectURL(new Blob([r.html],{type:'text/html;charset=utf-8'})),a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},120000);}
+      toast('열린 기록 화면에서 PDF로 저장을 누르세요.');
+    }).catch(function(e){if(popup&&!popup.closed){popup.document.body.innerHTML='<p>기록을 불러오지 못했습니다. 원래 화면에서 다시 시도해 주세요.</p>';}toast('PDF 기록을 열지 못했습니다: '+(e.message||''),'warn');});
+  }
   Teacher.renderTop=function(){
     var self=this,s=self.data.session,m=clockMode(s),auto=!!s.settings.autoTimer;
     $('#console-title').textContent=(s.class_name||'수업')+' 수업 · '+(clockLabel(s));
