@@ -84,12 +84,12 @@ test('Students and teachers can copy run-specific login links',()=>{
  }
  assert.doesNotMatch(s,/u\.searchParams\.set\(['"](?:pin|password)['"]/i);
 });
-test('1-8 lesson coverage and 560 base plus 100 Recite prompts',()=>{
+test('1-8 lesson coverage and 560 base plus 100 Recite plus 60 evidence checks',()=>{
  const C=require('../lib/content');
  assert.equal(Object.keys(C.LESSONS).length,8);
- assert.equal(C.BANK.length,660);
+ assert.equal(C.BANK.length,720);
  for(let n=1;n<=8;n++){
-  assert.equal(C.BANK.filter(e=>e.lesson===n).length,n<3?70:n===3||n===8?90:85,'lesson '+n);
+  assert.equal(C.BANK.filter(e=>e.lesson===n).length,n<3?70:n===3||n===8?100:95,'lesson '+n);
  }
  const all=new Set(C.ITEMS.map(i=>i.id));
  for(const entry of C.BANK)assert.ok(all.has(entry.item),'Missing item '+entry.item);
