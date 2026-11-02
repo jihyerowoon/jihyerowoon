@@ -392,6 +392,8 @@ tr:last-child td { border-bottom: 0; }
 .student-pdf-embed{display:block;width:100%;height:75vh;min-height:580px;border:0;background:white}.reflection-paper-entry fieldset{margin:12px 0}.reflection-paper-entry label:has(#post-comparison){display:block;margin:12px 0}.reflection-paper-entry #post-comparison{width:100%;min-height:110px}.reflection-paper-entry [data-act='review-reflect']{width:100%;min-height:50px;font-weight:700}.review-answers{margin:14px 0}.review-reflection{margin:14px 0}
 
 /* 2026-11-02 학생 가독성 및 태블릿 Read 개념판 접근성 */
+body.is-student{--bg:#f3f5f9;--surface:#fff;--surface-2:#eff3f9;--ink:#192b45;--muted:#35445f;--line:#d5deeb;--line-2:#a9bdd7;color-scheme:light}
+body.is-student .panel.material img,body.is-student .paper-material img{filter:contrast(1.18)}
 body.is-student{--muted:#37475f;--ink:#142238}
 body.is-student #right,body.is-student #leftstage,body.is-student .paper-item,body.is-student .paper-item textarea,body.is-student .paper-item input,body.is-student .stage-intro,body.is-student .student-simple-tip{color:#17253d;font-weight:650}
 body.is-student .paper-item textarea,body.is-student .paper-item input[type=text]{font-weight:650;letter-spacing:0;-webkit-text-fill-color:#17253d}
@@ -656,6 +658,6 @@ body.is-student #layout{max-width:1420px;margin-inline:auto;grid-template-column
 <div id="toasts" aria-live="polite"></div>
 <div class="netbar" id="netbar" hidden>연결이 끊겼어요 · 다시 연결하는 중</div>
 <noscript>이 페이지는 자바스크립트가 필요해요.</noscript>
-<script src="app.js?v=0.6.5-student-readability-20261102"></script>
+<script src="app.js?v=0.6.5-student-contrast-20261102"></script>
 </body>
 </html>
