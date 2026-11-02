@@ -390,6 +390,30 @@ tr:last-child td { border-bottom: 0; }
 .student-pdf-panel{max-width:100%;overflow:hidden}.student-pdf-paper{position:relative;width:100%;max-width:1000px;margin:12px auto;background:white;box-shadow:0 1px 8px #0002;border:1px solid #d2d9e4}.student-pdf-paper canvas{display:block;width:100%;height:auto}.student-pdf-nav{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.student-pdf-nav .btn{min-height:40px}.reflection-paper-entry{position:relative;background:#f5f9ff;border-top:2px solid #2360a6;margin:0;padding:14px}.reflection-paper-entry label{font-size:18px;font-weight:700;display:block;margin-bottom:8px}.reflection-paper-entry textarea{width:100%;min-height:120px;font-size:17px;padding:12px;border:2px solid #859dc4;border-radius:8px;box-sizing:border-box}.student-pdf-frame{display:none}
 .worksheet-input-overlay{position:absolute;left:8%;width:84%;z-index:3;box-sizing:border-box;background:rgba(255,255,255,.90);border:1px solid #85a9d0;border-radius:8px;padding:3px 7px;overflow:auto}.worksheet-input-overlay .fields{display:flex;flex-direction:column;gap:4px;margin:0;padding:0}.worksheet-input-overlay .field{margin:0;padding:0;border:0}.worksheet-input-overlay .field label,.worksheet-input-overlay .field legend{font-size:11px;line-height:1.15;margin:0}.worksheet-input-overlay textarea{display:block;box-sizing:border-box;width:100%;min-height:30px;height:50px;max-height:80px;font-size:14px;line-height:1.3;padding:4px;background:rgba(255,255,255,.97)}.worksheet-input-overlay input[type=text]{width:100%;box-sizing:border-box;min-height:30px;padding:4px}.worksheet-recite-input textarea{min-height:38px;height:48px}.worksheet-input-overlay fieldset{padding:2px;margin:0}.worksheet-input-overlay .choice-line{display:inline-flex;margin-right:8px}.worksheet-input-overlay .selrow{display:none}
 .student-pdf-embed{display:block;width:100%;height:75vh;min-height:580px;border:0;background:white}.reflection-paper-entry fieldset{margin:12px 0}.reflection-paper-entry label:has(#post-comparison){display:block;margin:12px 0}.reflection-paper-entry #post-comparison{width:100%;min-height:110px}.reflection-paper-entry [data-act='review-reflect']{width:100%;min-height:50px;font-weight:700}.review-answers{margin:14px 0}.review-reflection{margin:14px 0}
+
+/* 2026-11-02 학생 가독성 및 태블릿 Read 개념판 접근성 */
+body.is-student{--muted:#37475f;--ink:#142238}
+body.is-student #right,body.is-student #leftstage,body.is-student .paper-item,body.is-student .paper-item textarea,body.is-student .paper-item input,body.is-student .stage-intro,body.is-student .student-simple-tip{color:#17253d;font-weight:650}
+body.is-student .paper-item textarea,body.is-student .paper-item input[type=text]{font-weight:650;letter-spacing:0;-webkit-text-fill-color:#17253d}
+body.is-student .paper-item textarea::placeholder{color:#4b5871;opacity:1}
+body.is-student .paper-item .item-t h3,body.is-student .paper-item .field>label,body.is-student .paper-item legend{font-weight:800}
+body.is-student .hint,body.is-student .item-sub,body.is-student .stage-k .min,body.is-student .figtarget,body.is-student .symbar-hint,body.is-student .symbar-k,body.is-student .field>label{color:#36465e;font-weight:650}
+body.is-student .step.future{opacity:0.83}
+body.is-student .step .nm,body.is-student .step .mn,body.is-student .stage-k .ko{font-weight:750}
+@media (min-width:768px) and (max-width:1180px){
+ body.is-student #layout:not(.noleft){grid-template-columns:minmax(300px,0.98fr) minmax(0,1.14fr);gap:12px;max-width:100%;padding:10px 12px 40px}
+ body.is-student #layout:not(.noleft) #left{position:sticky;top:calc(env(safe-area-inset-top, 0px) + 95px);max-height:calc(100dvh - 116px);overflow-y:auto;overscroll-behavior:contain;min-width:0;max-width:none;margin:0}
+ body.is-student #layout:not(.noleft) #right{max-width:none;margin:0;min-width:0}
+ body.is-student .paper-item{padding:14px}
+ body.is-student .paper-item textarea{font-size:18px;line-height:1.65}
+ body.is-student .panel.material{min-width:0;overflow:hidden}
+ body.is-student .panel.material img{width:100%;height:auto;object-fit:contain}
+}
+@media (max-width:767px){
+ body.is-student #layout:not(.noleft){grid-template-columns:minmax(0,1fr)}
+ body.is-student #left{position:static;max-height:none;overflow:visible}
+ body.is-student .paper-item{font-weight:650}
+}
 </style>
 <style>
 /* MVP 추가: 로그인, 연구자 관리 화면 */
