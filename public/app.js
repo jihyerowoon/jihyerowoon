@@ -1628,17 +1628,36 @@
     if(!auto){note.innerHTML='<b>이전 방식으로 만든 수동 수업입니다.</b> 이 수업에는 자동 시작 버튼이 없습니다. 연구자 화면에서 등록된 반을 선택한 뒤 새 수업이나 시연을 준비해 주세요. <button class="btn sm" id="open-research-setup">연구자 수업 준비로</button>';$('#open-research-setup').onclick=function(){if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{var saved=rememberedStaff('researcher');if(saved){tabStore('pq4r:staff-screen',{screen:'researcher'});restoreStaff(saved);}else renderEntry('researcher');}};}
     else if(m==='waiting'){note.textContent='① 학생들이 반 코드로 먼저 입장합니다. ② 아래 접속 인원을 확인합니다. ③ '+'수업 시작'+'을 누르면 모두 Preview 2분부터 시작합니다. 시작 전에는 시간이 흐르지 않습니다.';
       if(!s.clock.ready&&self.readyAttempt!==s.code){self.readyAttempt=s.code;api('POST','staff/ready',{session:s.code}).then(function(){return self.refresh();}).catch(function(e){toast(e.message,'warn');note.textContent=e.message;});}
-    }else if(m==='paused')note.textContent='현재 단계와 남은 시간, 학생 답안이 보존되어 있습니다. 이어서 진행을 누르면 이 지점부터 학생들과 함께 재개합니다. 새 수업을 만들 필요가 없습니다.';else if(m==='reflection')note.textContent='성찰지 작성 중입니다. Review 마지막 2분이 지나도 자동 종료되지 않습니다. 모든 학생의 성찰 제출을 확인한 뒤 직접 종료하세요.';else note.textContent='교사 시작 시각을 기준으로 모든 학생이 함께 진행합니다. 시간이 끝나면 자동으로 다음 단계로 이동합니다.';
-    var navActions=(m==='running'&&auto)?'<button class="btn" data-clock="manual-prev"'+(s.stage===0?' disabled':'')+'>← 이전 단계</button><button class="btn primary" data-clock="manual-next"'+(s.stage===5?' disabled':'')+'>다음 단계 →</button>':'';
-    var otherActions=auto?(m==='waiting'?'<button class="btn primary" data-clock="start">수업 시작</button>':['running','catchup'].includes(m)?'<button class="btn" data-clock="pause">긴급 일시정지</button>':m==='reflection'?'<button class="btn primary" data-clock="finish">성찰 확인 후 수업 종료</button>':m==='paused'?'<button class="btn primary" data-clock="resume">이어서 진행</button>':'<span class="pill">수업 완료</span>'):'<button class="btn" id="t-prev">이전 단계</button><button class="btn primary" id="t-next">다음 단계</button>';
-    var actions=navActions+otherActions;
+    }else if(m==='paused')note.textContent='현재 단계의 시간과 학생 답안이 보존되어 있습니다. 이어서 진행을 누르세요.';else if(m==='reflection')note.textContent='Review 12분이 지나도 자동 종료하지 않습니다. 해설 공개, 성찰, 종료 시점을 교사가 결정할 수 있습니다.';else note.textContent='교사 시작 시각을 기준으로 진행합니다. Review는 6분 이상 독립 풀이 후 교사가 다음 단계로 넘깁니다.';
+    var reviewStart=s.stage_opened&&s.stage_opened[5]?Date.parse(s.stage_opened[5]):NaN;
+    var sixElapsed=Number.isFinite(reviewStart)&&nowMs()-reviewStart>=360000;
+    var inReview=auto&&s.stage===5&&['running','reflection','paused'].includes(m);
+    var reviewActions='';
+    if(inReview&&['running','reflection'].includes(m)){
+      reviewActions=!s.clock.review_released_at?
+        '<button class="btn primary" data-clock="review-release"'+(!sixElapsed?' disabled':'')+'>6분 후 해설 단계 열기</button>':
+        !s.clock.review_reflection_opened_at?
+          '<button class="btn primary" data-clock="review-reflect">성찰 단계 열기</button>':
+          '<span class="pill ok">성찰 단계 진행 중</span>';
+    }
+    var navActions=(m==='running'&&auto&&s.stage<5)?'<button class="btn" data-clock="manual-prev"'+(s.stage===0?' disabled':'')+'>← 이전 단계</button><button class="btn primary" data-clock="manual-next">다음 단계 →</button>':'';
+    var otherActions=auto?(m==='waiting'?'<button class="btn primary" data-clock="start">수업 시작</button>':
+      ['running','catchup'].includes(m)?'<button class="btn" data-clock="pause">긴급 일시정지</button>':
+      m==='paused'?'<button class="btn primary" data-clock="resume">이어서 진행</button>':
+      m==='finished'?'<span class="pill">수업 완료</span>':''):
+      '<button class="btn" id="t-prev">이전 단계</button><button class="btn primary" id="t-next">다음 단계</button>';
+    if(inReview&&sixElapsed)otherActions+='<button class="btn danger" data-clock="finish">수업 종료 (60분 전 가능)</button>';
+    if(inReview&&!sixElapsed)otherActions+='<span class="hint small">Review 독립 풀이 6분까지 '+mmss((reviewStart+360000-nowMs())/1000)+'</span>';
+    var actions=navActions+reviewActions+otherActions;
     if($('#clock-actions').innerHTML!==actions){
       $('#clock-actions').innerHTML=actions;
       $$('[data-clock]').forEach(function(b){b.onclick=function(){
         var action=b.getAttribute('data-clock');
         if(action==='manual-next'&&!confirm('다음 단계로 이동할까요? 현재 단계의 미제출 답안은 미완료 처리되며 수업 진행 로그에 교사 조작으로 기록됩니다.'))return;
         if(action==='manual-prev'&&!confirm('이전 단계로 돌아갈까요? 학생 화면도 이전 단계로 이동하고 새 타이머가 시작됩니다. 수업 진행 로그에 교사 조작으로 기록됩니다.'))return;
-        if(action==='finish'&&!confirm('학생들의 성찰 제출을 확인했습니까? 종료하면 성찰을 추가 저장할 수 없습니다.'))return;
+        if(action==='review-release'&&!confirm('Review 독립 풀이를 최소 6분 진행했습니다. 두 집단 학생에게 해설을 공개하고 이전 답안 수정은 잠급니다. 진행할까요?'))return;
+        if(action==='review-reflect'&&!confirm('학생들에게 마지막 이해도 성찰 작성을 열까요?'))return;
+        if(action==='finish'&&!confirm('60분이 되지 않았어도 지금 수업을 종료할 수 있습니다. 종료하면 새 답안과 성찰을 더 제출할 수 없습니다. 저장된 기록은 보존됩니다. 종료할까요?'))return;
         b.disabled=true;
         api('POST','staff/clock',{session:self.code,action:action}).then(function(){self.queueFingerprint=null;self.reviewStage=null;return self.refresh();}).catch(function(e){toast(e.message,'warn');self.refresh();});
       };});
