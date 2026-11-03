@@ -61,6 +61,18 @@ test('Non-evaluative learner self-check for correct and incorrect answers and un
  const pending=E.judgeRule('L3RD02','EXPERIMENT',{answer:'3',work:'조건 확인'},{},K.DEFAULT_SETTINGS);
  assert.equal(pending.state,'AMBIGUOUS','3~8차시 정오 확정 금지');
 });
+test('Teacher roster shows pink online presence in worksheet and summary tile modes',()=>{
+ const app=read('public/app.js'),css=read('public/index.html');
+ assert.match(app,/var presence=offline\?' offline-presence':' online'/);
+ assert.match(app,/worksheet-tile '\+kind\+presence/);
+ assert.match(app,/student-tile '\+kind\+presence/);
+ assert.match(app,/미접속':'● 접속 중'/);
+ assert.match(app,/nowMs\(\)-Date\.parse\(p\.last_seen\)>90000/);
+ assert.match(css,/student-tile\.online\.worksheet-tile/);
+ assert.match(css,/border:3px solid #e00070/);
+ assert.match(css,/tile-presence\.is-online/);
+ assert.match(css,/student-tile\.offline\.worksheet-tile/);
+});
 test('Never apply forEach to one DOM element',()=>{
  const source=read('public/app.js');
  assert.doesNotMatch(source,/(?<!\$)\$\([^)]*\)\.forEach\s*\(/);
