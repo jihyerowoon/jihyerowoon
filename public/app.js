@@ -1607,7 +1607,7 @@
     if(popup)popup.document.write('<!doctype html><html lang="ko"><meta charset="utf-8"><title>학습 기록 준비 중</title><body style="font-family:sans-serif;padding:32px">저장된 기록을 불러오고 있습니다.</body></html>');
     retryRecordApi(path,2).then(function(r){
       if(!r||!r.html)throw new Error('PDF 인쇄 자료가 없습니다.');
-      if(popup&&!popup.closed){popup.document.open();popup.document.write(r.html);popup.document.close();popup.focus();}
+      if(popup&&!popup.closed){popup.document.open();popup.document.write(r.html);popup.document.close();popup.focus();var saveBtn=popup.document.getElementById('report-print-button');if(saveBtn)saveBtn.addEventListener('click',function(){popup.focus();popup.print();});}
       else{var url=URL.createObjectURL(new Blob([r.html],{type:'text/html;charset=utf-8'})),a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},120000);}
       toast('열린 기록 화면에서 PDF로 저장을 누르세요.');
     }).catch(function(e){if(popup&&!popup.closed){popup.document.body.innerHTML='<p>기록을 불러오지 못했습니다. 원래 화면에서 다시 시도해 주세요.</p>';}toast('PDF 기록을 열지 못했습니다: '+(e.message||''),'warn');});
