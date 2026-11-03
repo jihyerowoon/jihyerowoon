@@ -73,6 +73,28 @@ test('Teacher roster shows pink online presence in worksheet and summary tile mo
  assert.match(css,/tile-presence\.is-online/);
  assert.match(css,/student-tile\.offline\.worksheet-tile/);
 });
+test('All eight lesson tutor prompts render segment overlines but never change triangle, angle, or AI tokens',()=>{
+ const C=require('../lib/content');
+ const app=read('public/app.js'),css=read('public/index.html');
+ const match=app.match(/  function fmt\(s\) \{[\s\S]*?\n  \}/);
+ assert.ok(match,'student-safe math formatter defined');
+ const escape=t=>String(t).replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
+ const fmt=new Function('esc',match[0]+'; return fmt;')(escape);
+ const result=fmt('선분 AB ∥ CD, AO = CO, △ABC ≡ △DEF, ∠AOB, AI 튜터, {EO}, PC');
+ for(const token of ['AB','CD','AO','CO','EO','PC'])assert.match(result,new RegExp('math-segment[^>]*>'+token+'</span>'),token+' must have overline');
+ assert.match(result,/△ABC/);assert.match(result,/△DEF/);assert.match(result,/∠AOB/);assert.match(result,/AI 튜터/);
+ assert.doesNotMatch(result,/<span[^>]*>AI<\/span>/);
+ assert.doesNotMatch(result,/<span[^>]*>ABC<\/span>/);
+ assert.match(css,/\.math-segment\s*\{[^}]*border-top:2px solid currentColor/);
+ for(let lesson=1;lesson<=8;lesson++){
+   const prompt=C.BANK.filter(e=>e.lesson===lesson&&e.level===1);
+   assert.ok(prompt.length>0,'lesson '+lesson+' prompts');
+   for(const e of prompt){
+     const html=fmt(e.text);
+     assert.doesNotMatch(html,/\{(?:AB|CD|AO|CO|EO|PC)\}/,'Unrendered segment in '+e.id);
+   }
+ }
+});
 test('Never apply forEach to one DOM element',()=>{
  const source=read('public/app.js');
  assert.doesNotMatch(source,/(?<!\$)\$\([^)]*\)\.forEach\s*\(/);
