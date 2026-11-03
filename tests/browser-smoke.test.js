@@ -13,7 +13,7 @@ const publicContent={
  verdict_choices:C.VERDICT_CHOICES,figure:C.FIGURE,materials:C.MATERIALS
 };
 const classCode='A01',students=Array.from({length:30},(_,i)=>'A'+String(i+1).padStart(2,'0'));
-let session=null,clockStarts=0,logins=0;
+let session=null,clockStarts=0,logins=0,testItems=null,reciteLocked=false,studentNavigations=[],pastSubmissions=[];
 const reply=(res,status,body,type='application/json')=>{
  res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});
  res.end(typeof body==='string'?body:JSON.stringify(body));
@@ -27,7 +27,7 @@ function teacherOverview(){
 function studentMe(){
  return {student:{code:'A01',group:'EXPERIMENT'},
    session:{...session},
-   messages:[],items:{},requests:[],msgSeq:0,notice:null,
+   messages:[],items:testItems||{},requests:[],msgSeq:0,notice:null,recite_locked:reciteLocked,
    server_time:new Date().toISOString(),
    review:{unlocked:false,reflect_unlocked:false,reflection:null}
  };
@@ -70,8 +70,20 @@ const server=http.createServer(async(req,res)=>{
  }
  if(route==='me')return reply(res,200,studentMe());
  if(route==='me/sync')return reply(res,200,{clock:session.clock,stage:session.stage,stage_opened:session.stage_opened,
-   stage_rev:session.stage_rev,status:session.status,settings:session.settings,notice:null,messages:[],requests:[],
+   stage_rev:session.stage_rev,status:session.status,settings:session.settings,notice:null,messages:[],requests:[],recite_locked:reciteLocked,
    server_time:new Date().toISOString(),review:{unlocked:false,reflect_unlocked:false}});
+ if(route==='me/navigate'){
+   if(session.stage!==4||Number(body.stage)!==0||Date.now()-Date.parse(session.stage_opened[4])<300000)return reply(res,409,{error:'Recite minimum'});
+   studentNavigations.push(body.stage);reciteLocked=true;
+   return reply(res,200,{ok:true,stage:0,recite_locked:true});
+ }
+ if(route==='me/draft')return reply(res,200,{saved:true,at:new Date().toISOString()});
+ if(route==='me/submit'){
+   pastSubmissions.push(body);
+   const v={no:1,at:new Date().toISOString(),fields:body.fields,sel:body.selections||{}};
+   testItems=testItems||{};testItems[body.item_id]={draft:body.fields,draft_sel:body.selections||{},versions:[v],attempts:1,status:'open'};
+   return reply(res,200,{item_id:body.item_id,item:testItems[body.item_id],messages:[],requests:[]});
+ }
  if(route==='staff/announce')return reply(res,200,{ok:true});
  return reply(res,404,{error:'unmocked '+route});
 });
@@ -127,6 +139,28 @@ async function run(){
   await segMenu.locator('[data-act="segcustom"]').click();
   assert.equal(await previewInput.inputValue(),'A̅B̅C̅D̅','custom CD appended in the intended field');
   assert.equal(await segMenu.isVisible(),false,'menu closes after insertion');
+  // Student completes Recite, waits five minutes, returns to Preview and saves a revision.
+  testItems=Object.fromEntries(C.ITEMS.filter(it=>it.lesson===1&&it.stage==='Recite'&&!it.archived).map(it=>[
+    it.id,{draft:{text:'조건을 확인하고 합동의 뜻을 설명합니다.'},draft_sel:{},
+      versions:[{no:1,at:new Date().toISOString(),fields:{text:'조건을 확인하고 합동의 뜻을 설명합니다.'},sel:{}}],attempts:1,status:'open'}
+  ]));
+  session.stage=4;session.stage_opened[4]=new Date(Date.now()-6*60000).toISOString();
+  session.clock={mode:'running',started_at:new Date(Date.now()-48*60000).toISOString(),deadline:new Date(Date.now()+8*60000).toISOString()};
+  session.stage_rev++;
+  await student.locator('[data-step="0"]:not([disabled])').waitFor({timeout:14000});
+  student.on('dialog',dialog=>dialog.accept());
+  await student.locator('[data-step="0"]').click();
+  await student.locator('#in-L1PV01-text').waitFor({timeout:12000});
+  assert.equal(await student.locator('#in-L1PV01-text').isEnabled(),true,'Past Preview editable after completed Recite');
+  await student.locator('#in-L1PV01-text').fill('이전 단계에서 합동 조건을 다시 자세히 적습니다.');
+  await student.locator('[data-act="submit"][data-id="L1PV01"]').click();
+  await student.waitForFunction(()=>document.querySelector('[data-status="L1PV01"]')?.textContent?.includes('제출함'),null,{timeout:10000});
+  assert.deepEqual(studentNavigations,[0],'Recite exit and Preview revisit recorded');
+  assert.ok(pastSubmissions.some(x=>x.item_id==='L1PV01'&&x.fields.text.includes('합동 조건')),'Previous answer revision saved');
+  await student.locator('[data-step="4"]').click();
+  await student.locator('.stage-revisit-note.locked').waitFor({timeout:10000});
+  assert.equal(await student.locator('#in-L1RC01-text').count(),0,'Recite input stays locked after prior-stage visit');
+
   assert.equal(errors.length,0,'Browser errors: '+errors.join(' | '));
   console.log('PASS: researcher creates lesson, share links appear, student joins first, teacher joins second, teacher starts time, student sync, no pageerrors.');
   await teacher.close();await student.close();
