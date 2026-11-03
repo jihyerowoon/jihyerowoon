@@ -1621,14 +1621,15 @@
       var label=active?shortOf(active):'문항 선택 전';
       var preview=p.recent&&p.recent.preview?p.recent.preview:'';
       var status=offline?'미접속':help?'도움 요청':submitted===ids.length?'제출 완료':draft?'답안 작성 중':'대기 또는 읽는 중';
-      var kind=help?'need-help':offline?'offline':submitted===ids.length?'submitted':'writing';
-      var info='<span class="tile-head"><b>'+esc(p.code)+'</b><strong>'+esc(status)+'</strong></span>';
+      var kind=offline?'offline':help?'need-help':submitted===ids.length?'submitted':'writing';
+      var presence=offline?' offline-presence':' online';
+      var info='<span class="tile-head"><b>'+esc(p.code)+'</b><span class="tile-head-side"><span class="tile-presence '+(offline?'is-offline':'is-online')+'">'+(offline?'미접속':'● 접속 중')+'</span><strong>'+esc(status)+'</strong></span></span>';
       if(showSheet){
-        return '<button type="button" class="student-tile worksheet-tile '+kind+'" data-student="'+esc(p.code)+'" aria-label="'+esc(p.code)+' '+esc(status)+' 활동지 크게 보기">'+info+
+        return '<button type="button" class="student-tile worksheet-tile '+kind+presence+'" data-student="'+esc(p.code)+'" aria-label="'+esc(p.code)+' '+esc(status)+' 활동지 크게 보기">'+info+
           '<span class="tile-live-item">'+esc(label)+'</span><span class="mini-mirror">'+self.worksheetHTML(p,false)+'</span>'+
           '<small>클릭하면 활동지 확대 · '+submitted+'/'+ids.length+' 제출</small></button>';
       }
-      return '<button type="button" class="student-tile '+kind+(self.sel===p.code?' selected':'')+'" data-student="'+esc(p.code)+'" title="'+esc(p.code)+' · '+esc(label)+' · '+esc(preview)+'">'+info+
+      return '<button type="button" class="student-tile '+kind+presence+(self.sel===p.code?' selected':'')+'" data-student="'+esc(p.code)+'" title="'+esc(p.code)+' · '+esc(label)+' · '+esc(preview)+'">'+info+
         '<span class="tile-item">'+esc(label)+'</span><span class="tile-preview">'+esc(preview||'입력한 답안이 아직 없습니다.')+'</span>'+
         '<small>'+submitted+'/'+ids.length+' 제출 · 클릭해 답안 보기</small></button>';
     }).join('')||'<p class="hint">표시할 학생이 없습니다.</p>';
