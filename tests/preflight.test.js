@@ -13,14 +13,14 @@ for(const p of jsFiles)test('Syntax '+p,()=>new Function(read(p)));
 
 test('Correct-answer confirmation only for verified student request, with unchanged-answer gate in both groups',()=>{
  const E=require('../lib/engine'),K=require('../lib/core');
- const item='L1RD02',fields={answer:'1,5',work:'AB∥DC이므로 엇각 ∠BAO=∠DCO, ∠ABO=∠CDO이고 AB=CD라서 ASA 합동'};
- const fp=K.answerFingerprint(fields,{}),fpWhitespace=K.answerFingerprint({work:' AB∥DC이므로  엇각 ∠BAO=∠DCO, ∠ABO=∠CDO이고 AB=CD라서 ASA 합동 ',answer:'1,5'}, {});
+ const item='L2RC01',fields={text:'두 쌍의 대변이 각각 평행한 사각형'};
+ const fp=K.answerFingerprint(fields,{}),fpWhitespace=K.answerFingerprint({text:' 두 쌍의  대변이 각각 평행한 사각형 '}, {});
  assert.equal(fp,fpWhitespace,'공백이나 필드 순서만 변경하면 같은 답안');
- assert.notEqual(fp,K.answerFingerprint({...fields,work:fields.work+' 다른 근거'},{}),'실제 풀이 변화 탐지');
+ assert.notEqual(fp,K.answerFingerprint({...fields,text:fields.text+' 변의 관계를 근거로 다시 설명'},{}),'실제 풀이 변화 탐지');
  const judgment=E.judgeRule(item,'EXPERIMENT',fields,{},K.DEFAULT_SETTINGS);
  assert.equal(judgment.state,'CLEAR_INDEPENDENT');
  assert.equal(judgment.decisive,true);
- const ctx={stage:'Read',itemId:item,group:'EXPERIMENT',settings:K.DEFAULT_SETTINGS,recs:{}};
+ const ctx={stage:'Recite',itemId:item,group:'EXPERIMENT',settings:K.DEFAULT_SETTINGS,recs:{}};
  const first=E.onSubmit(E.newRec(),judgment,ctx).rec;
  const confirmed=E.onHelp(first,{...ctx,responseFingerprint:fp,verifiedCorrect:true});
  assert.ok(confirmed.out.some(o=>o.kind==='support'&&o.ack===true&&o.requiresResubmission===false));
@@ -29,7 +29,7 @@ test('Correct-answer confirmation only for verified student request, with unchan
  const blocked=E.onHelp(fakeResubmit,{...ctx,responseFingerprint:fp,verifiedCorrect:true});
  assert.deepEqual(blocked.out.map(o=>o.text),['수정한 답을 쓰고 질문을 하세요.']);
  assert.ok(!blocked.out.some(o=>o.kind==='support'||o.kind==='request'));
- const changed=E.onHelp(fakeResubmit,{...ctx,responseFingerprint:K.answerFingerprint({...fields,work:fields.work+' 다른 근거'},{}),verifiedCorrect:false});
+ const changed=E.onHelp(fakeResubmit,{...ctx,responseFingerprint:K.answerFingerprint({...fields,text:fields.text+' 변의 관계를 근거로 다시 설명'},{}),verifiedCorrect:false});
  assert.ok(changed.out.some(o=>o.kind==='support'),'수정 후 요청은 허용');
  const unverified=E.onHelp(first,{...ctx,responseFingerprint:fp,verifiedCorrect:false});
  assert.ok(!unverified.out.some(o=>o.ack),'미검증 답안에 정답 확인 메시지 금지');
