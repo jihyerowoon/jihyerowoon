@@ -43,6 +43,9 @@ test('Non-evaluative learner self-check for correct and incorrect answers and un
  assert.deepEqual(repeated.out.map(o=>o.text),['수정한 답을 쓰고 질문을 하세요.']);
  assert.match(read('public/app.js'),/data-self-check-send/);
  assert.doesNotMatch(read('public/app.js'),/data-verified-send|mode:'verified'/);
+ assert.match(read('public/app.js'),/if \(r\.attempts > 0\) return \[r\.attempts > 1/);
+ assert.doesNotMatch(read('public/app.js'),/if \(r\.status === 'clear'\) return \['기록 완료'/);
+
  assert.match(read('lib/staff.js'),/mode==='self_check'\?C\.COMMON\.SELF_CHECK\.text/);
  assert.doesNotMatch(read('lib/staff.js'),/confirmed_by_teacher|TEACHER_CONFIRMED_CORRECT/);
  assert.doesNotMatch(read('lib/engine.js'),/verifiedCorrect|VERIFIED_COMPLETE_SELF_CHECK_V1/);
