@@ -31,6 +31,14 @@ test('Correct-answer confirmation only for verified student request, with unchan
  assert.ok(!blocked.out.some(o=>o.kind==='support'||o.kind==='request'));
  const changed=E.onHelp(fakeResubmit,{...ctx,responseFingerprint:K.answerFingerprint({...fields,text:fields.text+' 변의 관계를 근거로 다시 설명'},{}),verifiedCorrect:false});
  assert.ok(changed.out.some(o=>o.kind==='support'),'수정 후 요청은 허용');
+ const earlyWrong=E.judgeRule(item,'EXPERIMENT',{text:'한 쌍의 대변이 평행한 사각형'},{},K.DEFAULT_SETTINGS);
+ const wrongRec=E.onSubmit(E.newRec(),earlyWrong,ctx).rec;
+ const earlyHelp=E.onHelp(wrongRec,{...ctx,responseFingerprint:K.answerFingerprint({text:'한 쌍의 대변이 평행한 사각형'},{}),verifiedCorrect:false});
+ assert.ok(earlyHelp.out.some(o=>o.kind==='support'),'오답 도움 요청에는 기존 은행 발문');
+ const revisedCorrect=E.onSubmit(earlyHelp.rec,judgment,ctx).rec;
+ const afterHint=E.onHelp(revisedCorrect,{...ctx,responseFingerprint:fp,verifiedCorrect:true});
+ assert.ok(afterHint.out.some(o=>o.ack),'수정 후 완전 정답이라면 앞서 힌트를 받았더라도 확인 응답');
+ assert.ok(afterHint.rec.verifiedConfirmationSent,'확인 메시지는 일회성');
  const unverified=E.onHelp(first,{...ctx,responseFingerprint:fp,verifiedCorrect:false});
  assert.ok(!unverified.out.some(o=>o.ack),'미검증 답안에 정답 확인 메시지 금지');
  const ctrlCtx={...ctx,group:'CONTROL'};
