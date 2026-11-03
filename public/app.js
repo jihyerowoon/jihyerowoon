@@ -340,7 +340,7 @@
       every(4000, function () { return self.poll(); }, 15000);
       App.timers.push(setInterval(function () {
         var t = $('#timer'); if (t) t.innerHTML = timerText(self.me.session);
-        if (self.view === 5 && self.stageIdx() === 5) { var due = self.me.review && self.me.review.release_at; var reflectAt = self.me.review && self.me.review.reflection_at; var count = $('#review-release-count'); if (count && due) count.textContent = '해설까지 ' + mmss((Date.parse(due)-nowMs())/1000); if (due && nowMs() >= Date.parse(due)) self.loadReviewFeedback(); var rc = $('#review-reflect-count'); if (rc && reflectAt) rc.textContent = '성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000); if (reflectAt && nowMs() >= Date.parse(reflectAt) && self.reviewFeedback && !self.reviewReflectionShown) { self.reviewReflectionShown = true; self.renderStage(); } }
+        if (self.view === 5 && self.stageIdx() === 5) { var due = self.me.review && self.me.review.release_at; var reflectAt = self.me.review && self.me.review.reflection_at; var count = $('#review-release-count'); if (count && due) count.textContent = nowMs()<Date.parse(due)?'해설을 열 수 있을 때까지 '+mmss((Date.parse(due)-nowMs())/1000):'교사가 해설 단계를 열면 풀이를 비교할 수 있습니다.'; if (self.me.review && self.me.review.unlocked) self.loadReviewFeedback(); var rc = $('#review-reflect-count'); if (rc && reflectAt) rc.textContent = '성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000); if (self.me.review && self.me.review.reflect_unlocked && self.reviewFeedback && !self.reviewReflectionShown) { self.reviewReflectionShown = true; self.renderStage(); } }
         if(self.stageIdx()===4){var allow=self.canRevisit();if(self._prevRevisitNav!==allow){self._prevRevisitNav=allow;self.renderStepper();}}
         $('.waiting[data-at]').forEach(function (n) { n.textContent = '도움 요청 보냄 · ' + mmss((nowMs() - Date.parse(n.getAttribute('data-at'))) / 1000) + ' 기다리는 중'; });
       }, 1000));
@@ -501,11 +501,11 @@
     reviewPanel: function () {
       var due = this.me.review && this.me.review.release_at, data = this.reviewFeedback, self = this;
       if (!due) return '';
-      if (nowMs() < Date.parse(due)) return '<section class="panel"><h3>Review 첫 6분 · 문제 풀이</h3><p>정답 없이 문제를 풀고 풀이 근거를 작성해 제출해 주세요.</p><p id="review-release-count" class="hint small">정답 공개까지 ' + mmss((Date.parse(due)-nowMs())/1000) + '</p><p class="small">6분 뒤 두 집단에 정답과 풀이를 동시에 공개합니다. 작성한 답변은 보존됩니다.</p></section>';
+      if (!self.me.review || !self.me.review.unlocked) return '<section class="panel"><h3>Review · 독립 풀이</h3><p>정답을 보지 않고 문제와 풀이를 작성해 제출하세요.</p><p id="review-release-count" class="hint small">' + (nowMs()<Date.parse(due)?'해설을 열 수 있을 때까지 '+mmss((Date.parse(due)-nowMs())/1000):'독립 풀이 6분 경과 · 교사의 해설 단계 전환을 기다립니다.') + '</p><p class="small">교사가 해설 단계를 열기 전까지 답안은 비공개입니다.</p></section>';
       if (!data) return '<section class="panel"><h3>해설 공개 시간</h3><p>나의 답변을 보존하고 정답과 해설을 불러오는 중입니다.</p></section>';
       var confidence = {explain:'충분히 설명할 수 있다',partial:'일부 이해했다',uncertain:'아직 어렵다'};
       var solutionName = function(x) { var id=x.item_id||''; return id.indexOf('RV')>=0?'Review 다시 풀기':id.indexOf('RD')>=0?'Read 개념확인':'Reflect 문제 '+id.slice(-1); };
-      var reflectAt=this.me.review&&this.me.review.reflection_at, canReflect=reflectAt&&nowMs()>=Date.parse(reflectAt);
+      var reflectAt=this.me.review&&this.me.review.reflection_at,canReflect=!!(this.me.review&&this.me.review.reflect_unlocked);
       var cards = (data.solutions || []).map(function (sol,i) {
         var p = sol.problem || {}, a = (data.answers || []).filter(function (v) {return v.item_id === sol.item_id;})[0] || {}, ans = a.pre_response || {};
         var own = Object.keys(ans).filter(function(k) {return String(ans[k]||'').trim();}).map(function (k) {return '<p><b>' + esc(k) + ':</b> ' + fmt(String(ans[k])) + '</p>';}).join('') || '<p class="muted">작성된 답안이 없습니다.</p>';
@@ -522,14 +522,14 @@
         Object.keys(confidence).map(function(k){return '<label class="choice-line"><input type="radio" name="post-understanding" value="'+k+'"><span>'+esc(confidence[k])+'</span></label>';}).join('') + '</fieldset>' +
         '<label style="display:block;margin:10px 0">내 풀이와 해설을 비교하여 새롭게 확인한 조건이나 성질, 또는 아직 이해하지 못한 부분 한 가지<textarea id="post-comparison" rows="2" maxlength="350" placeholder="한두 문장으로 적어 보세요."></textarea></label>' +
         '<p class="hint">2분이 지나도 자동 종료되지 않습니다. 작성한 내용을 제출해 주세요.</p><button type="button" class="btn primary" data-act="review-reflect">성찰 제출</button></section>';
-      var reflectUI = ref || canReflect ? completed : '<section class="panel"><h3>6~10분: 정답과 내 풀이 비교</h3><p>풀이에서 무엇이 같고 다른지 확인하세요. 마지막 2분에 짧은 이해도 성찰이 열립니다.</p><p id="review-reflect-count" class="hint small">성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000) + '</p></section>';
+      var reflectUI = ref || canReflect ? completed : '<section class="panel"><h3>해설과 내 풀이 비교</h3><p>교사가 성찰 단계로 전환할 때까지 정답과 자신의 풀이를 비교해 보세요.</p></section>';
       if(canReflect)return '<section class="panel review-answers"><h2>2단계 · 정답과 풀이 확인</h2>'+cards+'</section>'+reflectUI;
-      return '<section class="panel"><h2>Review 정답과 풀이 · 6분 후 공개</h2><p>첫 6분의 자기 풀이를 보존했습니다. 다음 4분은 정답 비교, 마지막 2분은 성찰입니다.</p><p class="hint small">두 집단에 동일하게 제공하는 검증용 해설 초안입니다.</p>' + cards + '</section>' + reflectUI;
+      return '<section class="panel"><h2>Review · 교사가 공개한 해설</h2><p>독립 풀이 시간을 마친 후 교사가 공개한 해설입니다. 학생의 기존 답안은 보존됩니다.</p><p class="hint small">두 집단에 동일하게 제공하는 검증용 해설 초안입니다.</p>' + cards + '</section>' + reflectUI;
     },
     loadReviewFeedback: function () {
       var self=this, due=self.me.review && self.me.review.release_at;
-      if(['catchup','finished'].includes(clockMode(self.me.session)))return;
-      if (!due || self.stageIdx()!==5 || self.view!==5 || self.reviewFeedback || self.reviewLoading || nowMs()<Date.parse(due)) return;
+      if(clockMode(self.me.session)==='catchup')return;
+      if (!due || self.stageIdx()!==5 || self.view!==5 || self.reviewFeedback || self.reviewLoading || !self.me.review || !self.me.review.unlocked) return;
       if (Date.now()-self.lastReviewFetch<3500) return;
       self.lastReviewFetch=Date.now(); self.reviewLoading=true;
       api('GET','me/review-feedback').then(function(r){
