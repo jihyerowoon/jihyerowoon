@@ -237,7 +237,7 @@
       var min = stageMin(n, i);
       var state = i < open ? 'past' : i === open ? 'now' : 'future';
       var hidden = opts.reciteHide && open === 4 && i < 4;
-      var disabled = state === 'future' || hidden || opts.noNav;
+      var disabled = state === 'future' || hidden || opts.noNav || (state === 'past' && opts.allowPast === false);
       return '<button class="step ' + STAGE_KEYS[i] + ' ' + state + (i === view ? ' viewing' : '') + (hidden ? ' hidden-stage' : '') + '" data-step="' + i + '"' + (disabled ? ' disabled' : '') +
         ' title="' + s.id + ' ' + s.ko + ' · ' + min + '분' + (hidden ? ' (Recite 동안 가림)' : '') + '"><span class="n">' + (i + 1) + '</span><span class="nm">' + ['미리보기','질문하기','개념 읽기','생각 점검','내 말로 설명','마무리'][i] + '</span><span class="mn">' + min + '분</span></button>';
     }).join('');
@@ -341,7 +341,8 @@
       App.timers.push(setInterval(function () {
         var t = $('#timer'); if (t) t.innerHTML = timerText(self.me.session);
         if (self.view === 5 && self.stageIdx() === 5) { var due = self.me.review && self.me.review.release_at; var reflectAt = self.me.review && self.me.review.reflection_at; var count = $('#review-release-count'); if (count && due) count.textContent = '해설까지 ' + mmss((Date.parse(due)-nowMs())/1000); if (due && nowMs() >= Date.parse(due)) self.loadReviewFeedback(); var rc = $('#review-reflect-count'); if (rc && reflectAt) rc.textContent = '성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000); if (reflectAt && nowMs() >= Date.parse(reflectAt) && self.reviewFeedback && !self.reviewReflectionShown) { self.reviewReflectionShown = true; self.renderStage(); } }
-        $$('.waiting[data-at]').forEach(function (n) { n.textContent = '도움 요청 보냄 · ' + mmss((nowMs() - Date.parse(n.getAttribute('data-at'))) / 1000) + ' 기다리는 중'; });
+        if(self.stageIdx()===4){var allow=self.canRevisit();if(self._prevRevisitNav!==allow){self._prevRevisitNav=allow;self.renderStepper();}}
+        $('.waiting[data-at]').forEach(function (n) { n.textContent = '도움 요청 보냄 · ' + mmss((nowMs() - Date.parse(n.getAttribute('data-at'))) / 1000) + ' 기다리는 중'; });
       }, 1000));
     },
     pendKey: function () { return 'pq4r:pending:' + this.me.session.code + ':' + this.me.student.code; },
@@ -368,6 +369,7 @@
         if (r.messages.length) { self.me.messages = self.me.messages.concat(r.messages); self.me.msgSeq = r.messages[r.messages.length - 1].seq; }
         if (self.group() === 'CONTROL') self.me.requests = r.requests;
         if(r.clock) self.me.session.clock=r.clock;
+        if(typeof r.recite_locked==='boolean')self.me.recite_locked=r.recite_locked;
         if(r.notice) self.me.notice=r.notice;
         if (r.review) self.me.review = r.review;
         if (stageChanged) {
@@ -401,10 +403,10 @@
         '<div class="demo" id="demo" hidden></div><div class="layout" id="layout"><aside class="left" id="left"></aside><section class="right" id="right"></section></div>';
       bindExit('나가면 다시 들어올 때 PIN을 넣어야 해요. 나갈까요?');
       self.renderStepper(); self.renderDemo(); self.renderLeft(); self.renderStage();
-      $('#stepper').addEventListener('click', function (ev) { var b = ev.target.closest('[data-step]'); if (!b || b.disabled) return; self.view = +b.getAttribute('data-step'); self.renderStepper(); self.renderStage(); });
+      $('#stepper').addEventListener('click', function(ev){var b=ev.target.closest('[data-step]');if(!b||b.disabled)return;self.navigateTo(+b.getAttribute('data-step'));});
       self.bindRight(); self.bindLeft();
     },
-    renderStepper: function () { var n = $('#stepper'); if (n) n.innerHTML = stepperHTML(this.stageIdx(), this.view, { reciteHide: true, lesson: this.lesson() }); var t = $('#timer'); if (t) t.innerHTML = timerText(this.me.session); },
+    renderStepper: function(){var n=$('#stepper'),allow=this.canRevisit();if(n)n.innerHTML=stepperHTML(this.stageIdx(),this.view,{reciteHide:!allow,allowPast:allow,lesson:this.lesson()});var t=$('#timer');if(t)t.innerHTML=timerText(this.me.session);},
     renderDemo: function () {
       var self = this, n = $('#demo'); if (!n) return;
       if (!self.settings().demoControls) { n.hidden = true; return; }
@@ -469,10 +471,32 @@
         else { var it = resolveItem(f.item, this.group(), this.settings()), fd = it.fields.filter(function (x) { return x.key === f.field; })[0]; t.innerHTML = '선택 대상: <b>' + esc(shortOf(f.item)) + '</b> ' + fmt(fd ? fd.label : f.field); }
       }
     },
-    editable: function () {
-      var due = this.me.review && this.me.review.release_at;
-      return this.view === this.stageIdx() && this.me.session.status === 'open' &&
-        !(this.stageIdx() === 5 && due && nowMs() >= Date.parse(due));
+    stageComplete: function(){
+      var self=this,items=itemsForStage(C.stages[self.stageIdx()].id,self.group(),self.settings(),self.lesson());
+      return items.length>0&&items.every(function(it){var r=self.item(it.id),v=r.versions&&r.versions.length?r.versions[r.versions.length-1]:null;
+        return !!v&&it.fields.every(function(f){return String((v.fields||{})[f.key]||'').trim().length>0;});});
+    },
+    canRevisit: function(){
+      var idx=this.stageIdx(),s=this.me.session;
+      if(idx===0||s.status!=='open'||clockMode(s)!=='running'||!this.stageComplete())return false;
+      if(idx===5&&this.me.review&&this.me.review.unlocked)return false;
+      if(idx===4){var start=s.stage_opened&&s.stage_opened[4];if(!start||nowMs()-Date.parse(start)<300000)return false;}
+      return true;
+    },
+    editable: function(){
+      var idx=this.stageIdx(),s=this.me.session;
+      if(s.status!=='open'||!['running','legacy'].includes(clockMode(s)))return false;
+      if(this.view===idx)return !(idx===4&&this.me.recite_locked)&&!(idx===5&&this.me.review&&this.me.review.unlocked);
+      return this.view<idx&&this.view!==4&&this.canRevisit();
+    },
+    navigateTo: function(target){
+      var self=this,cur=self.stageIdx();
+      if(target===cur){self.view=cur;self.renderStepper();self.renderStage();return;}
+      if(target>cur||!self.canRevisit()){toast('현재 단계의 필수 답안을 모두 제출하면 이전 단계를 수정할 수 있습니다. Recite는 최소 5분 동안 작성해야 합니다.','warn');return;}
+      if(cur===4&&!self.me.recite_locked&&!confirm('Recite에서 앞 단계로 이동합니다.\\n\\n앞 단계의 답안은 수정할 수 있지만, Recite로 돌아와도 Recite 답안은 다시 작성할 수 없습니다.\\n\\n계속할까요?'))return;
+      api('POST','me/navigate',{stage:target}).then(function(data){self.me.recite_locked=!!data.recite_locked;return self.reload();}).then(function(){
+        self.view=target;self.focus=null;self.renderStepper();self.renderStage();
+      }).catch(function(e){toast(e.message,'warn');self.reload().then(function(){self.view=self.stageIdx();self.renderStepper();self.renderStage();});});
     },
     reviewPanel: function () {
       var due = this.me.review && this.me.review.release_at, data = this.reviewFeedback, self = this;
@@ -525,7 +549,7 @@
         self.renderStage(); toast('해설 후 성찰이 저장됐어요.');
       }).catch(function(e){toast(e.message,'warn'); if(btn)btn.disabled=false;});
     },
-    visibleStage: function (i) { var open = this.stageIdx(); if (i > open) return false; if (open === 4 && i < 4) return false; return true; },
+    visibleStage: function(i){var open=this.stageIdx();if(i>open)return false;if(open===4&&i<4&&!this.canRevisit())return false;return true;},
     renderStage: function () {
       var self = this;
       if (!self.visibleStage(self.view)) self.view = self.stageIdx();
@@ -537,6 +561,8 @@
       if (editable && st.id !== 'Preview' && st.id !== 'Read') h += '<p class="student-simple-tip">① 답을 적고 제출하세요. ② 어렵다면 <b>질문으로 도움받기</b>를 누르세요. Review에서는 첫 제출 전에도 질문할 수 있습니다.</p>';
       if(g!=='CONTROL')h += worksheetPane(ln,g,st.id);
       // 기호와 선분은 아래 각 답안 칸에 개별적으로 표시한다.
+      if(self.view<self.stageIdx()&&editable)h+='<p class="stage-revisit-note">지난 단계 답안 수정 중 · 수업의 현재 단계와 타이머는 계속 진행됩니다.</p>';
+      if(self.view===4&&self.me.recite_locked)h+='<p class="stage-revisit-note locked">앞 단계로 이동했으므로 Recite는 재작성할 수 없습니다.</p>';
       if(!(self.view===5 && self.reviewFeedback))items.forEach(function (it) { h += self.itemHTML(it, editable); });
       if (self.view === 5 && self.stageIdx() === 5) h += self.reviewPanel();
       h += '<p class="savestate" id="savestate"></p>';
@@ -666,7 +692,7 @@
       if (sb) {
         sb.textContent = r.attempts ? '수정한 답 저장·제출하기' : '내 답 제출하기';
         sb.disabled = !!self.busy[id] || self.isEmpty(id) || r.status === 'incomplete' || !self.editable();
-        $$('[data-act="help"][data-id="' + id + '"]').forEach(function(hb){hb.disabled = !!self.busy[id] || (!r.attempts && ITEM[id].stage !== 'Review') || r.status === 'incomplete' || !self.editable();});
+        $$('[data-act="help"][data-id="' + id + '"]').forEach(function(hb){hb.disabled = !!self.busy[id] || (!r.attempts && ITEM[id].stage !== 'Review') || r.status === 'incomplete' || !self.editable() || self.view !== self.stageIdx();});
       }
       var rv = $('[data-revise="' + id + '"]'); if (rv) rv.hidden = !(r.attempts > 0 && r.status !== 'incomplete');
       var bz = $('[data-busy="' + id + '"]'); if (bz) bz.hidden = !self.busy[id];
@@ -815,7 +841,7 @@
       self.busy[id] = true; self.refreshItem(id);
       api('POST', 'me/submit', { item_id: id, fields: self.currentFields(id), selections: clone(r.draft_sel || {}), reason: r.attempts ? (r.reason || '') : '', client_ts: new Date().toISOString() })
         .then(function (res) {
-          self.applyResult(res);toast('답안을 저장했습니다. 필요하면 질문으로 도움받기를 눌러 주세요.');
+          self.applyResult(res);self.renderStepper();toast('답안을 저장했습니다. 필요하면 질문으로 도움받기를 눌러 주세요.');
           delete self.pending[id]; store(self.pendKey(), self.pending);
           var rv = $('[data-reason="' + id + '"]'); if (rv) rv.value = '';
         })
@@ -826,7 +852,7 @@
         .then(function () { self.busy[id] = false; self.refreshItem(id); });
     },
     help: function (id, fieldLabel) {
-      var self = this; if (self.busy[id] || !self.editable()) return;
+      var self = this; if (self.busy[id] || !self.editable() || self.view!==self.stageIdx()) return;
       self.busy[id] = true; self.refreshItem(id);
       var send = self.pending[id] ? self.flushDraft(id) : Promise.resolve();
       send.then(function () { return api('POST', 'me/help', { item_id: id, question:fieldLabel?('['+fieldLabel+'] '+(self.item(id).question_draft||'질문으로 도움받기')):(self.item(id).question_draft||''), client_ts: new Date().toISOString() }); })
