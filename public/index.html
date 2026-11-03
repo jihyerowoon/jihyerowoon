@@ -416,6 +416,29 @@ body.is-student .step .nm,body.is-student .step .mn,body.is-student .stage-k .ko
  body.is-student #left{position:static;max-height:none;overflow:visible}
  body.is-student .paper-item{font-weight:650}
 }
+
+/* 교사용 실시간 접속 상태: 온라인은 고채도 핑크, 오프라인은 회색. 90초 기준을 목록과 일치시킨다. */
+.is-teacher .student-tile.online,
+.is-teacher .student-tile.online.worksheet-tile,
+.is-teacher .student-tile.online.selected,
+.is-teacher .student-tile.online.need-help,
+.is-teacher .student-tile.online.submitted,
+.is-teacher .student-tile.online:hover,
+.is-teacher .student-tile.online:focus-visible{
+  border:3px solid #e00070;
+  background:#ffe0ef;
+  box-shadow:0 0 0 2px #ffc0dd,0 3px 10px #af16552b;
+}
+.is-teacher .student-tile.online .tile-head>b{color:#90004a;font-weight:900}
+.is-teacher .student-tile .tile-head-side{display:grid;justify-items:end;gap:4px;min-width:0}
+.is-teacher .student-tile .tile-presence{font-size:12px;font-weight:900;line-height:1.3;padding:3px 7px;border-radius:999px;white-space:nowrap}
+.is-teacher .student-tile .tile-presence.is-online{background:#b60059;color:#fff}
+.is-teacher .student-tile .tile-presence.is-offline{background:#e0e3e9;color:#596579}
+.is-teacher .student-tile.offline,
+.is-teacher .student-tile.offline.worksheet-tile{background:#f0f1f4;border:2px solid #d1d6df;box-shadow:none}
+.is-teacher .student-tile.online.worksheet-tile .mini-mirror::after{background:linear-gradient(transparent,#ffe0ef)}
+#teacher-wall:fullscreen .student-tile .tile-presence{font-size:10px;padding:2px 5px}
+
 </style>
 <style>
 /* MVP 추가: 로그인, 연구자 관리 화면 */
@@ -658,6 +681,6 @@ body.is-student #layout{max-width:1420px;margin-inline:auto;grid-template-column
 <div id="toasts" aria-live="polite"></div>
 <div class="netbar" id="netbar" hidden>연결이 끊겼어요 · 다시 연결하는 중</div>
 <noscript>이 페이지는 자바스크립트가 필요해요.</noscript>
-<script src="app.js?v=0.6.5-no-verdict-20261103"></script>
+<script src="app.js?v=0.6.5-online-pink-20261103"></script>
 </body>
 </html>
