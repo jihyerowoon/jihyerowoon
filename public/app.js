@@ -801,7 +801,10 @@
       var renderBank = function () {
         var L = +$('#sf-level').value;
         var list = L === 0 ? [self.bank.pre_submit] : self.bank.bank.filter(function (b) { return b.item === self.selItem && b.level === L; });
-        $('#sf-bank').innerHTML = list.map(function (b, i) { return '<label class="bankopt"><input type="radio" name="sf-b" value="' + esc(b.id) + '"' + (i === 0 ? ' checked' : '') + '><span>' + fmt(b.text) + '</span></label>'; }).join('');
+        var recommended = it && it.recommendation && it.recommendation.level === L ? it.recommendation : null;
+        list = list.slice().sort(function (x, y) { return (y.id === (recommended && recommended.id) ? 1 : 0) - (x.id === (recommended && recommended.id) ? 1 : 0); });
+        $('#sf-bank').innerHTML = (recommended ? '<p class="hint small">학생의 최근 답변을 고려한 추천입니다. 자동 전송되지 않으며 선생님이 검토한 뒤 보내세요.</p>' : '') +
+          list.map(function (b, i) { return '<label class="bankopt"><input type="radio" name="sf-b" value="' + esc(b.id) + '"' + (i === 0 ? ' checked' : '') + '><span>' + (recommended && b.id === recommended.id ? '<strong>추천 발문 · </strong>' : '') + fmt(b.text) + '</span></label>'; }).join('');
       };
       renderBank();
       $('#sf-level').onchange = renderBank;
