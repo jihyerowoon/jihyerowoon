@@ -160,7 +160,7 @@ test('Teacher starts clock explicitly',()=>{
  const s=read('lib/clock.js');
  assert.match(s,/action==='start' && c\.mode==='waiting'/);
  assert.match(s,/c\.started_at=iso\(now\)/);
- assert.match(s,/action==='finish'&&s\.stage===5/);
+ assert.match(s,/action==='finish'&&\['running','reflection','paused','catchup'\]/);
  assert.match(s,/action==='review-release'/);
  assert.match(s,/action==='review-reflect'/);
 });
