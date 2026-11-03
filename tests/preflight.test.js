@@ -24,10 +24,13 @@ test('Non-evaluative learner self-check for correct and incorrect answers and un
  const neutral=E.onHelp(first,{...ctx,responseFingerprint:fp,asksConfirmation:true});
  assert.ok(neutral.out.some(o=>o.kind==='support' && o.text===C.COMMON.SELF_CHECK.text));
  assert.ok(neutral.out.every(o=>!o.ack && !/답과 풀이의 근거가 모두 타당/.test(o.text)),'정오 확인 신호 없음');
+ assert.ok(neutral.out.some(o=>o.requiresResubmission===false),'자기점검 뒤 수정 답안 강제하지 않음');
+ assert.match(neutral.out[0].text,/다음 문제로 넘어가도 좋아요/);
+
  const fakeResubmit=E.onSubmit(neutral.rec,judgment,ctx).rec;
  const blocked=E.onHelp(fakeResubmit,{...ctx,responseFingerprint:fp,asksConfirmation:true});
- assert.deepEqual(blocked.out.map(o=>o.text),['수정한 답을 쓰고 질문을 하세요.']);
- assert.ok(blocked.out.every(o=>o.kind!=='support'&&o.kind!=='request'),'동일 답안 재요청 불허');
+ assert.deepEqual(blocked.out.map(o=>o.text),['스스로 점검하는 방법은 이미 안내했어요. 더 고칠 부분이 없다고 판단하면 다음 문제로 넘어가도 좋아요.']);
+ assert.ok(blocked.out.every(o=>o.kind!=='support'&&o.kind!=='request'),'자기점검 반복 요청은 강제 수정 없이 종료');
  const changed=E.onHelp(fakeResubmit,{...ctx,responseFingerprint:K.answerFingerprint({text:fields.text+' 근거 추가'},{}),asksConfirmation:true});
  assert.ok(changed.out.some(o=>o.text===C.COMMON.SELF_CHECK.text),'수정 후 중립 점검 발문');
  const wrong=E.judgeRule(item,'EXPERIMENT',{text:'한 쌍의 대변이 평행한 사각형'},{},K.DEFAULT_SETTINGS);
@@ -38,6 +41,11 @@ test('Non-evaluative learner self-check for correct and incorrect answers and un
  const ctrl=E.onSubmit(E.newRec(),judgment,ctrlCtx).rec;
  const requested=E.onHelp(ctrl,{...ctrlCtx,responseFingerprint:fp,asksConfirmation:true});
  assert.ok(requested.out.some(o=>o.kind==='request'),'통제반 질문은 교사에게 전달');
+ const selfCheckByTeacher=E.applyTeacherSupport(ctrl,1,fp);
+ selfCheckByTeacher.selfCheckFingerprint=fp;
+ const teacherClose=E.onHelp(selfCheckByTeacher,{...ctrlCtx,responseFingerprint:fp,asksConfirmation:true});
+ assert.match(teacherClose.out[0].text,/다음 문제로 넘어가도 좋아요/);
+ assert.match(read('lib/staff.js'),/requires_resubmission:mode==='self_check'\?false/);
  const teacherSupported=E.applyTeacherSupport(ctrl,1,fp);
  const repeated=E.onHelp(E.onSubmit(teacherSupported,judgment,ctrlCtx).rec,{...ctrlCtx,responseFingerprint:fp});
  assert.deepEqual(repeated.out.map(o=>o.text),['수정한 답을 쓰고 질문을 하세요.']);
