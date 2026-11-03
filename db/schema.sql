@@ -44,6 +44,11 @@ create table if not exists participants (
   primary key (session_id, student_id)
 );
 
+-- 교사용 활동지 관찰: 최근 선택 문항만 보관하는 운영 상태. 연구 원본 events는 변경하지 않는다.
+alter table participants add column if not exists focus_item text;
+alter table participants add column if not exists focus_field text;
+alter table participants add column if not exists focus_at timestamptz;
+
 -- 학생 × 문항의 현재 상태(엔진 rec, 임시저장, 제출본). 기록 원본은 events.
 create table if not exists item_states (
   session_id uuid not null references sessions(id) on delete restrict,
@@ -59,6 +64,9 @@ create table if not exists item_states (
   updated_at timestamptz not null default now(),
   primary key (session_id, student_id, item_id)
 );
+
+-- 질문 입력도 두 집단 동일하게 자동 저장한다.
+alter table item_states add column if not exists question_draft text not null default '';
 
 -- 학생 화면에 보이는 지원 대화(AI·교사·안내)
 create table if not exists messages (
@@ -91,6 +99,8 @@ create table if not exists help_requests (
   answer_message uuid
 );
 create index if not exists help_open on help_requests (session_id) where answered_at is null;
+
+alter table help_requests add column if not exists question_text text not null default '';
 
 -- 연구 기록(06 로그 사전 + 추가 항목). 추가만 가능하고 고치거나 지울 수 없다.
 create table if not exists events (
@@ -151,3 +161,39 @@ alter table events enable row level security;
 alter table auth_failures enable row level security;
 alter table heartbeat enable row level security;
 alter table schema_meta enable row level security;
+
+-- 2026-10-27 연구자 승인: 명시적인 반 및 교사 배정. 기존 기록과 표는 보존.
+create table if not exists classes (
+  code text primary key check (code ~ '^[A-Z0-9_-]{2,20}$'),
+  grp text not null check (grp in ('EXPERIMENT','CONTROL')),
+  teacher_code text not null check (teacher_code ~ '^[A-Z0-9_-]{2,20}$'),
+  created_at timestamptz not null default now()
+);
+alter table classes enable row level security;
+alter table sessions add column if not exists clock jsonb not null default '{}'::jsonb;
+-- 보완본은 시간 내 답안(item_states)과 분리. 수정 이력은 events에 추가만 한다.
+create table if not exists supplements (
+  session_id uuid not null references sessions(id) on delete restrict,
+  student_id uuid not null references students(id) on delete restrict,
+  item_id text not null,
+  fields jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  primary key(session_id,student_id,item_id)
+);
+alter table supplements enable row level security;
+
+
+-- 연구자 원본 활동지·정답지·성찰지 (PDF만 허용). 학생 제공 시 서버에서 공개 시점을 검증한다.
+-- 본실험과 시연 중 문서 교체는 해시와 업로드 시각을 로그에 남겨 추적한다.
+create table if not exists lesson_assets (
+ lesson int not null check (lesson between 1 and 8),
+ kind text not null check(kind in ('worksheet','answer','reflection')),
+ filename text not null,
+ mime text not null default 'application/pdf',
+ bytes_base64 text not null,
+ sha256 text not null,
+ bytes_count int not null,
+ updated_at timestamptz not null default now(),
+ primary key(lesson,kind)
+);
+alter table lesson_assets enable row level security;

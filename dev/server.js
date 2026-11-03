@@ -17,7 +17,7 @@ const router = require('../api/router');
 const keepalive = require('../api/keepalive');
 const vercel = JSON.parse(fs.readFileSync(path.join(root, 'vercel.json'), 'utf8'));
 const pub = path.join(root, vercel.outputDirectory || 'public');
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.webp': 'image/webp', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.ico': 'image/x-icon' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.woff2': 'font/woff2', '.webp': 'image/webp', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.ico': 'image/x-icon' };
 
 function applyHeaders(res, urlPath) {
   (vercel.headers || []).forEach(function (h) {
