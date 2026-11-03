@@ -187,23 +187,23 @@ test('All 576 researcher-supplied prompts cover eight lessons and 72 question un
     assert.equal(entry.src,'USER_CSV_576_20261103');
   }
 });
-test('Review six-minute minimum plus teacher-controlled release and reflection',()=>{
+test('Review opens both answers and reflection automatically after four minutes',()=>{
  const R=require('../lib/review'),start=Date.now();
  const session={status:'open',stage:5,lesson:3,stage_opened:{5:new Date(start).toISOString()},clock:{mode:'running'}};
- for(const minutes of [0,5.999,6,9.999,10,12,30]){
-  const s=R.status(session,start+Math.round(minutes*60000));
-  assert.equal(s.unlocked,false,'Teacher has not released answers at minute '+minutes);
-  assert.equal(s.reflect_unlocked,false,'Teacher has not opened reflection at minute '+minutes);
-  assert.equal(s.teacher_can_release,minutes>=6);
+ for(const minutes of [0,2,3.999,4,5,10,12]){
+  const v=R.status(session,start+Math.round(minutes*60000));
+  assert.equal(v.unlocked,minutes>=4,'Answer release at minute '+minutes);
+  assert.equal(v.reflect_unlocked,minutes>=4,'Reflection release at minute '+minutes);
  }
- session.clock.review_released_at=new Date(start+6*60000).toISOString();
- assert.equal(R.status(session,start+6*60000+1).unlocked,true);
- assert.equal(R.status(session,start+9*60000).reflect_unlocked,false);
- session.clock.review_reflection_opened_at=new Date(start+8*60000).toISOString();
- assert.equal(R.status(session,start+9*60000).reflect_unlocked,true);
- assert.equal(R.status(session,start+12*60000).reflect_unlocked,true);
- assert.match(read('public/app.js'),/data-clock="review-release"/);
- assert.match(read('public/app.js'),/data-clock="review-reflect"/);
+ assert.equal(R.status(session,start).delay_seconds,240);
+ const app=read('public/app.js');
+ assert.match(app,/4분 뒤 정답 및 성찰지 동시 공개/);
+ assert.match(app,/data-clock="finish"/);
+ assert.match(app,/내용을 보고 필요한 시간이 얼마일지 목표설정을 해보세요/);
+ const clock=read('lib/clock.js');
+ assert.match(clock,/action==='finish'&&\['running','reflection','paused','catchup'\]/);
+ assert.match(read('lib/record-download.js'),/report-print-button/);
+ assert.match(read('public/report-print.js'),/window\.print\(\)/);
 });
 test('Prior stage edits require complete active stage, Recite five minutes, and a persisted reentry lock',()=>{
  const s=read('lib/student.js'),a=read('public/app.js');
