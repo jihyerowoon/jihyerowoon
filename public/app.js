@@ -1061,12 +1061,13 @@
         var L = +$('#sf-level').value;
         var list = L === 0 ? [] : self.bank.bank.filter(function (b) { return b.item === self.selItem && b.level === 1 && !b.group; });
         var state = it && it.rec && it.rec.state || '*';
-        var priority = list.filter(function(b){return b.state === state || b.state === '*';});
-        var top = priority.slice(0,6), more = list.filter(function(b){return top.indexOf(b) < 0;});
-        var optionHTML=function(b,checked){return '<label class="bankopt"><input type="radio" name="sf-b" value="' + esc(b.id) + '"' + (checked?' checked':'') + '><span>' + fmt(b.text) + ' <small>(' + esc(b.state) + ')</small></span></label>';};
-        $('#sf-bank').innerHTML = '<p class="hint small">학생 응답 상태: ' + esc(state) + ' · 우선 추천 ' + top.length + '개 (교사는 내용 확인 후 선택)</p>' +
+        var recommended = it && it.recommendation;
+        list.sort(function(x,y){return (y.id === (recommended && recommended.id)?1:0)-(x.id === (recommended && recommended.id)?1:0);});
+        var top=list.slice(0,6), more=list.slice(6);
+        var optionHTML=function(b,checked){return '<label class="bankopt"><input type="radio" name="sf-b" value="' + esc(b.id) + '"' + (checked?' checked':'') + '><span>' + (recommended && recommended.id===b.id?'<b>추천 발문: </b>':'') + fmt(b.text) + '</span></label>';};
+        $('#sf-bank').innerHTML = '<p class="hint small">학생 질문과 답안에 맞춰 우선순위 추천. 교사가 확인하고 전송합니다. 자동 발송하지 않습니다.</p>' +
           top.map(function(b,i){return optionHTML(b,i===0);}).join('') +
-          (more.length?'<details><summary>다른 발문 후보 ' + more.length + '개 보기</summary>' + more.map(function(b){return optionHTML(b,false);}).join('') + '</details>':'');
+          (more.length?'<details><summary>다른 발문 '+more.length+'개</summary>'+more.map(function(b){return optionHTML(b,false);}).join('')+'</details>':'');
       };
       renderBank();
       $$('input[name="sf-mode"]').forEach(function(radio){
