@@ -1,0 +1,1 @@
+(function(){'use strict';function bind(){var b=document.getElementById('report-print-button');if(!b)return;b.addEventListener('click',function(){window.focus();window.print();});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();})();
