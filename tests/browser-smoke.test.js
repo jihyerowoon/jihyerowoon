@@ -147,7 +147,8 @@ async function run(){
   session.stage=4;session.stage_opened[4]=new Date(Date.now()-6*60000).toISOString();
   session.clock={mode:'running',started_at:new Date(Date.now()-48*60000).toISOString(),deadline:new Date(Date.now()+8*60000).toISOString()};
   session.stage_rev++;
-  await student.locator('[data-step="0"]:not([disabled])').waitFor({timeout:14000});
+  await student.locator('[data-step="4"].now').waitFor({timeout:15000});
+  await student.locator('[data-step="0"]:not([disabled])').waitFor({timeout:10000});
   student.on('dialog',dialog=>dialog.accept());
   await student.locator('[data-step="0"]').click();
   await student.locator('#in-L1PV01-text').waitFor({timeout:12000});
