@@ -113,6 +113,20 @@ async function run(){
   assert.equal(clockStarts,1,'Teacher start click should start timer exactly once');
   assert.equal(session.clock.mode,'running');
   await student.waitForTimeout(1600);
+  // Verify a real student can insert a figure segment without losing focus.
+  const segButton=student.locator('#right [data-act="segmenu"]').first();
+  await segButton.waitFor({timeout:12000});
+  await segButton.click();
+  const segMenu=student.locator('#'+await segButton.getAttribute('data-segmenu'));
+  await segMenu.locator('[data-segins="AB"]').click();
+  const previewInput=student.locator('#in-L1PV01-text');
+  assert.equal(await previewInput.inputValue(),'A̅B̅','AB inserted in the intended field');
+  await segButton.click();
+  await segMenu.locator('[data-seg-start]').selectOption('C');
+  await segMenu.locator('[data-seg-end]').selectOption('D');
+  await segMenu.locator('[data-act="segcustom"]').click();
+  assert.equal(await previewInput.inputValue(),'A̅B̅C̅D̅','custom CD appended in the intended field');
+  assert.equal(await segMenu.isVisible(),false,'menu closes after insertion');
   assert.equal(errors.length,0,'Browser errors: '+errors.join(' | '));
   console.log('PASS: researcher creates lesson, share links appear, student joins first, teacher joins second, teacher starts time, student sync, no pageerrors.');
   await teacher.close();await student.close();
