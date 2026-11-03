@@ -171,26 +171,21 @@ test('Students and teachers can copy run-specific login links',()=>{
  }
  assert.doesNotMatch(s,/u\.searchParams\.set\(['"](?:pin|password)['"]/i);
 });
-test('1-8 lesson coverage and 560 base plus 100 Recite plus 60 evidence checks',()=>{
- const C=require('../lib/content');
- assert.equal(Object.keys(C.LESSONS).length,8);
- assert.equal(C.BANK.length,720);
- const checks=C.BANK.filter(e=>e.variant==='reasoning20261102');
- assert.equal(checks.length,60,'3-8차시 수학적 근거 점검 발문 60개');
- assert.equal(new Set(checks.map(e=>e.item)).size,30,'Read Reflect Review 총 30문항');
- for(const p of checks){
-  assert.equal(p.group,null,'동일 발문을 두 집단에 제공');
-  assert.equal(p.review_status,'EXPERT_REVIEW_PENDING','내용타당도 검토 전임을 보존');
-  assert.equal(p.state,'AMBIGUOUS','미검증 3-8차시 정답을 단정하지 않음');
-  assert.ok(p.text.length>=18 && p.text.length<=130 && /[?？]/.test(p.text),'간결한 질문 표현');
-  assert.doesNotMatch(p.text,/정답은|답은\s*\d|\b(?:SSS|SAS|ASA)\b/i,'정답 힌트 노출 방지');
- }
-
- for(let n=1;n<=8;n++){
-  assert.equal(C.BANK.filter(e=>e.lesson===n).length,n<3?70:n===3||n===8?100:95,'lesson '+n);
- }
- const all=new Set(C.ITEMS.map(i=>i.id));
- for(const entry of C.BANK)assert.ok(all.has(entry.item),'Missing item '+entry.item);
+test('All 576 researcher-supplied prompts cover eight lessons and 72 question units',()=>{
+  const C=require('../lib/content');
+  assert.equal(Object.keys(C.LESSONS).length,8);
+  assert.equal(C.BANK.length,576);
+  const all=new Set(C.ITEMS.map(i=>i.id));
+  assert.equal(new Set(C.BANK.map(e=>e.id)).size,576,'Duplicate prompt identifiers');
+  for(let n=1;n<=8;n++) assert.equal(C.BANK.filter(e=>e.lesson===n).length,72,'lesson '+n);
+  assert.equal(new Set(C.BANK.map(e=>e.item)).size,72);
+  for(const entry of C.BANK){
+    assert.ok(all.has(entry.item),'Missing item '+entry.item);
+    assert.equal(entry.level,1);
+    assert.ok(entry.text.length>=8);
+    assert.ok(entry.priority>=1&&entry.priority<=8);
+    assert.equal(entry.src,'USER_CSV_576_20261103');
+  }
 });
 test('Review six-minute minimum plus teacher-controlled release and reflection',()=>{
  const R=require('../lib/review'),start=Date.now();
