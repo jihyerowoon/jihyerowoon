@@ -347,7 +347,7 @@
         var t = $('#timer'); if (t) t.innerHTML = timerText(self.me.session);
         if (self.view === 5 && self.stageIdx() === 5) { var due = self.me.review && self.me.review.release_at; var reflectAt = self.me.review && self.me.review.reflection_at; var count = $('#review-release-count'); if (count && due) count.textContent = nowMs()<Date.parse(due)?'해설을 열 수 있을 때까지 '+mmss((Date.parse(due)-nowMs())/1000):'교사가 해설 단계를 열면 풀이를 비교할 수 있습니다.'; if (self.me.review && self.me.review.unlocked) self.loadReviewFeedback(); var rc = $('#review-reflect-count'); if (rc && reflectAt) rc.textContent = '성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000); if (self.me.review && self.me.review.reflect_unlocked && self.reviewFeedback && !self.reviewReflectionShown) { self.reviewReflectionShown = true; self.renderStage(); } }
         if(self.stageIdx()===4){var allow=self.canRevisit();if(self._prevRevisitNav!==allow){self._prevRevisitNav=allow;self.renderStepper();}}
-        $('.waiting[data-at]').forEach(function (n) { n.textContent = '도움 요청 보냄 · ' + mmss((nowMs() - Date.parse(n.getAttribute('data-at'))) / 1000) + ' 기다리는 중'; });
+        $$('.waiting[data-at]').forEach(function (n) { n.textContent = '도움 요청 보냄 · ' + mmss((nowMs() - Date.parse(n.getAttribute('data-at'))) / 1000) + ' 기다리는 중'; });
       }, 1000));
     },
     pendKey: function () { return 'pq4r:pending:' + this.me.session.code + ':' + this.me.student.code; },
