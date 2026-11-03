@@ -439,6 +439,20 @@ body.is-student .step .nm,body.is-student .step .mn,body.is-student .stage-k .ko
 .is-teacher .student-tile.online.worksheet-tile .mini-mirror::after{background:linear-gradient(transparent,#ffe0ef)}
 #teacher-wall:fullscreen .student-tile .tile-presence{font-size:10px;padding:2px 5px}
 
+
+/* 모든 차시와 서술형 칸의 도형 기호 선택. 개별 답안 칸에만 입력한다. */
+.is-student .per-field-symbar{margin:0 0 9px;padding:9px;border:1.5px solid #a8bfdc;background:#f2f7ff;gap:5px;max-width:100%}
+.is-student .per-field-symbar .symbar-k{font-weight:800;color:#214977}
+.is-student .per-field-symbar .segpick>.sym{font-weight:800;border:2px solid #3266a6;color:#173d73;background:white}
+.is-student .diagram-segmenu{grid-template-columns:repeat(5,minmax(0,1fr));width:min(405px,calc(100vw - 52px));max-width:none;max-height:min(350px,50dvh);overflow-y:auto;overscroll-behavior:contain;gap:5px;padding:10px;background:#fff;z-index:30}
+.is-student .diagram-segmenu .sym{min-width:0;font-size:16px;font-weight:700;background:#f1f6ff;min-height:41px}
+.is-student .diagram-segmenu-title{grid-column:1/-1;font-size:13px;font-weight:800;color:#1c497c;padding:6px 0 2px}
+.is-student .diagram-seg-custom{grid-column:1/-1;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.is-student .diagram-seg-custom select{width:67px;min-width:0;padding:7px;background:white;border:1px solid #869ec3;border-radius:5px;font-size:15px}
+.is-student .diagram-seg-custom .sym{width:auto;flex:1;min-width:95px;background:#dceafe}
+.is-student .field{min-width:0}
+@media(max-width:580px){.is-student .diagram-segmenu{grid-template-columns:repeat(4,minmax(0,1fr));left:auto;right:0;width:min(330px,calc(100vw - 40px))}.is-student .per-field-symbar .symbar-hint{margin:0}}
+
 </style>
 <style>
 /* MVP 추가: 로그인, 연구자 관리 화면 */
@@ -681,6 +695,6 @@ body.is-student #layout{max-width:1420px;margin-inline:auto;grid-template-column
 <div id="toasts" aria-live="polite"></div>
 <div class="netbar" id="netbar" hidden>연결이 끊겼어요 · 다시 연결하는 중</div>
 <noscript>이 페이지는 자바스크립트가 필요해요.</noscript>
-<script src="app.js?v=0.6.5-online-pink-20261103"></script>
+<script src="app.js?v=0.6.5-segments-all-20261103"></script>
 </body>
 </html>
