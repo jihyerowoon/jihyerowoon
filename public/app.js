@@ -543,7 +543,7 @@
       $('#right').innerHTML = h;
       items.forEach(function (it) { self.refreshItem(it.id); });
       if (!self.focus || ITEM[self.focus.item].stage !== st.id) {
-        var first = items.filter(function (it) { return self.item(it.id).status !== 'clear'; })[0] || items[0];
+        var first = items.filter(function (it) { return self.item(it.id).attempts === 0; })[0] || items[0];
         var ff = first && first.fields.filter(function (f) { return f.kind !== 'choice' && f.kind !== 'multi'; })[0];
         self.focus = editable && ff ? { item: first.id, field: ff.key } : null;
       }
@@ -614,8 +614,7 @@
     statusText: function (id) {
       var r = this.item(id), drafted = Object.keys(r.draft || {}).some(function (k) { return String(r.draft[k] || '').trim(); });
       if (r.status === 'incomplete') return ['미제출', 'muted'];
-      if (r.status === 'clear') return ['기록 완료', 'done'];
-      if (r.status === 'unresolved' || r.status === 'closed') return ['기록됨', 'muted'];
+      // 학생에게 정답 판정 상태를 노출하지 않도록 모든 제출을 동일한 방식으로 표현한다.
       if (r.attempts > 0) return [r.attempts > 1 ? '다시 제출함 · ' + r.attempts + '회' : '제출함', 'sent'];
       return drafted ? ['작성 중', 'draft'] : ['아직 안 씀', 'muted'];
     },
