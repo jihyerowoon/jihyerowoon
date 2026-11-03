@@ -8,7 +8,12 @@
   function $(s, r) { return (r || document).querySelector(s); }
   function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function fmt(s) { return esc(s).replace(/\{([A-FO]{2})\}/g, '<span class="seg">$1</span>'); }
+  // 모든 차시의 수학 발문: 이름만 적힌 선분 AB, AO, CD 등을 자동으로 선분 기호로 보인다.
+  // △ABC, ∠ABC, AI 등의 2글자 부분은 선분으로 오인하지 않는다.
+  function fmt(s) {
+    var v=String(s==null?'':s).replace(/(^|[^A-Za-z0-9{])([A-HO-Q]{2})(?=$|[^A-Za-z0-9}])/g,'$1{$2}');
+    return esc(v).replace(/\{([A-HO-Q]{2})\}/g,'<span class="seg math-segment" aria-label="선분 $1">$1</span>');
+  }
   function plain(s) { return String(s == null ? '' : s).replace(/\{([A-FO]{2})\}/g, '$1'); }
   function nowMs() { return Date.now() + App.skew; }
   function kst(iso, withDate) {
