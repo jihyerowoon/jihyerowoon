@@ -159,7 +159,7 @@ async function run(){
   assert.ok(pastSubmissions.some(x=>x.item_id==='L1PV01'&&x.fields.text.includes('합동 조건')),'Previous answer revision saved');
   await student.locator('[data-step="4"]').click();
   await student.locator('.stage-revisit-note.locked').waitFor({timeout:10000});
-  assert.equal(await student.locator('#in-L1RC01-text').count(),0,'Recite input stays locked after prior-stage visit');
+  assert.equal(await student.locator('#in-L1RC01-text').isDisabled(),true,'Recite input stays locked after prior-stage visit');
 
   assert.equal(errors.length,0,'Browser errors: '+errors.join(' | '));
   console.log('PASS: researcher creates lesson, share links appear, student joins first, teacher joins second, teacher starts time, student sync, no pageerrors.');
