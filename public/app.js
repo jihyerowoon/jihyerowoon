@@ -536,7 +536,7 @@
         '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (editable ? '' : self.view===5&&self.me.review&&self.me.review.unlocked?'<p class="closed-note">문제 풀이 작성 시간은 끝났습니다. 해설을 확인하고 아래에서 성찰을 작성하세요.</p>':'<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') + '</div>';
       if (editable && st.id !== 'Preview' && st.id !== 'Read') h += '<p class="student-simple-tip">① 답을 적고 제출하세요. ② 어렵다면 <b>질문으로 도움받기</b>를 누르세요. Review에서는 첫 제출 전에도 질문할 수 있습니다.</p>';
       if(g!=='CONTROL')h += worksheetPane(ln,g,st.id);
-      if (editable && ln<=2 && !(ln===2 && st.id==='Recite')) h += self.toolbarHTML();
+      // 기호와 선분은 아래 각 답안 칸에 개별적으로 표시한다.
       if(!(self.view===5 && self.reviewFeedback))items.forEach(function (it) { h += self.itemHTML(it, editable); });
       if (self.view === 5 && self.stageIdx() === 5) h += self.reviewPanel();
       h += '<p class="savestate" id="savestate"></p>';
@@ -549,14 +549,55 @@
       }
       self.markFocus(); self.renderFigSel(); self.renderLeftStage();
     },
-    toolbarHTML: function () {
-      var syms = [['△', '삼각형'], ['≡', '합동'], ['∠', '각'], ['∥', '평행'], ['⊥', '수직'], ['=', '같음'], ['≠', '다름'], ['°', '도'], ['+', '더하기'], ['−', '빼기'], ['×', '곱하기'], ['÷', '나누기']];
-      var segs = this.lesson() === 1 ? ['AB', 'BC', 'CA', 'DE', 'EF', 'FD', 'AO', 'CO', 'BD'] : ['AB', 'BC', 'CD', 'DA', 'AC', 'BD', 'AO', 'BO', 'CO', 'DO', 'OA', 'OB', 'OC', 'OD', 'AD', 'DC', 'AE', 'BE', 'DE', 'EC', 'EO', 'PC', 'PD', 'PB', 'AP'];
-      return '<div class="symbar" role="toolbar" aria-label="수학 기호 입력"><span class="symbar-k">기호</span>' +
-        syms.map(function (s) { return '<button type="button" class="sym" data-sym="' + s[0] + '" title="' + s[1] + '">' + s[0] + '</button>'; }).join('') +
-        '<span class="segpick"><button type="button" class="sym wide" data-act="segmenu" aria-expanded="false">선분 <span class="seg">AB</span> ▾</button>' +
-        '<span class="segmenu" id="segmenu" hidden>' + segs.map(function (s) { return '<button type="button" class="sym" data-segins="' + s + '"><span class="seg">' + s + '</span></button>'; }).join('') + '</span></span>' +
-        '<span class="symbar-hint">답안 칸을 누른 후 기호를 선택하세요. 1~8차시 공통</span></div>';
+    segmentOptions: function (it) {
+      // 실제 활동지에서 확인한 점과 선분. PDF 속 그림은 일반 텍스트가 아닌
+      // 경우가 있으므로 기본 도형의 선분을 제공하고 기타는 직접 조합한다.
+      var map={
+        L1PV01:['AB','BC','CA','DE','EF','FD'],
+        L1QU01:['AB','BC','CA','DE','EF','FD'],
+        L1QU02:['AB','BC','CA','DE','EF','FD'],
+        L1RF01:['AB','BO','AO','CD','DO','CO','AC','BD'],
+        L1RF02:['AB','BC','CD','DA','BD'],
+        L1RF03:['AB','BC','CA','DE','EF','FD'],
+        L2PV01:['AB','BC','CD','DA','AC','BD','AE','BE','CF','DF','AO','BO','CO','DO','EO','OF'],
+        L2QU01:['AB','BC','CD','DA','AC','BD','AE','BE','CF','DF','AO','BO','CO','DO','EO','OF'],
+        L2QU02:['AB','BC','CD','DA','AC','BD','AE','BE','CF','DF','AO','BO','CO','DO','EO','OF'],
+        L2RD02:['AB','BC','CD','DA','AC','BD','AO','BO','CO','DO'],
+        L2RF01:['AB','BC','CD','DA','AE','DE','CE'],
+        L2RF02:['AB','BC','CD','DA','AC','BD','AO','BO','CO','DO'],
+        L2RF03:['AB','BC','CD','DA'],
+        L2RC03:['AB','BC','CD','DA','AC','BD','AO','BO','CO','DO'],
+        L2RV01:['AB','BC','CD','DA','AC','BD','AE','BE','CF','DF','AO','BO','CO','DO','EO','OF']
+      };
+      var l=it.lesson,base=l===1?['AB','BC','CA','DE','EF','FD']:['AB','BC','CD','DA','AC','BD'];
+      // 3~8차시의 추가점은 차시별 문제 해설에 등장하는 문자만 확장.
+      var supplemental={
+        4:['AO','BO','CO','DO'],
+        5:['AO','BO','CO','DO'],
+        6:['PB','PC','PD'],
+        7:['BE','DE','CE','AE'],
+        8:['AO','BO','CO','DO']
+      };
+      var listed=map[it.id]||(l===1?base:base.concat(supplemental[l]||[]));
+      if(l===1&&it.id==='L1RD02')listed=base;
+      return Array.from(new Set(listed.filter(function(v){return /^[A-Z]{2}$/.test(v)&&v[0]!==v[1];})));
+    },
+    toolbarHTML: function (it,field) {
+      var syms=[['△','삼각형'],['≡','합동'],['∠','각'],['∥','평행'],['⊥','수직'],['=','같음'],['≠','다름'],['°','도'],['+','더하기'],['−','빼기'],['×','곱하기'],['÷','나누기']];
+      var id='in-'+it.id+'-'+field.key,menu='segmenu-'+it.id+'-'+field.key,segs=this.segmentOptions(it);
+      var letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+      return '<div class="symbar per-field-symbar" role="toolbar" aria-label="'+esc(it.id+' '+field.label+' 수학 기호 입력')+'"><span class="symbar-k">기호</span>'+
+        syms.map(function(s){return '<button type="button" class="sym" data-sym="'+esc(s[0])+'" data-target-field="'+esc(id)+'" title="'+esc(s[1])+'">'+esc(s[0])+'</button>';}).join('')+
+        '<span class="segpick"><button type="button" class="sym wide" data-act="segmenu" data-segmenu="'+esc(menu)+'" aria-controls="'+esc(menu)+'" aria-expanded="false" title="이 그림의 선분 고르기">선분 선택 ▾</button>'+
+        '<span class="segmenu diagram-segmenu" id="'+esc(menu)+'" hidden>'+
+        '<span class="diagram-segmenu-title">도형에 표시된 선분</span>'+
+        segs.map(function(v){return '<button type="button" class="sym" data-segmenu="'+esc(menu)+'" data-target-field="'+esc(id)+'" data-segins="'+v+'" title="선분 '+v+' 입력"><span class="seg">'+v+'</span></button>';}).join('')+
+        '<span class="diagram-segmenu-title">목록에 없는 선분: 양 끝 점 고르기</span>'+
+        '<span class="diagram-seg-custom" data-seg-custom="'+esc(menu)+'">'+
+        '<select aria-label="시작점" data-seg-start>'+letters.map(function(v){return '<option value="'+v+'">'+v+'</option>';}).join('')+'</select>'+
+        '<select aria-label="끝점" data-seg-end>'+letters.map(function(v){return '<option value="'+v+'"'+(v==='B'?' selected':'')+'>'+v+'</option>';}).join('')+'</select>'+
+        '<button type="button" class="sym wide" data-act="segcustom" data-target-field="'+esc(id)+'" data-segmenu="'+esc(menu)+'">선분 넣기</button></span>'+
+        '</span></span><span class="symbar-hint">선분을 누르면 이 답안 칸에 입력돼요.</span></div>';
     },
     itemHTML: function (it, editable) {
       var self = this, rec = self.item(it.id), paper=true, source=paperAsset(it,self.group());
@@ -573,7 +614,7 @@
         var src = self.item(it.recall), txt = src.versions.length ? src.versions[0].fields.text : (src.draft.text || '');
         h += '<blockquote class="recall"><span>처음 생각 (Preview)</span>' + (txt ? esc(txt) : '<i>기록 없음</i>') + '</blockquote>';
       }
-      if(editable && /^L2RC0[123]$/.test(it.id)) h += self.toolbarHTML().replace(/data-sym=/g, 'data-target-field="in-'+it.id+'-text" data-sym=').replace(/data-segins=/g, 'data-target-field="in-'+it.id+'-text" data-segins=').replace(/id="segmenu"/g, 'id="segmenu-'+it.id+'"').replace(/data-act="segmenu"/g, 'data-act="segmenu" data-segmenu="segmenu-'+it.id+'"').replace(/data-segins=/g, 'data-segmenu="segmenu-'+it.id+'" data-segins=');
+      // 모든 텍스트 답안 칸은 자체 기호/선분 도구를 사용한다.
       h += '<div class="fields' + (it.fields.some(function (f) { return f.narrow; }) ? ' has-narrow' : '') + '">';
       it.fields.forEach(function (f) {
         var val = rec.draft[f.key] != null ? rec.draft[f.key] : (last[f.key] || '');
@@ -586,11 +627,7 @@
             return '<label class="opt"><input type="' + (f.kind === 'multi' ? 'checkbox' : 'radio') + '" name="' + id + '" value="' + o.v + '" data-item="' + it.id + '" data-field="' + f.key + '"' + (on.indexOf(o.v) >= 0 ? ' checked' : '') + dis + '><span>' + fmt(o.label) + '</span></label>';
           }).join('') + '</div></fieldset>';
         } else {
-          if(editable && self.lesson()>=3){
-            h+='<div class="field-math-toolbar" role="toolbar" aria-label="'+esc(f.label)+' 수학 기호 입력">'+
-              ['△','≡','∠','∥','⊥','=','≠','°','+','−','×','÷'].map(function(sym){return '<button type="button" class="sym" data-sym="'+sym+'" data-target-field="'+id+'">'+sym+'</button>';}).join('')+
-              '<button type="button" class="sym" data-sym="AB ∥ CD" data-target-field="'+id+'">AB ∥ CD</button></div>';
-          }
+          if(editable)h+=self.toolbarHTML(it,f);
           h += '<label for="' + id + '">' + fmt(f.label) + (f.unit ? ' <small>(' + esc(f.unit) + ')</small>' : '') + '</label>';
           if (f.kind === 'long') h += '<textarea id="' + id + '" rows="' + (f.rows || 3) + '" maxlength="3000" data-item="' + it.id + '" data-field="' + f.key + '"' + dis + '>' + esc(val) + '</textarea>';
           else h += '<input id="' + id + '" type="text" maxlength="300" autocomplete="off" data-item="' + it.id + '" data-field="' + f.key + '" value="' + esc(val) + '"' + dis + '>';
@@ -727,7 +764,21 @@
         var b = ev.target.closest('button'); if (!b) return;
         if (b.hasAttribute('data-sym')) { insertAt(b.hasAttribute('data-target-field')?document.getElementById(b.getAttribute('data-target-field')):lastInput, b.getAttribute('data-sym')); return; }
         if (b.getAttribute('data-act') === 'segmenu') { var m = document.getElementById(b.getAttribute('data-segmenu')||'segmenu'); m.hidden = !m.hidden; b.setAttribute('aria-expanded', String(!m.hidden)); return; }
-        if (b.hasAttribute('data-segins')) { insertAt(b.hasAttribute('data-target-field')?document.getElementById(b.getAttribute('data-target-field')):lastInput, b.getAttribute('data-segins').split('').map(function (ch) { return ch + '̅'; }).join('')); var sm=document.getElementById(b.getAttribute('data-segmenu')||'segmenu'); if(sm)sm.hidden=true; return; }
+        if (b.getAttribute('data-act') === 'segcustom') {
+          var m=document.getElementById(b.getAttribute('data-segmenu')),holder=m&&m.querySelector('[data-seg-custom]'),
+          from=holder&&holder.querySelector('[data-seg-start]'),to=holder&&holder.querySelector('[data-seg-end]');
+          if(!from||!to||from.value===to.value){toast('서로 다른 두 점을 선택해 주세요.','warn');return;}
+          insertAt(document.getElementById(b.getAttribute('data-target-field')),from.value+'̅'+to.value+'̅');
+          m.hidden=true;
+          var trigger=$('[data-act="segmenu"][data-segmenu="'+b.getAttribute('data-segmenu')+'"]');if(trigger)trigger.setAttribute('aria-expanded','false');
+          return;
+        }
+        if (b.hasAttribute('data-segins')) {
+          insertAt(document.getElementById(b.getAttribute('data-target-field')),b.getAttribute('data-segins').split('').map(function(ch){return ch+'̅';}).join(''));
+          var sm=document.getElementById(b.getAttribute('data-segmenu'));if(sm)sm.hidden=true;
+          var trigger=$('[data-act="segmenu"][data-segmenu="'+b.getAttribute('data-segmenu')+'"]');if(trigger)trigger.setAttribute('aria-expanded','false');
+          return;
+        }
         if (b.hasAttribute('data-unsel')) { var p = b.getAttribute('data-unsel').split(':'), arr = self.item(p[0]).draft_sel[p[1]] || [], el = p[2] + ':' + p[3], i = arr.indexOf(el); if (i >= 0) arr.splice(i, 1); self.renderSelRow(p[0], p[1]); self.renderFigSel(); self.saveDraft(p[0]); return; }
         if (b.hasAttribute('data-openmat')) { self.openMaterial(+b.getAttribute('data-openmat')); return; }
         if (b.getAttribute('data-act') === 'review-reflect') { self.submitReviewReflection(); return; }
