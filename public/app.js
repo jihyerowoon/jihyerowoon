@@ -492,8 +492,9 @@
     navigateTo: function(target){
       var self=this,cur=self.stageIdx();
       if(target===cur){self.view=cur;self.renderStepper();self.renderStage();return;}
+      if(target===4){self.view=4;self.renderStepper();self.renderStage();return;}
       if(target>cur||!self.canRevisit()){toast('현재 단계의 필수 답안을 모두 제출하면 이전 단계를 수정할 수 있습니다. Recite는 최소 5분 동안 작성해야 합니다.','warn');return;}
-      if(cur===4&&!self.me.recite_locked&&!confirm('Recite에서 앞 단계로 이동합니다.\\n\\n앞 단계의 답안은 수정할 수 있지만, Recite로 돌아와도 Recite 답안은 다시 작성할 수 없습니다.\\n\\n계속할까요?'))return;
+      if(cur===4&&!self.me.recite_locked&&!confirm('Recite에서 앞 단계로 이동합니다.\n\n앞 단계의 답안은 수정할 수 있지만, Recite로 돌아와도 Recite 답안은 다시 작성할 수 없습니다.\n\n계속할까요?'))return;
       api('POST','me/navigate',{stage:target}).then(function(data){self.me.recite_locked=!!data.recite_locked;return self.reload();}).then(function(){
         self.view=target;self.focus=null;self.renderStepper();self.renderStage();
       }).catch(function(e){toast(e.message,'warn');self.reload().then(function(){self.view=self.stageIdx();self.renderStepper();self.renderStage();});});
