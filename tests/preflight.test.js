@@ -6,10 +6,46 @@ const fs=require('node:fs');
 const path=require('node:path');
 const dir=path.resolve(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(dir,f),'utf8');
-const jsFiles=['public/app.js','lib/classroom.js','lib/student.js','lib/content.js','lib/review.js','lib/clock.js','lib/assets.js','lib/csv-bank.js','lib/lessons-3-8.js','api/router.js'];
+const jsFiles=['public/app.js','lib/classroom.js','lib/student.js','lib/staff.js','lib/core.js','lib/engine.js','lib/content.js','lib/review.js','lib/clock.js','lib/assets.js','lib/csv-bank.js','lib/lessons-3-8.js','api/router.js'];
 let passed=0;
 function test(name,fn){try{fn();passed++;process.stdout.write('PASS '+name+'\n');}catch(e){process.stderr.write('FAIL '+name+'\n'+e.stack+'\n');process.exitCode=1;}}
 for(const p of jsFiles)test('Syntax '+p,()=>new Function(read(p)));
+
+test('Correct-answer confirmation only for verified student request, with unchanged-answer gate in both groups',()=>{
+ const E=require('../lib/engine'),K=require('../lib/core');
+ const item='L1RD02',fields={answer:'1,5',work:'AB∥DC이므로 엇각 ∠BAO=∠DCO, ∠ABO=∠CDO이고 AB=CD라서 ASA 합동'};
+ const fp=K.answerFingerprint(fields,{}),fpWhitespace=K.answerFingerprint({work:' AB∥DC이므로  엇각 ∠BAO=∠DCO, ∠ABO=∠CDO이고 AB=CD라서 ASA 합동 ',answer:'1,5'}, {});
+ assert.equal(fp,fpWhitespace,'공백이나 필드 순서만 변경하면 같은 답안');
+ assert.notEqual(fp,K.answerFingerprint({...fields,work:fields.work+' 다른 근거'},{}),'실제 풀이 변화 탐지');
+ const judgment=E.judgeRule(item,'EXPERIMENT',fields,{},K.DEFAULT_SETTINGS);
+ assert.equal(judgment.state,'CLEAR_INDEPENDENT');
+ assert.equal(judgment.decisive,true);
+ const ctx={stage:'Read',itemId:item,group:'EXPERIMENT',settings:K.DEFAULT_SETTINGS,recs:{}};
+ const first=E.onSubmit(E.newRec(),judgment,ctx).rec;
+ const confirmed=E.onHelp(first,{...ctx,responseFingerprint:fp,verifiedCorrect:true});
+ assert.ok(confirmed.out.some(o=>o.kind==='support'&&o.ack===true&&o.requiresResubmission===false));
+ assert.match(confirmed.out[0].text,/답과 풀이의 근거가 모두 타당해요/);
+ const fakeResubmit=E.onSubmit(confirmed.rec,judgment,ctx).rec;
+ const blocked=E.onHelp(fakeResubmit,{...ctx,responseFingerprint:fp,verifiedCorrect:true});
+ assert.deepEqual(blocked.out.map(o=>o.text),['수정한 답을 쓰고 질문을 하세요.']);
+ assert.ok(!blocked.out.some(o=>o.kind==='support'||o.kind==='request'));
+ const changed=E.onHelp(fakeResubmit,{...ctx,responseFingerprint:K.answerFingerprint({...fields,work:fields.work+' 다른 근거'},{}),verifiedCorrect:false});
+ assert.ok(changed.out.some(o=>o.kind==='support'),'수정 후 요청은 허용');
+ const unverified=E.onHelp(first,{...ctx,responseFingerprint:fp,verifiedCorrect:false});
+ assert.ok(!unverified.out.some(o=>o.ack),'미검증 답안에 정답 확인 메시지 금지');
+ const ctrlCtx={...ctx,group:'CONTROL'};
+ const ctrl=E.onSubmit(E.newRec(),judgment,ctrlCtx).rec;
+ const requested=E.onHelp(ctrl,{...ctrlCtx,responseFingerprint:fp,verifiedCorrect:false});
+ assert.ok(requested.out.some(o=>o.kind==='request'),'통제반 최초 문의는 교사에게 전달');
+ const teacherSupported=E.applyTeacherSupport(ctrl,1,fp);
+ const repeated=E.onHelp(E.onSubmit(teacherSupported,judgment,ctrlCtx).rec,{...ctrlCtx,responseFingerprint:fp});
+ assert.deepEqual(repeated.out.map(o=>o.text),['수정한 답을 쓰고 질문을 하세요.']);
+ assert.match(read('public/app.js'),/data-verified-send/);
+ assert.match(read('lib/staff.js'),/confirmed_by_teacher:true/);
+ assert.match(read('lib/student.js'),/responseFingerprint: responseFingerprint, verifiedCorrect:!!verifiedCorrect/);
+ const pending=E.judgeRule('L3RD02','EXPERIMENT',{answer:'3',work:'조건 확인'},{},K.DEFAULT_SETTINGS);
+ assert.equal(pending.state,'AMBIGUOUS','3~8차시는 정오 자동확정 금지');
+});
 test('Never apply forEach to one DOM element',()=>{
  const source=read('public/app.js');
  assert.doesNotMatch(source,/(?<!\$)\$\([^)]*\)\.forEach\s*\(/);
