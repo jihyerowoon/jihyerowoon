@@ -138,7 +138,9 @@ test('Teacher starts clock explicitly',()=>{
  const s=read('lib/clock.js');
  assert.match(s,/action==='start' && c\.mode==='waiting'/);
  assert.match(s,/c\.started_at=iso\(now\)/);
- assert.match(s,/action==='finish' && c\.mode==='reflection'/);
+ assert.match(s,/action==='finish'&&s\.stage===5/);
+ assert.match(s,/action==='review-release'/);
+ assert.match(s,/action==='review-reflect'/);
 });
 test('Students and teachers can copy run-specific login links',()=>{
  const s=read('public/app.js');
@@ -168,14 +170,36 @@ test('1-8 lesson coverage and 560 base plus 100 Recite plus 60 evidence checks',
  const all=new Set(C.ITEMS.map(i=>i.id));
  for(const entry of C.BANK)assert.ok(all.has(entry.item),'Missing item '+entry.item);
 });
-test('Review public windows and ongoing reflection',()=>{
- const R=require('../lib/review');
- const start=Date.now(),session={status:'open',stage:5,lesson:3,stage_opened:{5:new Date(start).toISOString()},clock:{mode:'reflection'}};
- for(const [minutes,answer,reflection] of [[0,false,false],[5.999,false,false],[6,true,false],[9.999,true,false],[10,true,true],[12,true,true],[30,true,true]]){
+test('Review six-minute minimum plus teacher-controlled release and reflection',()=>{
+ const R=require('../lib/review'),start=Date.now();
+ const session={status:'open',stage:5,lesson:3,stage_opened:{5:new Date(start).toISOString()},clock:{mode:'running'}};
+ for(const minutes of [0,5.999,6,9.999,10,12,30]){
   const s=R.status(session,start+Math.round(minutes*60000));
-  assert.equal(s.unlocked,answer,'Answer '+minutes);
-  assert.equal(s.reflect_unlocked,reflection,'Reflection '+minutes);
+  assert.equal(s.unlocked,false,'Teacher has not released answers at minute '+minutes);
+  assert.equal(s.reflect_unlocked,false,'Teacher has not opened reflection at minute '+minutes);
+  assert.equal(s.teacher_can_release,minutes>=6);
  }
+ session.clock.review_released_at=new Date(start+6*60000).toISOString();
+ assert.equal(R.status(session,start+6*60000+1).unlocked,true);
+ assert.equal(R.status(session,start+9*60000).reflect_unlocked,false);
+ session.clock.review_reflection_opened_at=new Date(start+8*60000).toISOString();
+ assert.equal(R.status(session,start+9*60000).reflect_unlocked,true);
+ assert.equal(R.status(session,start+12*60000).reflect_unlocked,true);
+ assert.match(read('public/app.js'),/data-clock="review-release"/);
+ assert.match(read('public/app.js'),/data-clock="review-reflect"/);
+});
+test('Prior stage edits require complete active stage, Recite five minutes, and a persisted reentry lock',()=>{
+ const s=read('lib/student.js'),a=read('public/app.js');
+ assert.match(s,/RECITE_EXIT_LOCK_20261103/);
+ assert.match(s,/now-start>=300000/);
+ assert.match(s,/currentComplete\(sql,s,student\)/);
+ assert.match(s,/recite_minimum_five_minutes/);
+ assert.match(s,/if\(idx===4&&ps\.locked\)/);
+ assert.match(s,/REVIEW\.status\(s\)\.unlocked/);
+ assert.match(s,/STUDENT_STAGE_REVISIT/);
+ assert.match(a,/me\/navigate/);
+ assert.match(a,/Recite로 돌아와도 Recite 답안은 다시 작성할 수 없습니다/);
+ assert.match(a,/this\.view<idx&&this\.view!==4&&this\.canRevisit\(\)/);
 });
 test('Version and browser asset always updated together',()=>{
  const v=require('../package.json').version;
