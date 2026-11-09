@@ -268,7 +268,7 @@
     if(!sessionCode||!classCode)throw new Error('먼저 수업을 준비해 주세요.');
     var u=new URL('/',location.origin);
     u.searchParams.set('class',classCode);
-    u.searchParams.set('session',sessionCode);
+    if(role==='teacher')u.searchParams.set('session',sessionCode);
     u.hash=role==='teacher'?'login-teacher':'login-student';
     return u.href;
   }
@@ -703,7 +703,7 @@
       var sb = $('[data-act="submit"][data-id="' + id + '"]');
       if (sb) {
         sb.textContent = r.attempts ? '수정한 답 저장·제출하기' : '내 답 제출하기';
-        sb.disabled = !!self.busy[id] || self.isEmpty(id) || r.status === 'incomplete' || !self.editable();
+        sb.disabled = !!self.busy[id] || self.isEmpty(id) || (r.status === 'incomplete' && ITEM[id].stage !== 'Review') || !self.editable();
         $$('[data-act="help"][data-id="' + id + '"]').forEach(function(hb){hb.disabled = !!self.busy[id] || (!r.attempts && ITEM[id].stage !== 'Review') || r.status === 'incomplete' || !self.editable() || self.view !== self.stageIdx();});
       }
       var rv = $('[data-revise="' + id + '"]'); if (rv) rv.hidden = !(r.attempts > 0 && r.status !== 'incomplete');
@@ -714,7 +714,7 @@
     refreshItemLight: function (id) {
       var r = this.item(id), chip = $('[data-status="' + id + '"]');
       if (chip) { var st = this.statusText(id); chip.textContent = st[0]; chip.className = 'chip-status ' + st[1]; }
-      var sb = $('[data-act="submit"][data-id="' + id + '"]'); if (sb) sb.disabled = !!this.busy[id] || this.isEmpty(id) || r.status === 'incomplete' || !this.editable();
+      var sb = $('[data-act="submit"][data-id="' + id + '"]'); if (sb) sb.disabled = !!this.busy[id] || this.isEmpty(id) || (r.status === 'incomplete' && ITEM[id].stage !== 'Review') || !this.editable();
     },
     renderSelRow: function (id, field) {
       var n = $('[data-selrow="' + id + ':' + field + '"]'); if (!n) return;
