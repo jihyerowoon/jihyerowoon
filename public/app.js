@@ -346,7 +346,7 @@
       App.timers.push(setInterval(function () {
         var t = $('#timer'); if (t) t.innerHTML = timerText(self.me.session);
         if (self.view === 5 && self.stageIdx() === 5) { var due = self.me.review && self.me.review.release_at; var reflectAt = self.me.review && self.me.review.reflection_at; var count = $('#review-release-count'); if (count && due) count.textContent = nowMs()<Date.parse(due)?'해설을 열 수 있을 때까지 '+mmss((Date.parse(due)-nowMs())/1000):'교사가 해설 단계를 열면 풀이를 비교할 수 있습니다.'; if (self.me.review && self.me.review.unlocked) self.loadReviewFeedback(); var rc = $('#review-reflect-count'); if (rc && reflectAt) rc.textContent = '성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000); if (self.me.review && self.me.review.reflect_unlocked && self.reviewFeedback && !self.reviewReflectionShown) { self.reviewReflectionShown = true; self.renderStage(); } }
-        if(self.stageIdx()===4){var allow=self.canRevisit();if(self._prevRevisitNav!==allow){self._prevRevisitNav=allow;self.renderStepper();}}
+        var allow=self.canRevisit();if(self._prevRevisitNav!==allow){self._prevRevisitNav=allow;self.renderStepper();}
         $$('.waiting[data-at]').forEach(function (n) { n.textContent = '도움 요청 보냄 · ' + mmss((nowMs() - Date.parse(n.getAttribute('data-at'))) / 1000) + ' 기다리는 중'; });
       }, 1000));
     },
@@ -411,7 +411,7 @@
       $('#stepper').addEventListener('click', function(ev){var b=ev.target.closest('[data-step]');if(!b||b.disabled)return;self.navigateTo(+b.getAttribute('data-step'));});
       self.bindRight(); self.bindLeft();
     },
-    renderStepper: function(){var n=$('#stepper'),allow=this.canRevisit();if(n)n.innerHTML=stepperHTML(this.stageIdx(),this.view,{reciteHide:!allow,allowPast:allow,lesson:this.lesson()});var t=$('#timer');if(t)t.innerHTML=timerText(this.me.session);},
+    renderStepper: function(){var n=$('#stepper'),allow=this.canRevisit();if(n)n.innerHTML=stepperHTML(this.stageIdx(),this.view,{reciteHide:false,allowPast:allow,lesson:this.lesson()});var t=$('#timer');if(t)t.innerHTML=timerText(this.me.session);},
     renderDemo: function () {
       var self = this, n = $('#demo'); if (!n) return;
       if (!self.settings().demoControls) { n.hidden = true; return; }
@@ -483,23 +483,19 @@
     },
     canRevisit: function(){
       var idx=this.stageIdx(),s=this.me.session;
-      if(idx===0||s.status!=='open'||clockMode(s)!=='running'||!this.stageComplete())return false;
-      if(idx===5&&this.me.review&&this.me.review.unlocked)return false;
-      if(idx===4){var start=s.stage_opened&&s.stage_opened[4];if(!start||nowMs()-Date.parse(start)<300000)return false;}
+      if(idx===0||s.status!=='open'||!['running','reflection'].includes(clockMode(s))||!this.stageComplete())return false;
       return true;
     },
     editable: function(){
       var idx=this.stageIdx(),s=this.me.session;
       if(s.status!=='open'||(!['running','legacy'].includes(clockMode(s))&&!(idx===5&&clockMode(s)==='reflection')))return false;
       if(this.view===idx)return !(idx===4&&this.me.recite_locked);
-      return this.view<idx&&this.view!==4&&this.canRevisit();
+      return this.view<idx&&this.canRevisit();
     },
     navigateTo: function(target){
       var self=this,cur=self.stageIdx();
       if(target===cur){self.view=cur;self.renderStepper();self.renderStage();return;}
-      if(target===4){self.view=4;self.renderStepper();self.renderStage();return;}
-      if(target>cur||!self.canRevisit()){toast('현재 단계의 필수 답안을 모두 제출하면 이전 단계를 수정할 수 있습니다. Recite는 최소 5분 동안 작성해야 합니다.','warn');return;}
-      if(cur===4&&!self.me.recite_locked&&!confirm('Recite에서 앞 단계로 이동합니다.\n\n앞 단계의 답안은 수정할 수 있지만, Recite로 돌아와도 Recite 답안은 다시 작성할 수 없습니다.\n\n계속할까요?'))return;
+      if(target>cur||!self.canRevisit()){toast('현재 단계의 필수 답안을 모두 제출하면 앞 단계로 돌아가 답을 추가하거나 수정할 수 있습니다.','warn');return;}
       api('POST','me/navigate',{stage:target}).then(function(data){self.me.recite_locked=!!data.recite_locked;return self.reload();}).then(function(){
         self.view=target;self.focus=null;self.renderStepper();self.renderStage();
       }).catch(function(e){toast(e.message,'warn');self.reload().then(function(){self.view=self.stageIdx();self.renderStepper();self.renderStage();});});
@@ -561,7 +557,7 @@
         self.renderStage(); toast('해설 후 성찰이 저장됐어요.');
       }).catch(function(e){toast(e.message,'warn'); if(btn)btn.disabled=false;});
     },
-    visibleStage: function(i){var open=this.stageIdx();if(i>open)return false;if(open===4&&i<4&&!this.canRevisit())return false;return true;},
+    visibleStage: function(i){var open=this.stageIdx();if(i>open)return false;if(i<open&&!this.canRevisit())return false;return true;},
     renderStage: function () {
       var self = this;
       if (!self.visibleStage(self.view)) self.view = self.stageIdx();
@@ -574,7 +570,7 @@
       if(g!=='CONTROL')h += worksheetPane(ln,g,st.id);
       // 기호와 선분은 아래 각 답안 칸에 개별적으로 표시한다.
       if(self.view<self.stageIdx()&&editable)h+='<p class="stage-revisit-note">지난 단계 답안 수정 중 · 수업의 현재 단계와 타이머는 계속 진행됩니다.</p>';
-      if(self.view===4&&self.me.recite_locked)h+='<p class="stage-revisit-note locked">앞 단계로 이동했으므로 Recite는 재작성할 수 없습니다.</p>';
+      if(self.view<self.stageIdx()&&editable)h+='<p class="stage-revisit-note">앞 단계 보완 입력 중 · 현재 수업 타이머는 그대로 진행되며 변경 내역이 보존됩니다.</p>';
       items.forEach(function (it) { h += self.itemHTML(it, editable); });
       if (self.view === 5 && self.stageIdx() === 5) h += self.reviewPanel();
       h += '<p class="savestate" id="savestate"></p>';
@@ -853,7 +849,7 @@
       self.busy[id] = true; self.refreshItem(id);
       api('POST', 'me/submit', { item_id: id, fields: self.currentFields(id), selections: clone(r.draft_sel || {}), reason: r.attempts ? (r.reason || '') : '', client_ts: new Date().toISOString() })
         .then(function (res) {
-          self.applyResult(res);self.renderStepper();toast('답안을 저장했습니다. 필요하면 질문으로 도움받기를 눌러 주세요.');
+          self.applyResult(res);self.renderStepper();toast('답안을 저장했습니다. 현재 단계의 모든 답안을 제출하면 앞 단계 입력도 가능합니다.');
           delete self.pending[id]; store(self.pendKey(), self.pending);
           var rv = $('[data-reason="' + id + '"]'); if (rv) rv.value = '';
         })
