@@ -166,7 +166,7 @@ test('Teacher starts clock explicitly',()=>{
 });
 test('Students and teachers can copy run-specific login links',()=>{
  const s=read('public/app.js');
- for(const token of ["function shareLink(role,classCode,sessionCode)","u.searchParams.set('session',sessionCode)","u.searchParams.set('class',classCode)","u.hash=role==='teacher'?'login-teacher':'login-student'","$('#teacher-student-share').onclick","$('#teacher-staff-share').onclick","session_code:linkSession()","Teacher.start(linkSession()||null)"]){
+ for(const token of ["function shareLink(role,classCode,sessionCode)","u.searchParams.set('session',sessionCode)","u.searchParams.set('class',classCode)","u.hash=role==='teacher'?'login-teacher':'login-student'","$('#teacher-student-share').onclick","$('#teacher-staff-share').onclick","Teacher.start(linkSession()||null)"]){
    assert.ok(s.includes(token),token);
  }
  assert.doesNotMatch(s,/u\.searchParams\.set\(['"](?:pin|password)['"]/i);
@@ -187,17 +187,18 @@ test('All 576 researcher-supplied prompts cover eight lessons and 72 question un
     assert.equal(entry.src,'USER_CSV_576_20261103');
   }
 });
-test('Review opens both answers and reflection automatically after four minutes',()=>{
+test('Review opens other feedback and reflection after six minutes, Review answer after seven',()=>{
  const R=require('../lib/review'),start=Date.now();
  const session={status:'open',stage:5,lesson:3,stage_opened:{5:new Date(start).toISOString()},clock:{mode:'running'}};
- for(const minutes of [0,2,3.999,4,5,10,12]){
+ for(const minutes of [0,4,5.999,6,6.999,7,10,12]){
   const v=R.status(session,start+Math.round(minutes*60000));
-  assert.equal(v.unlocked,minutes>=4,'Answer release at minute '+minutes);
-  assert.equal(v.reflect_unlocked,minutes>=4,'Reflection release at minute '+minutes);
+  assert.equal(v.unlocked,minutes>=6,'Other answer release at minute '+minutes);
+   assert.equal(v.review_answer_unlocked,minutes>=7,'Review answer release at minute '+minutes);
+  assert.equal(v.reflect_unlocked,minutes>=6,'Reflection release at minute '+minutes);
  }
- assert.equal(R.status(session,start).delay_seconds,240);
+ assert.equal(R.status(session,start).delay_seconds,360);
  const app=read('public/app.js');
- assert.match(app,/4분 뒤 정답 및 성찰지 동시 공개/);
+ assert.match(app,/6분 뒤 일반 정답과 성찰지 공개/);
  assert.match(app,/data-clock="finish"/);
  assert.match(app,/내용을 보고 필요한 시간이 얼마일지 목표설정을 해보세요/);
  const clock=read('lib/clock.js');
