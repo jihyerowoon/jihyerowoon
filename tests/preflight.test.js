@@ -197,6 +197,12 @@ test('Review opens other feedback and reflection after six minutes, Review answe
   assert.equal(v.reflect_unlocked,minutes>=6,'Reflection release at minute '+minutes);
  }
  assert.equal(R.status(session,start).delay_seconds,360);
+  assert.equal(R.status(session,start+6*60000).review_answer_unlocked,false);
+  assert.equal(R.status(session,start+7*60000).review_answer_unlocked,true);
+  const studentBackend=read('lib/student.js');
+  assert.match(studentBackend,/reviewStatus\.review_answer_unlocked/);
+  assert.match(studentBackend,/function reviewWritable\(s,itemId\)/);
+  assert.match(studentBackend,/review_visibility_at_submit/);
  const app=read('public/app.js');
  assert.match(app,/6분 뒤 일반 정답과 성찰지 공개/);
  assert.match(app,/data-clock="finish"/);
