@@ -212,18 +212,21 @@ test('Review opens other feedback and reflection after six minutes, Review answe
  assert.match(read('lib/record-download.js'),/report-print-button/);
  assert.match(read('public/report-print.js'),/window\.print\(\)/);
 });
-test('Prior stage edits require complete active stage, Recite five minutes, and a persisted reentry lock',()=>{
+test('Completed current stage unlocks every earlier stage without rewinding the class clock',()=>{
  const s=read('lib/student.js'),a=read('public/app.js');
- assert.match(s,/RECITE_EXIT_LOCK_20261103/);
- assert.match(s,/now-start>=300000/);
  assert.match(s,/currentComplete\(sql,s,student\)/);
- assert.match(s,/recite_minimum_five_minutes/);
- assert.match(s,/if\(idx===4&&ps\.locked\)/);
- assert.match(s,/REVIEW\.status\(s\)\.unlocked/);
  assert.match(s,/STUDENT_STAGE_REVISIT/);
+ assert.match(s,/target<0\|\|target>=s\.stage/);
+ assert.match(s,/!\['running','reflection'\]\.includes/);
+ assert.match(s,/original_stage_index/);
+ assert.match(s,/revisited_stage/);
+ assert.match(s,/pastStageWritable/);
+ assert.doesNotMatch(s,/idx===4&&ps\.locked/);
+ assert.doesNotMatch(s,/recite_minimum_five_minutes/);
  assert.match(a,/me\/navigate/);
- assert.match(a,/Recite로 돌아와도 Recite 답안은 다시 작성할 수 없습니다/);
- assert.match(a,/this\.view<idx&&this\.view!==4&&this\.canRevisit\(\)/);
+ assert.match(a,/this\.view<idx&&this\.canRevisit\(\)/);
+ assert.match(a,/reciteHide:false/);
+ assert.doesNotMatch(a,/Recite로 돌아와도 Recite 답안은 다시 작성할 수 없습니다/);
 });
 test('Version and browser asset always updated together',()=>{
  const v=require('../package.json').version;
