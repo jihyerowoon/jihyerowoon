@@ -315,7 +315,7 @@
       if (tab === 'student') {
         var sc = $('#l-sess').value.trim().toUpperCase(), code = $('#l-code').value.trim().toUpperCase();
         store('pq4r:last', Object.assign({}, last, { tab: 'student', classCode: sc, code: code }));
-        p = api('POST', 'login/student', { class_code: sc, session_code:linkSession(), student_code: code, pin: $('#l-pin').value.trim(), ua: navigator.userAgent.slice(0, 160) })
+        p = api('POST', 'login/student', { class_code: sc, student_code: code, pin: $('#l-pin').value.trim(), ua: navigator.userAgent.slice(0, 160) })
           .then(function (r) { App.tok = r.token; App.role = 'student'; saveAuth({ token: r.token, role: 'student' }); Student.start(r.me); });
       } else {
         var tid = tab === 'teacher' ? $('#l-tid').value.trim().toUpperCase() : null;
@@ -490,8 +490,8 @@
     },
     editable: function(){
       var idx=this.stageIdx(),s=this.me.session;
-      if(s.status!=='open'||!['running','legacy'].includes(clockMode(s)))return false;
-      if(this.view===idx)return !(idx===4&&this.me.recite_locked)&&!(idx===5&&this.me.review&&this.me.review.unlocked);
+      if(s.status!=='open'||(!['running','legacy'].includes(clockMode(s))&&!(idx===5&&clockMode(s)==='reflection')))return false;
+      if(this.view===idx)return !(idx===4&&this.me.recite_locked);
       return this.view<idx&&this.view!==4&&this.canRevisit();
     },
     navigateTo: function(target){
@@ -507,11 +507,12 @@
     reviewPanel: function () {
       var due = this.me.review && this.me.review.release_at, data = this.reviewFeedback, self = this;
       if (!due) return '';
-      if (!self.me.review || !self.me.review.unlocked) return '<section class="panel"><h3>Review · 독립 풀이</h3><p>정답을 보지 않고 문제와 풀이를 작성해 제출하세요.</p><p id="review-release-count" class="hint small">' + (nowMs()<Date.parse(due)?'해설을 열 수 있을 때까지 '+mmss((Date.parse(due)-nowMs())/1000):'독립 풀이 6분 경과 · 교사의 해설 단계 전환을 기다립니다.') + '</p><p class="small">교사가 해설 단계를 열기 전까지 답안은 비공개입니다.</p></section>';
+      if (!self.me.review || !self.me.review.unlocked) return '<section class="panel"><h3>Review · 독립 풀이</h3><p>정답을 보지 않고 문제와 풀이를 작성해 제출하세요.</p><p id="review-release-count" class="hint small">일반 해설 공개까지 ' + mmss((Date.parse(due)-nowMs())/1000) + '</p><p class="small">Review 문제의 정답은 시작 7분 후 공개됩니다.</p></section>';
       if (!data) return '<section class="panel"><h3>해설 공개 시간</h3><p>나의 답변을 보존하고 정답과 해설을 불러오는 중입니다.</p></section>';
       var confidence = {explain:'충분히 설명할 수 있다',partial:'일부 이해했다',uncertain:'아직 어렵다'};
       var solutionName = function(x) { var id=x.item_id||''; return id.indexOf('RV')>=0?'Review 다시 풀기':id.indexOf('RD')>=0?'Read 개념확인':'Reflect 문제 '+id.slice(-1); };
       var reflectAt=this.me.review&&this.me.review.reflection_at,canReflect=!!(this.me.review&&this.me.review.reflect_unlocked);
+      var reviewAnswerAt=this.me.review&&this.me.review.review_answer_at,reviewAnswerVisible=!!(this.me.review&&this.me.review.review_answer_unlocked);
       var cards = (data.solutions || []).map(function (sol,i) {
         var p = sol.problem || {}, a = (data.answers || []).filter(function (v) {return v.item_id === sol.item_id;})[0] || {}, ans = a.pre_response || {};
         var own = Object.keys(ans).filter(function(k) {return String(ans[k]||'').trim();}).map(function (k) {return '<p><b>' + esc(k) + ':</b> ' + fmt(String(ans[k])) + '</p>';}).join('') || '<p class="muted">작성된 답안이 없습니다.</p>';
@@ -528,21 +529,26 @@
         Object.keys(confidence).map(function(k){return '<label class="choice-line"><input type="radio" name="post-understanding" value="'+k+'"><span>'+esc(confidence[k])+'</span></label>';}).join('') + '</fieldset>' +
         '<label style="display:block;margin:10px 0">내 풀이와 해설을 비교하여 새롭게 확인한 조건이나 성질, 또는 아직 이해하지 못한 부분 한 가지<textarea id="post-comparison" rows="2" maxlength="350" placeholder="한두 문장으로 적어 보세요."></textarea></label>' +
         '<p class="hint">2분이 지나도 자동 종료되지 않습니다. 작성한 내용을 제출해 주세요.</p><button type="button" class="btn primary" data-act="review-reflect">성찰 제출</button></section>';
+      var reviewDelayNotice=reviewAnswerVisible?'Review 문제 정답도 공개되었습니다. 답안 수정과 제출은 계속 가능합니다.':'Review 문제 정답 공개까지 '+mmss((Date.parse(reviewAnswerAt)-nowMs())/1000)+' · 풀이와 제출은 계속 가능합니다.';
       var reflectUI = ref || canReflect ? completed : '<section class="panel"><h3>해설과 내 풀이 비교</h3><p>교사가 성찰 단계로 전환할 때까지 정답과 자신의 풀이를 비교해 보세요.</p></section>';
-      if(canReflect)return '<section class="panel review-answers"><h2>2단계 · 정답과 풀이 확인</h2>'+cards+'</section>'+reflectUI;
+      if(canReflect)return '<section class="panel review-answers"><h2>정답과 풀이 확인</h2><p class="hint">'+reviewDelayNotice+'</p>'+cards+'</section>'+reflectUI;
       return '<section class="panel"><h2>Review · 교사가 공개한 해설</h2><p>독립 풀이 시간을 마친 후 교사가 공개한 해설입니다. 학생의 기존 답안은 보존됩니다.</p><p class="hint small">두 집단에 동일하게 제공하는 검증용 해설 초안입니다.</p>' + cards + '</section>' + reflectUI;
     },
     loadReviewFeedback: function () {
       var self=this, due=self.me.review && self.me.review.release_at;
       if(clockMode(self.me.session)==='catchup')return;
-      if (!due || self.stageIdx()!==5 || self.view!==5 || self.reviewFeedback || self.reviewLoading || !self.me.review || !self.me.review.unlocked) return;
+      if (!due || self.stageIdx()!==5 || self.view!==5 || self.reviewLoading || !self.me.review || !self.me.review.unlocked) return;
+      if(self.reviewFeedback && !!(self.reviewFeedback.review&&self.reviewFeedback.review.review_answer_unlocked)===!!self.me.review.review_answer_unlocked)return;
       if (Date.now()-self.lastReviewFetch<3500) return;
       self.lastReviewFetch=Date.now(); self.reviewLoading=true;
       api('GET','me/review-feedback').then(function(r){
+        var reflectionText=($('#post-comparison')||{}).value,reflectionChoice=$('input[name="post-understanding"]:checked');var reflectionChoiceValue=reflectionChoice?reflectionChoice.value:null;
         self.reviewFeedback=r;
         if(self.me.review) self.me.review.reflection=r.reflection;
         // 미저장 입력은 보완을 위해 기기에 보관하며 시간 내 답안은 덮어쓰지 않는다.
         self.renderStage(); self.renderLeftStage();
+        if(reflectionText&&$('#post-comparison'))$('#post-comparison').value=reflectionText;
+        if(reflectionChoiceValue){var input=$('input[name="post-understanding"][value="'+reflectionChoiceValue+'"]');if(input)input.checked=true;}
       }).catch(function(e){ if(e.code!=='review_locked') toast('해설을 불러오지 못했어요: '+e.message,'warn'); })
         .then(function(){self.reviewLoading=false;});
     },
@@ -563,13 +569,13 @@
       var items = itemsForStage(st.id, g, self.settings(), ln), editable = self.editable();
       var mats = lessonMaterials(ln);
       var h = '<div class="stagehead ' + key + '"><p class="stage-k"><span class="sdot"></span>' + (self.view + 1) + '. ' + st.id.toUpperCase() + '<span class="ko">' + st.ko + '</span><span class="min">' + stageMin(ln, self.view) + '분</span></p>' +
-        '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (self.view===self.stageIdx()?'<p class="stage-goal" role="status">내용을 보고 필요한 시간이 얼마일지 목표설정을 해보세요.</p>':'') + (editable ? '' : self.view===5&&self.me.review&&self.me.review.unlocked?'<p class="closed-note">문제 풀이 작성 시간은 끝났습니다. 해설을 확인하고 아래에서 성찰을 작성하세요.</p>':'<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') + '</div>';
+        '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (self.view===self.stageIdx()?'<p class="stage-goal" role="status">내용을 보고 필요한 시간이 얼마일지 목표설정을 해보세요.</p>':'') + (editable ? '' : self.view===5&&self.me.review&&self.me.review.unlocked?'<p class="closed-note">수업 종료 전까지 Review 답안을 수정하고 제출할 수 있습니다.</p>':'<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') + '</div>';
       if (editable && st.id !== 'Preview' && st.id !== 'Read') h += '<p class="student-simple-tip">① 답을 적고 제출하세요. ② 어렵다면 <b>질문으로 도움받기</b>를 누르세요. Review에서는 첫 제출 전에도 질문할 수 있습니다.</p>';
       if(g!=='CONTROL')h += worksheetPane(ln,g,st.id);
       // 기호와 선분은 아래 각 답안 칸에 개별적으로 표시한다.
       if(self.view<self.stageIdx()&&editable)h+='<p class="stage-revisit-note">지난 단계 답안 수정 중 · 수업의 현재 단계와 타이머는 계속 진행됩니다.</p>';
       if(self.view===4&&self.me.recite_locked)h+='<p class="stage-revisit-note locked">앞 단계로 이동했으므로 Recite는 재작성할 수 없습니다.</p>';
-      if(!(self.view===5 && self.reviewFeedback))items.forEach(function (it) { h += self.itemHTML(it, editable); });
+      items.forEach(function (it) { h += self.itemHTML(it, editable); });
       if (self.view === 5 && self.stageIdx() === 5) h += self.reviewPanel();
       h += '<p class="savestate" id="savestate"></p>';
       $('#right').innerHTML = h;
@@ -1635,11 +1641,11 @@
     if(!auto){note.innerHTML='<b>이전 방식으로 만든 수동 수업입니다.</b> 이 수업에는 자동 시작 버튼이 없습니다. 연구자 화면에서 등록된 반을 선택한 뒤 새 수업이나 시연을 준비해 주세요. <button class="btn sm" id="open-research-setup">연구자 수업 준비로</button>';$('#open-research-setup').onclick=function(){if(App.role==='researcher'){Researcher.tab='classes';Researcher.start();}else{var saved=rememberedStaff('researcher');if(saved){tabStore('pq4r:staff-screen',{screen:'researcher'});restoreStaff(saved);}else renderEntry('researcher');}};}
     else if(m==='waiting'){note.textContent='① 학생들이 반 코드로 먼저 입장합니다. ② 아래 접속 인원을 확인합니다. ③ '+'수업 시작'+'을 누르면 모두 Preview 2분부터 시작합니다. 시작 전에는 시간이 흐르지 않습니다.';
       if(!s.clock.ready&&self.readyAttempt!==s.code){self.readyAttempt=s.code;api('POST','staff/ready',{session:s.code}).then(function(){return self.refresh();}).catch(function(e){toast(e.message,'warn');note.textContent=e.message;});}
-    }else if(m==='paused')note.textContent='현재 단계의 시간과 학생 답안이 보존되어 있습니다. 이어서 진행을 누르세요.';else if(m==='reflection')note.textContent='Review 12분이 지나도 자동 종료하지 않습니다. 해설 공개, 성찰, 종료 시점을 교사가 결정할 수 있습니다.';else note.textContent='교사 시작 시각을 기준으로 진행합니다. Review 4분 뒤 정답과 성찰지가 함께 공개됩니다.';
+    }else if(m==='paused')note.textContent='현재 단계의 시간과 학생 답안이 보존되어 있습니다. 이어서 진행을 누르세요.';else if(m==='reflection')note.textContent='Review 12분이 지나도 자동 종료하지 않습니다. 해설 공개, 성찰, 종료 시점을 교사가 결정할 수 있습니다.';else note.textContent='교사 시작 시각을 기준으로 진행합니다. Review 6분 뒤 일반 정답과 성찰지, 7분 뒤 Review 문제 정답이 공개됩니다.';
     var reviewStart=s.stage_opened&&s.stage_opened[5]?Date.parse(s.stage_opened[5]):NaN;
-    var sixElapsed=Number.isFinite(reviewStart)&&nowMs()-reviewStart>=240000;
+    var sixElapsed=Number.isFinite(reviewStart)&&nowMs()-reviewStart>=360000;
     var inReview=auto&&s.stage===5&&['running','reflection','paused'].includes(m);
-    var reviewActions=inReview?(sixElapsed?'<span class="pill ok">4분 경과 · 정답 및 성찰지 공개</span>':'<span class="hint small">4분 뒤 정답 및 성찰지 동시 공개</span>'):'';
+    var reviewActions=inReview?(sixElapsed?'<span class="pill ok">6분 경과 · 일반 정답과 성찰지 공개 · Review 정답은 7분</span>':'<span class="hint small">6분 뒤 일반 정답과 성찰지 공개 · Review 정답은 7분</span>'):'';
     var navActions=(m==='running'&&auto&&s.stage<5)?'<button class="btn" data-clock="manual-prev"'+(s.stage===0?' disabled':'')+'>← 이전 단계</button><button class="btn primary" data-clock="manual-next">다음 단계 →</button>':'';
     var otherActions=auto?(m==='waiting'?'<button class="btn primary" data-clock="start">수업 시작</button>':
       ['running','catchup'].includes(m)?'<button class="btn" data-clock="pause">긴급 일시정지</button>':
