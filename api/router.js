@@ -50,6 +50,7 @@ const routes = {
   'POST login/staff': { body: true, fn: async function (ctx) { return T.login(ctx.body, ctx.req); } },
 
   'GET me': { roles: STUDENT, fn: async function (ctx) { return S.me(ctx.tok); } },
+  'GET me/current': { roles: STUDENT, fn: async function(ctx){return S.currentSession(ctx.tok);} },
   'GET me/sync': { roles: STUDENT, fn: async function (ctx) { return S.sync(ctx.tok, ctx.query); } },
   'POST me/focus': { roles: STUDENT, body: true, fn: async function(ctx){return S.focus(ctx.tok,ctx.body);} },
   'POST me/draft': { roles: STUDENT, body: true, fn: async function (ctx) { return S.saveDraft(ctx.tok, ctx.body); } },

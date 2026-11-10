@@ -164,12 +164,15 @@ test('Teacher starts clock explicitly',()=>{
  assert.match(s,/action==='review-release'/);
  assert.match(s,/action==='review-reflect'/);
 });
-test('Students and teachers can copy run-specific login links',()=>{
+test('Students and teachers can copy stable class-based login links',()=>{
  const s=read('public/app.js');
- for(const token of ["function shareLink(role,classCode,sessionCode)","u.searchParams.set('session',sessionCode)","u.searchParams.set('class',classCode)","u.hash=role==='teacher'?'login-teacher':'login-student'","$('#teacher-student-share').onclick","$('#teacher-staff-share').onclick","session_code:linkSession()","Teacher.start(linkSession()||null)"]){
+ for(const token of ["function shareLink(role,classCode,sessionCode)","u.searchParams.set('session',sessionCode)","u.searchParams.set('class',classCode)","u.hash=role==='teacher'?'login-teacher':'login-student'","$('#teacher-student-share').onclick","$('#teacher-staff-share').onclick","Teacher.start(linkSession()||null)"]){
    assert.ok(s.includes(token),token);
  }
  assert.doesNotMatch(s,/u\.searchParams\.set\(['"](?:pin|password)['"]/i);
+ assert.match(s,/if\(role==='teacher'\)u\.searchParams\.set\('session',sessionCode\)/);
+ assert.match(s,/api\('GET','me\/current'\)/);
+ assert.match(read('api/router.js'),/'GET me\/current'/);
 });
 test('All 576 researcher-supplied prompts cover eight lessons and 72 question units',()=>{
   const C=require('../lib/content');
@@ -187,17 +190,24 @@ test('All 576 researcher-supplied prompts cover eight lessons and 72 question un
     assert.equal(entry.src,'USER_CSV_576_20261103');
   }
 });
-test('Review opens both answers and reflection automatically after four minutes',()=>{
+test('Review opens other feedback and reflection after six minutes, Review answer after seven',()=>{
  const R=require('../lib/review'),start=Date.now();
  const session={status:'open',stage:5,lesson:3,stage_opened:{5:new Date(start).toISOString()},clock:{mode:'running'}};
- for(const minutes of [0,2,3.999,4,5,10,12]){
+ for(const minutes of [0,4,5.999,6,6.999,7,10,12]){
   const v=R.status(session,start+Math.round(minutes*60000));
-  assert.equal(v.unlocked,minutes>=4,'Answer release at minute '+minutes);
-  assert.equal(v.reflect_unlocked,minutes>=4,'Reflection release at minute '+minutes);
+  assert.equal(v.unlocked,minutes>=6,'Other answer release at minute '+minutes);
+   assert.equal(v.review_answer_unlocked,minutes>=7,'Review answer release at minute '+minutes);
+  assert.equal(v.reflect_unlocked,minutes>=6,'Reflection release at minute '+minutes);
  }
- assert.equal(R.status(session,start).delay_seconds,240);
+ assert.equal(R.status(session,start).delay_seconds,360);
+  assert.equal(R.status(session,start+6*60000).review_answer_unlocked,false);
+  assert.equal(R.status(session,start+7*60000).review_answer_unlocked,true);
+  const studentBackend=read('lib/student.js');
+  assert.match(studentBackend,/reviewStatus\.review_answer_unlocked/);
+  assert.match(studentBackend,/function reviewWritable\(s,itemId\)/);
+  assert.match(studentBackend,/review_visibility_at_submit/);
  const app=read('public/app.js');
- assert.match(app,/4분 뒤 정답 및 성찰지 동시 공개/);
+ assert.match(app,/6분 뒤 일반 정답과 성찰지 공개/);
  assert.match(app,/data-clock="finish"/);
  assert.match(app,/내용을 보고 필요한 시간이 얼마일지 목표설정을 해보세요/);
  const clock=read('lib/clock.js');
@@ -205,18 +215,21 @@ test('Review opens both answers and reflection automatically after four minutes'
  assert.match(read('lib/record-download.js'),/report-print-button/);
  assert.match(read('public/report-print.js'),/window\.print\(\)/);
 });
-test('Prior stage edits require complete active stage, Recite five minutes, and a persisted reentry lock',()=>{
+test('Completed current stage unlocks every earlier stage without rewinding the class clock',()=>{
  const s=read('lib/student.js'),a=read('public/app.js');
- assert.match(s,/RECITE_EXIT_LOCK_20261103/);
- assert.match(s,/now-start>=300000/);
  assert.match(s,/currentComplete\(sql,s,student\)/);
- assert.match(s,/recite_minimum_five_minutes/);
- assert.match(s,/if\(idx===4&&ps\.locked\)/);
- assert.match(s,/REVIEW\.status\(s\)\.unlocked/);
  assert.match(s,/STUDENT_STAGE_REVISIT/);
+ assert.match(s,/target<0\|\|target>=s\.stage/);
+ assert.match(s,/!\['running','reflection'\]\.includes/);
+ assert.match(s,/original_stage_index/);
+ assert.match(s,/revisited_stage/);
+ assert.match(s,/pastStageWritable/);
+ assert.doesNotMatch(s,/idx===4&&ps\.locked/);
+ assert.doesNotMatch(s,/recite_minimum_five_minutes/);
  assert.match(a,/me\/navigate/);
- assert.match(a,/Recite로 돌아와도 Recite 답안은 다시 작성할 수 없습니다/);
- assert.match(a,/this\.view<idx&&this\.view!==4&&this\.canRevisit\(\)/);
+ assert.match(a,/this\.view<idx&&this\.canRevisit\(\)/);
+ assert.match(a,/reciteHide:false/);
+ assert.doesNotMatch(a,/Recite로 돌아와도 Recite 답안은 다시 작성할 수 없습니다/);
 });
 test('Version and browser asset always updated together',()=>{
  const v=require('../package.json').version;
