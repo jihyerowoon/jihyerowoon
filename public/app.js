@@ -268,7 +268,7 @@
     if(!sessionCode||!classCode)throw new Error('먼저 수업을 준비해 주세요.');
     var u=new URL('/',location.origin);
     u.searchParams.set('class',classCode);
-    u.searchParams.set('session',sessionCode);
+    if(role==='teacher')u.searchParams.set('session',sessionCode);
     u.hash=role==='teacher'?'login-teacher':'login-student';
     return u.href;
   }
@@ -315,7 +315,7 @@
       if (tab === 'student') {
         var sc = $('#l-sess').value.trim().toUpperCase(), code = $('#l-code').value.trim().toUpperCase();
         store('pq4r:last', Object.assign({}, last, { tab: 'student', classCode: sc, code: code }));
-        p = api('POST', 'login/student', { class_code: sc, session_code:linkSession(), student_code: code, pin: $('#l-pin').value.trim(), ua: navigator.userAgent.slice(0, 160) })
+        p = api('POST', 'login/student', { class_code: sc, student_code: code, pin: $('#l-pin').value.trim(), ua: navigator.userAgent.slice(0, 160) })
           .then(function (r) { App.tok = r.token; App.role = 'student'; saveAuth({ token: r.token, role: 'student' }); Student.start(r.me); });
       } else {
         var tid = tab === 'teacher' ? $('#l-tid').value.trim().toUpperCase() : null;
@@ -345,7 +345,7 @@
       every(4000, function () { return self.poll(); }, 15000);
       App.timers.push(setInterval(function () {
         var t = $('#timer'); if (t) t.innerHTML = timerText(self.me.session);
-        if (self.view === 5 && self.stageIdx() === 5) { var due = self.me.review && self.me.review.release_at; var reflectAt = self.me.review && self.me.review.reflection_at; var count = $('#review-release-count'); if (count && due) count.textContent = nowMs()<Date.parse(due)?'해설을 열 수 있을 때까지 '+mmss((Date.parse(due)-nowMs())/1000):'교사가 해설 단계를 열면 풀이를 비교할 수 있습니다.'; if (self.me.review && self.me.review.unlocked) self.loadReviewFeedback(); var rc = $('#review-reflect-count'); if (rc && reflectAt) rc.textContent = '성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000); if (self.me.review && self.me.review.reflect_unlocked && self.reviewFeedback && !self.reviewReflectionShown) { self.reviewReflectionShown = true; self.renderStage(); } }
+        if (self.view === 5 && self.stageIdx() === 5) { var due = self.me.review && self.me.review.release_at; var reflectAt = self.me.review && self.me.review.reflection_at; var count = $('#review-release-count'); if (count && due) count.textContent = nowMs()<Date.parse(due)?'해설을 열 수 있을 때까지 '+mmss((Date.parse(due)-nowMs())/1000):'곧 정답과 해설을 확인할 수 있습니다.'; if (self.me.review && self.me.review.unlocked) self.loadReviewFeedback(); var rc = $('#review-reflect-count'); if (rc && reflectAt) rc.textContent = '성찰까지 ' + mmss((Date.parse(reflectAt)-nowMs())/1000); if (self.me.review && self.me.review.reflect_unlocked && self.reviewFeedback && !self.reviewReflectionShown) { self.reviewReflectionShown = true; self.renderStage(); } }
         if(self.stageIdx()===4){var allow=self.canRevisit();if(self._prevRevisitNav!==allow){self._prevRevisitNav=allow;self.renderStepper();}}
         $$('.waiting[data-at]').forEach(function (n) { n.textContent = '도움 요청 보냄 · ' + mmss((nowMs() - Date.parse(n.getAttribute('data-at'))) / 1000) + ' 기다리는 중'; });
       }, 1000));
@@ -491,7 +491,7 @@
     editable: function(){
       var idx=this.stageIdx(),s=this.me.session;
       if(s.status!=='open'||!['running','legacy'].includes(clockMode(s)))return false;
-      if(this.view===idx)return !(idx===4&&this.me.recite_locked)&&!(idx===5&&this.me.review&&this.me.review.unlocked);
+      if(this.view===idx)return !(idx===4&&this.me.recite_locked)&&!(idx===5&&this.me.review&&this.me.review.unlocked&&this.lesson()!==8);
       return this.view<idx&&this.view!==4&&this.canRevisit();
     },
     navigateTo: function(target){
@@ -507,7 +507,7 @@
     reviewPanel: function () {
       var due = this.me.review && this.me.review.release_at, data = this.reviewFeedback, self = this;
       if (!due) return '';
-      if (!self.me.review || !self.me.review.unlocked) return '<section class="panel"><h3>Review · 독립 풀이</h3><p>정답을 보지 않고 문제와 풀이를 작성해 제출하세요.</p><p id="review-release-count" class="hint small">' + (nowMs()<Date.parse(due)?'해설을 열 수 있을 때까지 '+mmss((Date.parse(due)-nowMs())/1000):'독립 풀이 6분 경과 · 교사의 해설 단계 전환을 기다립니다.') + '</p><p class="small">교사가 해설 단계를 열기 전까지 답안은 비공개입니다.</p></section>';
+      if (!self.me.review || !self.me.review.unlocked) return '<section class="panel"><h3>Review · 독립 풀이</h3><p>정답을 보지 않고 문제와 풀이를 작성해 제출하세요.</p><p id="review-release-count" class="hint small">' + (nowMs()<Date.parse(due)?'해설을 열 수 있을 때까지 '+mmss((Date.parse(due)-nowMs())/1000):'곧 정답과 해설을 확인할 수 있습니다.') + '</p><p class="small">교사가 해설 단계를 열기 전까지 답안은 비공개입니다.</p></section>';
       if (!data) return '<section class="panel"><h3>해설 공개 시간</h3><p>나의 답변을 보존하고 정답과 해설을 불러오는 중입니다.</p></section>';
       var confidence = {explain:'충분히 설명할 수 있다',partial:'일부 이해했다',uncertain:'아직 어렵다'};
       var solutionName = function(x) { var id=x.item_id||''; return id.indexOf('RV')>=0?'Review 다시 풀기':id.indexOf('RD')>=0?'Read 개념확인':'Reflect 문제 '+id.slice(-1); };
@@ -563,13 +563,13 @@
       var items = itemsForStage(st.id, g, self.settings(), ln), editable = self.editable();
       var mats = lessonMaterials(ln);
       var h = '<div class="stagehead ' + key + '"><p class="stage-k"><span class="sdot"></span>' + (self.view + 1) + '. ' + st.id.toUpperCase() + '<span class="ko">' + st.ko + '</span><span class="min">' + stageMin(ln, self.view) + '분</span></p>' +
-        '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (self.view===self.stageIdx()?'<p class="stage-goal" role="status">내용을 보고 필요한 시간이 얼마일지 목표설정을 해보세요.</p>':'') + (editable ? '' : self.view===5&&self.me.review&&self.me.review.unlocked?'<p class="closed-note">문제 풀이 작성 시간은 끝났습니다. 해설을 확인하고 아래에서 성찰을 작성하세요.</p>':'<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') + '</div>';
+        '<p class="stage-intro">' + esc(stageIntro(ln, st, g)) + '</p>' + (self.view===self.stageIdx()?'<p class="stage-goal" role="status">내용을 보고 필요한 시간이 얼마일지 목표설정을 해보세요.</p>':'') + (editable ? '' : self.view===5&&self.me.review&&self.me.review.unlocked?'<p class="closed-note">해설을 확인하고 성찰을 작성하세요.</p>':'<p class="closed-note">이 단계는 닫혔어요. 보기만 할 수 있어요.</p>') + '</div>';
       if (editable && st.id !== 'Preview' && st.id !== 'Read') h += '<p class="student-simple-tip">① 답을 적고 제출하세요. ② 어렵다면 <b>질문으로 도움받기</b>를 누르세요. Review에서는 첫 제출 전에도 질문할 수 있습니다.</p>';
       if(g!=='CONTROL')h += worksheetPane(ln,g,st.id);
       // 기호와 선분은 아래 각 답안 칸에 개별적으로 표시한다.
       if(self.view<self.stageIdx()&&editable)h+='<p class="stage-revisit-note">지난 단계 답안 수정 중 · 수업의 현재 단계와 타이머는 계속 진행됩니다.</p>';
       if(self.view===4&&self.me.recite_locked)h+='<p class="stage-revisit-note locked">앞 단계로 이동했으므로 Recite는 재작성할 수 없습니다.</p>';
-      if(!(self.view===5 && self.reviewFeedback))items.forEach(function (it) { h += self.itemHTML(it, editable); });
+      items.forEach(function (it) { h += self.itemHTML(it, editable); });
       if (self.view === 5 && self.stageIdx() === 5) h += self.reviewPanel();
       h += '<p class="savestate" id="savestate"></p>';
       $('#right').innerHTML = h;
