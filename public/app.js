@@ -957,7 +957,7 @@
     loadStudents: function () {
       var self = this;
       api('GET', 'admin/students').then(function (r) {
-        $('#st-n').textContent = r.students.length + '명 · 실험 ' + r.students.filter(function (s) { return s.group === 'EXPERIMENT'; }).length + ' · 통제 ' + r.students.filter(function (s) { return s.group === 'CONTROL'; }).length;
+        $('#st-n').textContent = '전체 등록 ' + r.students.length + '명 · A반 (AI 튜터 지원) 총 ' + r.students.filter(function (s) { return s.group === 'EXPERIMENT'; }).length + '명 등록 · T반 (교사 지원) 총 ' + r.students.filter(function (s) { return s.group === 'CONTROL'; }).length + '명 등록';
         var masked = !!self.pinMasked;
         $('#st-mask').textContent = masked ? 'PIN 보기' : 'PIN 가리기'; $('#st-mask').setAttribute('aria-pressed', masked ? 'true' : 'false');
         $('#st-mask').onclick = function () { self.pinMasked = !self.pinMasked; self.loadStudents(); };
