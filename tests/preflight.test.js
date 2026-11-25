@@ -174,20 +174,29 @@ test('Students and teachers can copy stable class-based login links',()=>{
  assert.match(s,/api\('GET','me\/current'\)/);
  assert.match(read('api/router.js'),/'GET me\/current'/);
 });
-test('All 576 researcher-supplied prompts cover eight lessons and 72 question units',()=>{
+test('All 560 researcher-approved prompts cover eight lessons and 82 question units',()=>{
   const C=require('../lib/content');
   assert.equal(Object.keys(C.LESSONS).length,8);
-  assert.equal(C.BANK.length,576);
+  assert.equal(C.BANK.length,560);
   const all=new Set(C.ITEMS.map(i=>i.id));
-  assert.equal(new Set(C.BANK.map(e=>e.id)).size,576,'Duplicate prompt identifiers');
-  for(let n=1;n<=8;n++) assert.equal(C.BANK.filter(e=>e.lesson===n).length,72,'lesson '+n);
-  assert.equal(new Set(C.BANK.map(e=>e.item)).size,72);
+  assert.equal(new Set(C.BANK.map(e=>e.id)).size,560,'Duplicate prompt identifiers');
+  for(let n=1;n<=8;n++) assert.equal(C.BANK.filter(e=>e.lesson===n).length,70,'lesson '+n);
+  const linkedItems=[...new Set(C.BANK.map(e=>e.item))];
+  assert.equal(linkedItems.length,82);
   for(const entry of C.BANK){
     assert.ok(all.has(entry.item),'Missing item '+entry.item);
     assert.equal(entry.level,1);
     assert.ok(entry.text.length>=8);
-    assert.ok(entry.priority>=1&&entry.priority<=8);
-    assert.equal(entry.src,'USER_CSV_576_20261103');
+    assert.ok(entry.priority>=1&&entry.priority<=10);
+    assert.equal(entry.src,'USER_XLSX_560_APPROVED_20261125');
+    assert.equal(entry.review_status,'RESEARCHER_APPROVED_20261125');
+  }
+  const E=require('../lib/engine');
+  for(const item of linkedItems){
+    assert.ok(E.bankFor(item,1,'EXPERIMENT').length>0,'AI bank missing '+item);
+    assert.ok(E.bankFor(item,1,'CONTROL').length>0,'Teacher bank missing '+item);
+    const selected=E.pickEntry(item,1,'AMBIGUOUS',null,[],'EXPERIMENT','a',null,[],{answerText:'',studentQuestion:''});
+    assert.ok(selected&&selected.item===item,'Prompt selection failed '+item);
   }
 });
 test('Review opens other feedback and reflection after six minutes, Review answer after seven',()=>{
