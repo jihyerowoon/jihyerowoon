@@ -6,7 +6,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const dir=path.resolve(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(dir,f),'utf8');
-const jsFiles=['public/app.js','lib/classroom.js','lib/student.js','lib/staff.js','lib/core.js','lib/engine.js','lib/content.js','lib/review.js','lib/clock.js','lib/assets.js','lib/csv-bank.js','lib/lessons-3-8.js','api/router.js'];
+const jsFiles=['public/app.js','lib/classroom.js','lib/student.js','lib/staff.js','lib/core.js','lib/engine.js','lib/content.js','lib/review.js','lib/clock.js','lib/assets.js','lib/csv-bank.js','lib/context-bank.js','lib/ai.js','lib/lessons-3-8.js','api/router.js'];
 let passed=0;
 function test(name,fn){try{fn();passed++;process.stdout.write('PASS '+name+'\n');}catch(e){process.stderr.write('FAIL '+name+'\n'+e.stack+'\n');process.exitCode=1;}}
 for(const p of jsFiles)test('Syntax '+p,()=>new Function(read(p)));
@@ -57,7 +57,7 @@ test('Non-evaluative learner self-check for correct and incorrect answers and un
  assert.match(read('lib/staff.js'),/mode==='self_check'\?C\.COMMON\.SELF_CHECK\.text/);
  assert.doesNotMatch(read('lib/staff.js'),/confirmed_by_teacher|TEACHER_CONFIRMED_CORRECT/);
  assert.doesNotMatch(read('lib/engine.js'),/verifiedCorrect|VERIFIED_COMPLETE_SELF_CHECK_V1/);
- assert.match(read('lib/student.js'),/asksConfirmation: asksConfirmation/);
+ assert.match(read('lib/student.js'),/helpCtx=\{[^\n]*asksConfirmation/);
  const pending=E.judgeRule('L3RD02','EXPERIMENT',{answer:'3',work:'조건 확인'},{},K.DEFAULT_SETTINGS);
  assert.equal(pending.state,'AMBIGUOUS','3~8차시 정오 확정 금지');
 });
@@ -174,30 +174,45 @@ test('Students and teachers can copy stable class-based login links',()=>{
  assert.match(s,/api\('GET','me\/current'\)/);
  assert.match(read('api/router.js'),/'GET me\/current'/);
 });
-test('All 560 researcher-approved prompts cover eight lessons and 82 question units',()=>{
-  const C=require('../lib/content');
+test('All 1126 approved source prompts map to both groups across eight lessons',()=>{
+  const C=require('../lib/content'),E=require('../lib/engine'),rows=require('../data/prompt-bank-1126.json');
   assert.equal(Object.keys(C.LESSONS).length,8);
-  assert.equal(C.BANK.length,560);
-  const all=new Set(C.ITEMS.map(i=>i.id));
-  assert.equal(new Set(C.BANK.map(e=>e.id)).size,560,'Duplicate prompt identifiers');
-  for(let n=1;n<=8;n++) assert.equal(C.BANK.filter(e=>e.lesson===n).length,70,'lesson '+n);
-  const linkedItems=[...new Set(C.BANK.map(e=>e.item))];
-  assert.equal(linkedItems.length,82);
-  for(const entry of C.BANK){
-    assert.ok(all.has(entry.item),'Missing item '+entry.item);
-    assert.equal(entry.level,1);
-    assert.ok(entry.text.length>=8);
-    assert.ok(entry.priority>=1&&entry.priority<=10);
-    assert.equal(entry.src,'USER_XLSX_560_APPROVED_20261125');
-    assert.equal(entry.review_status,'RESEARCHER_APPROVED_20261125');
+  assert.equal(rows.length,1126);
+  assert.equal(new Set(rows.map(r=>r[0])).size,1126);
+  const counts=[139,139,146,139,139,139,139,146];
+  const byId=new Map(rows.map(r=>[r[0],r]));
+  const expected=rows.flatMap(r=>/^L[1-8]QU$/.test(r[4])?[[r[0],r[4]+'01'],[r[0]+'-QU02',r[4]+'02']]:[[r[0],r[4]]]);
+  assert.equal(expected.length,1190);
+  assert.equal(C.BANK.length,expected.length);
+  assert.equal(new Set(C.BANK.map(e=>e.id)).size,expected.length);
+  assert.deepEqual(counts,counts.map((_,i)=>rows.filter(r=>r[1]===i+1).length));
+  const byEntry=new Map(C.BANK.map(e=>[e.id,e]));
+  const all=new Set(C.ITEMS.filter(i=>!i.archived).map(i=>i.id));
+  expected.forEach(([id,item])=>{const e=byEntry.get(id);assert.ok(e,'Missing prompt '+id);assert.equal(e.item,item);assert.ok(all.has(item));});
+  for(const e of C.BANK){
+    const source=byId.get(e.source_id);assert.ok(source);
+    assert.equal(e.text,source[9]);assert.equal(e.situation,source[6]);assert.equal(e.mechanism,source[7]);
+    assert.equal(e.level,1);assert.equal(e.type,'메타인지');assert.equal(e.group,null);
+    assert.equal(e.src,'USER_XLSX_1126_APPROVED_20261126');
+    assert.equal(e.review_status,'RESEARCHER_APPROVED_20261126');
   }
-  const E=require('../lib/engine');
-  for(const item of linkedItems){
-    assert.ok(E.bankFor(item,1,'EXPERIMENT').length>0,'AI bank missing '+item);
-    assert.ok(E.bankFor(item,1,'CONTROL').length>0,'Teacher bank missing '+item);
-    const selected=E.pickEntry(item,1,'AMBIGUOUS',null,[],'EXPERIMENT','a',null,[],{answerText:'',studentQuestion:''});
-    assert.ok(selected&&selected.item===item,'Prompt selection failed '+item);
+  for(const item of new Set(C.BANK.map(e=>e.item))){
+    const pool=E.bankFor(item,1,'EXPERIMENT');
+    assert.ok(pool.length);assert.deepEqual(pool,E.bankFor(item,1,'CONTROL'));
+    const ctx={answerText:'',studentQuestion:'어떤 근거를 확인해야 할까요?'};
+    const rec=E.newRec();rec.state='AMBIGUOUS';
+    const ranked=E.contextualCandidates(item,rec,'',ctx.studentQuestion,true);
+    assert.ok(ranked.length&&ranked.every(e=>e.item===item));
+    const selected=E.pickEntry(item,1,'AMBIGUOUS',null,[],'EXPERIMENT','a',null,[],{...ctx,selectedBankId:ranked[0].id});
+    assert.equal(selected.id,ranked[0].id);
+    const invalid=E.pickEntry(item,1,'AMBIGUOUS',null,[],'EXPERIMENT','a',null,[],{...ctx,selectedBankId:'INVALID'});
+    assert.ok(pool.some(e=>e.id===invalid.id));
+    assert.ok(pool.some(e=>e.id===E.recommendTeacherEntry(item,rec,'',ctx.studentQuestion).id));
   }
+  assert.match(read('lib/student.js'),/grp==='EXPERIMENT'&&!asksConfirmation/);
+  assert.match(read('lib/student.js'),/ai\.selectBankEntry/);
+  assert.match(read('lib/ai.js'),/ids\.includes\(r\.id\)/);
+  assert.match(read('lib/classroom.js'),/E\.contextualCandidates\(r\.item_id/);
 });
 test('Review opens other feedback and reflection after six minutes, Review answer after seven',()=>{
  const R=require('../lib/review'),start=Date.now();
